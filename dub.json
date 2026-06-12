@@ -1,0 +1,10 @@
+{
+	"description": "Result for D",
+	"license": "MIT",
+	"authors": [
+		"Kazuya Takahashi"
+	],
+	"copyright": "Copyright © 2026, Kazuya Takahashi",
+	"name": "d-result",
+	"targetType": "library"
+}
