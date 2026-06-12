@@ -43,12 +43,17 @@ struct Result(T, E)
     alias result this;
 
     /// The constructor accepts `Result!(T, E)`, `Ok!T` and `Err!E` values.
-    this(R)(auto ref R value)
-            if (is(typeof({ Result.init = R.init; })))
+    this(R)(auto ref R value) if (is(typeof({ Result.init = R.init; })))
     {
         this.result = value;
     }
 
+    /// Supports assignment of `Result!(T, E)`, `Ok!T` and `Err!E` values.
+    ref opAssign(R)(auto ref R value) if (is(typeof({ Result.init = R.init; })))
+    {
+        this.result = value;
+        return this;
+    }
 }
 
 // Ctor
@@ -68,4 +73,25 @@ struct Result(T, E)
 
     auto newResult = Result!(bool, dstring)(resultErr);
     assert(newResult.get!(Err!dstring) == Err!dstring("123"d));
+}
+
+// opAssign
+@trusted @nogc nothrow unittest
+{
+    import std.sumtype : get;
+
+    auto resultOk = Result!(int, string)(Ok!int(123));
+    resultOk = Ok!int(1234);
+    assert(resultOk.get!(Ok!int) == Ok!int(1234));
+
+    auto resultErr = Result!(bool, dstring)(Err!dstring("123"d));
+    resultErr = Err!dstring("1234"d);
+    assert(resultErr.get!(Err!dstring) == Err!dstring("1234"d));
+
+    auto resultEither = Result!(bool, dstring)(Err!dstring("123"d));
+    resultEither = Ok!bool(false);
+    assert(resultEither.get!(Ok!bool) == Ok!bool(false));
+
+    resultEither = resultErr;
+    assert(resultEither.get!(Err!dstring) == Err!dstring("1234"d));
 }
