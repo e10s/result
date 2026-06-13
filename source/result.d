@@ -97,6 +97,21 @@ struct Result(T, E)
         static assert(is(typeof(result) == const(Result))); // <--
         return result.get!(const(Ok!T)).okValue;
     }
+
+    /// Returns the contained `Ok!T` value.
+    /// Or returns the contained `defaultValue` if the value is an `Err!E`.
+    T unwrapOr(T defaultValue) const
+    {
+        if (this.isErr())
+        {
+            return defaultValue;
+        }
+
+        import std.sumtype : get;
+
+        static assert(is(typeof(result) == const(Result))); // <--
+        return result.get!(const(Ok!T)).okValue;
+    }
 }
 
 // Ctor
@@ -192,4 +207,20 @@ unittest
 
     auto resultErr = Result!(string, uint)(Err!uint(123));
     assertThrown!UnwrapException(resultErr.unwrap());
+}
+
+// unwrapOp
+@safe @nogc nothrow unittest
+{
+    auto resultOk1 = Result!(int, string)(Ok!int(123));
+    static assert(is(typeof(resultOk1.unwrapOr(456)) == int));
+    assert(resultOk1.unwrapOr(456) == 123);
+
+    auto resultOk2 = Result!(string, uint)(Ok!string("123"));
+    static assert(is(typeof(resultOk2.unwrapOr("456")) == string));
+    assert(resultOk2.unwrapOr("456") == "123");
+
+    auto resultErr = Result!(string, uint)(Err!uint(123));
+    static assert(is(typeof(resultErr.unwrapOr("456")) == string));
+    assert(resultErr.unwrapOr("456") == "456");
 }
