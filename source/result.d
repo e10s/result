@@ -191,7 +191,7 @@ struct Result(T, E)
 }
 
 // unwrap
-unittest
+@safe unittest
 {
     import std.exception : assertThrown, assertNotThrown;
 
