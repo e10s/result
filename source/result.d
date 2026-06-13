@@ -117,12 +117,19 @@ struct Result(T, E)
 // isOk
 @safe @nogc nothrow unittest
 {
-    auto result = Result!(int, string)(Ok!int(123));
-    assert(result.isOk());
-    const constResult = Result!(int, string)(Ok!int(123));
-    assert(constResult.isOk());
-    immutable immutableResult = Result!(int, string)(Ok!int(123));
-    assert(immutableResult.isOk());
+    auto resultOk = Result!(int, string)(Ok!int(123));
+    assert(resultOk.isOk());
+    const constResultOk = Result!(int, string)(Ok!int(123));
+    assert(constResultOk.isOk());
+    immutable immutableResultOk = Result!(int, string)(Ok!int(123));
+    assert(immutableResultOk.isOk());
+
+    auto resultErr = Result!(int, string)(Err!string("123"));
+    assert(!resultErr.isOk());
+    const constResultErr = Result!(int, string)(Err!string("123"));
+    assert(!constResultErr.isOk());
+    immutable immutableResultErr = Result!(int, string)(Err!string("123"));
+    assert(!immutableResultErr.isOk());
 }
 
 // isErr
@@ -141,5 +148,4 @@ struct Result(T, E)
     assert(!constResultOk.isErr());
     immutable immutableResultOk = Result!(int, string)(Ok!int(123));
     assert(!immutableResultOk.isErr());
-
 }
