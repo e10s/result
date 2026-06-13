@@ -54,6 +54,15 @@ struct Result(T, E)
         this.result = value;
         return this;
     }
+
+    /// Returns `true` if `this` has an `Ok!T` value.
+    bool isOk() const
+    {
+        import std.sumtype : has;
+
+        static assert(is(typeof(result) == const(Result))); // <--
+        return result.has!(const(Ok!T)); // <--
+    }
 }
 
 // Ctor
@@ -94,4 +103,15 @@ struct Result(T, E)
 
     resultEither = resultErr;
     assert(resultEither.get!(Err!dstring) == Err!dstring("1234"d));
+}
+
+// isOk
+@safe @nogc nothrow unittest
+{
+    auto result = Result!(int, string)(Ok!int(123));
+    assert(result.isOk());
+    const constResult = Result!(int, string)(Ok!int(123));
+    assert(constResult.isOk());
+    immutable immutableResult = Result!(int, string)(Ok!int(123));
+    assert(immutableResult.isOk());
 }
