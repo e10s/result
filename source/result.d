@@ -63,6 +63,15 @@ struct Result(T, E)
         static assert(is(typeof(result) == const(Result))); // <--
         return result.has!(const(Ok!T)); // <--
     }
+
+    /// Returns `true` if `this` has an `Err!E` value.
+    bool isErr() const
+    {
+        import std.sumtype : has;
+
+        static assert(is(typeof(result) == const(Result))); // <--
+        return result.has!(const(Err!E)); // <--
+    }
 }
 
 // Ctor
@@ -114,4 +123,23 @@ struct Result(T, E)
     assert(constResult.isOk());
     immutable immutableResult = Result!(int, string)(Ok!int(123));
     assert(immutableResult.isOk());
+}
+
+// isErr
+@safe @nogc nothrow unittest
+{
+    auto resultErr = Result!(int, string)(Err!string("123"));
+    assert(resultErr.isErr());
+    const constResultErr = Result!(int, string)(Err!string("123"));
+    assert(constResultErr.isErr());
+    immutable immutableResultErr = Result!(int, string)(Err!string("123"));
+    assert(immutableResultErr.isErr());
+
+    auto resultOk = Result!(int, string)(Ok!int(123));
+    assert(!resultOk.isErr());
+    const constResultOk = Result!(int, string)(Ok!int(123));
+    assert(!constResultOk.isErr());
+    immutable immutableResultOk = Result!(int, string)(Ok!int(123));
+    assert(!immutableResultOk.isErr());
+
 }
