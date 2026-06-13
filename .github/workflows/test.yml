@@ -1,0 +1,25 @@
+name: DUB Tests
+on: [push, pull_request]
+
+jobs:
+    test:
+        name: ${{ matrix.os }} - ${{ matrix.dc }}
+        strategy:
+            fail-fast: false
+            matrix:
+                os: [ubuntu-slim, windows-latest]
+                dc: [dmd, ldc]
+                #include:
+                #    - { os: ubuntu-slim, dc: gdc }
+        runs-on: ${{ matrix.os }}
+        steps:
+            - name: Checkout
+              uses: actions/checkout@v6
+
+            - name: Install D compiler
+              uses: dlang-community/setup-dlang@v2
+              with:
+                  compiler: ${{ matrix.dc }}
+
+            - name: Run tests
+              run: dub -q test
