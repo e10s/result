@@ -32,6 +32,16 @@ struct Err(E)
     assert(Err!string("Good day.") == "Good day."); // alias this
 }
 
+///
+class UnwrapException : Exception
+{
+    ///
+    pure @safe @nogc nothrow this(string msg, string file = __FILE__, size_t line = __LINE__)
+    {
+        super(msg, file, line);
+    }
+}
+
 /// Performs as a `std.sumtype.SumType` but has some additional features.
 struct Result(T, E)
 {
@@ -71,6 +81,21 @@ struct Result(T, E)
 
         static assert(is(typeof(result) == const(Result))); // <--
         return result.has!(const(Err!E)); // <--
+    }
+
+    /// Returns the containing `Ok!T` value.
+    /// Throws `UnwrapException` if the value is an `Err!E`.
+    T unwrap() const
+    {
+        if (this.isErr())
+        {
+            throw new UnwrapException("Bad"); // FIXME: message should be reasonable
+        }
+
+        import std.sumtype : get;
+
+        static assert(is(typeof(result) == const(Result))); // <--
+        return result.get!(const(Ok!T)).okValue;
     }
 }
 
@@ -148,4 +173,23 @@ struct Result(T, E)
     assert(!constResultOk.isErr());
     immutable immutableResultOk = Result!(int, string)(Ok!int(123));
     assert(!immutableResultOk.isErr());
+}
+
+// unwrap
+unittest
+{
+    import std.exception : assertThrown, assertNotThrown;
+
+    auto resultOk1 = Result!(int, string)(Ok!int(123));
+    static assert(is(typeof(resultOk1.unwrap()) == int));
+    assert(resultOk1.unwrap() == 123);
+    assertNotThrown!UnwrapException(resultOk1.unwrap());
+
+    auto resultOk2 = Result!(string, uint)(Ok!string("123"));
+    static assert(is(typeof(resultOk2.unwrap()) == string));
+    assert(resultOk2.unwrap() == "123");
+    assertNotThrown!UnwrapException(resultOk1.unwrap());
+
+    auto resultErr = Result!(string, uint)(Err!uint(123));
+    assertThrown!UnwrapException(resultErr.unwrap());
 }
