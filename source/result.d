@@ -98,6 +98,21 @@ struct Result(T, E)
         return result.get!(const(Ok!T)).okValue;
     }
 
+    /// Returns the contained `Err!E` value.
+    /// Throws `UnwrapException` if the value is an `Ok!T`.
+    E unwrapErr() const
+    {
+        if (this.isOk())
+        {
+            throw new UnwrapException("Bad"); // FIXME: message should be reasonable
+        }
+
+        import std.sumtype : get;
+
+        static assert(is(typeof(result) == const(Result))); // <--
+        return result.get!(const(Err!E)).errValue;
+    }
+
     /// Returns the contained `Ok!T` value.
     /// Or returns the contained `defaultValue` if the value is an `Err!E`.
     T unwrapOr(T defaultValue) const
@@ -207,6 +222,25 @@ struct Result(T, E)
 
     auto resultErr = Result!(string, uint)(Err!uint(123));
     assertThrown!UnwrapException(resultErr.unwrap());
+}
+
+// unwrapErr
+@safe unittest
+{
+    import std.exception : assertThrown, assertNotThrown;
+
+    auto resultErr1 = Result!(int, string)(Err!string("123"));
+    static assert(is(typeof(resultErr1.unwrapErr()) == string));
+    assert(resultErr1.unwrapErr() == "123");
+    assertNotThrown!UnwrapException(resultErr1.unwrapErr());
+
+    auto resultErr2 = Result!(string, uint)(Err!uint(123));
+    static assert(is(typeof(resultErr2.unwrapErr()) == uint));
+    assert(resultErr2.unwrapErr() == 123);
+    assertNotThrown!UnwrapException(resultErr2.unwrapErr());
+
+    auto resultOk = Result!(string, uint)(Ok!string("123"));
+    assertThrown!UnwrapException(resultOk.unwrapErr());
 }
 
 // unwrapOp
