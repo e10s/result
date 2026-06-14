@@ -218,7 +218,7 @@ struct Result(T, E)
     auto resultOk2 = Result!(string, uint)(Ok!string("123"));
     static assert(is(typeof(resultOk2.unwrap()) == string));
     assert(resultOk2.unwrap() == "123");
-    assertNotThrown!UnwrapException(resultOk1.unwrap());
+    assertNotThrown!UnwrapException(resultOk2.unwrap());
 
     auto resultErr = Result!(string, uint)(Err!uint(123));
     assertThrown!UnwrapException(resultErr.unwrap());
