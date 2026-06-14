@@ -148,6 +148,20 @@ struct Result(T, E)
         return unwrapUnchecked();
     }
 
+    import std.traits : isCallable;
+
+    /// Ditto
+    T unwrapOrElse(F)(auto ref F fun) const
+            if (isCallable!F && is(typeof(fun(E.init)) : T))
+    {
+        if (this.isErr())
+        {
+            return fun(unwrapErrUnchecked);
+        }
+
+        return unwrapUnchecked();
+    }
+
     /// Returns the containing `Ok!T` value,
     /// without checking that the value is not an `Err!E`
     T unwrapUnchecked() const
@@ -329,6 +343,36 @@ unittest
     assert(resultErr.unwrapOrElse!"to!string(a+2)"() == "125");
     static assert(is(typeof(resultErr.unwrapOrElse!"`foo`"()) == string));
     assert(resultErr.unwrapOrElse!"`foo`"() == "foo");
+}
+
+// unwrapOrElse
+@safe nothrow unittest
+{
+    import std.conv : to;
+
+    auto f999(string s)
+    {
+        return 999;
+    }
+
+    auto fFoo(uint n)
+    {
+        return "Foo is " ~ to!string(n);
+    }
+
+    auto resultOk1 = Result!(int, string)(Ok!int(123));
+    static assert(is(typeof(resultOk1.unwrapOrElse(&f999)) == int));
+    assert(resultOk1.unwrapOrElse(&f999) == 123);
+
+    immutable resultOk2 = Result!(string, uint)(Ok!string("123"));
+    static assert(is(typeof(resultOk2.unwrapOrElse((uint a) => "456")) == string));
+    assert(resultOk2.unwrapOrElse!(to!string)() == "123");
+
+    auto resultErr = Result!(string, uint)(Err!uint(123));
+    static assert(is(typeof(resultErr.unwrapOrElse((uint a) => a.to!string)) == string));
+    assert(resultErr.unwrapOrElse((uint a) => a.to!string) == "123");
+    static assert(is(typeof(resultErr.unwrapOrElse(&fFoo)) == string));
+    assert(resultErr.unwrapOrElse(&fFoo) == "Foo is 123");
 }
 
 // unwrapUnchecked
