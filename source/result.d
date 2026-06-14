@@ -127,6 +127,25 @@ struct Result(T, E)
         static assert(is(typeof(result) == const(Result))); // <--
         return result.get!(const(Ok!T)).okValue;
     }
+
+    import std.functional : unaryFun;
+
+    /// Returns the contained `Ok!T` value.
+    /// If the value is an `Err!E`, calls `fun` with the value of `Err!E` and returns the resulting `Ok!T` value.
+    T unwrapOrElse(alias fun = "a")() const
+            if (is(typeof(unaryFun!fun(E.init)) : T))
+    {
+        import std.sumtype : get;
+
+        static assert(is(typeof(result) == const(Result))); // <--
+
+        if (this.isErr())
+        {
+            return unaryFun!fun(result.get!(const(Err!E)).errValue);
+        }
+
+        return result.get!(const(Ok!T)).okValue;
+    }
 }
 
 // Ctor
@@ -243,7 +262,7 @@ struct Result(T, E)
     assertThrown!UnwrapException(resultOk.unwrapErr());
 }
 
-// unwrapOp
+// unwrapOr
 @safe @nogc nothrow unittest
 {
     auto resultOk1 = Result!(int, string)(Ok!int(123));
@@ -257,4 +276,26 @@ struct Result(T, E)
     auto resultErr = Result!(string, uint)(Err!uint(123));
     static assert(is(typeof(resultErr.unwrapOr("456")) == string));
     assert(resultErr.unwrapOr("456") == "456");
+}
+
+// unwrapOrElse
+@safe nothrow unittest
+{
+    import std.conv : to;
+
+    auto resultOk1 = Result!(int, string)(Ok!int(123));
+    static assert(is(typeof(resultOk1.unwrapOrElse!"999"()) == int));
+    assert(resultOk1.unwrapOrElse!"999"() == 123);
+
+    immutable resultOk2 = Result!(string, uint)(Ok!string("123"));
+    static assert(is(typeof(resultOk2.unwrapOrElse!(to!string)()) == string));
+    assert(resultOk2.unwrapOrElse!(to!string)() == "123");
+
+    auto resultErr = Result!(string, uint)(Err!uint(123));
+    static assert(is(typeof(resultErr.unwrapOrElse!(to!string)()) == string));
+    assert(resultErr.unwrapOrElse!(to!string)() == "123");
+    static assert(is(typeof(resultErr.unwrapOrElse!"to!string(a+2)"()) == string));
+    assert(resultErr.unwrapOrElse!"to!string(a+2)"() == "125");
+    static assert(is(typeof(resultErr.unwrapOrElse!"`foo`"()) == string));
+    assert(resultErr.unwrapOrElse!"`foo`"() == "foo");
 }
