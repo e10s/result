@@ -92,10 +92,7 @@ struct Result(T, E)
             throw new UnwrapException("Bad"); // FIXME: message should be reasonable
         }
 
-        import std.sumtype : get;
-
-        static assert(is(typeof(result) == const(Result))); // <--
-        return result.get!(const(Ok!T)).okValue;
+        return unwrapUnchecked();
     }
 
     /// Returns the contained `Err!E` value.
@@ -107,6 +104,13 @@ struct Result(T, E)
             throw new UnwrapException("Bad"); // FIXME: message should be reasonable
         }
 
+        return unwrapErrUnchecked();
+    }
+
+    /// Returns the contained `Err!E` value.
+    /// without checking that the value is not an `Ok!T`.
+    E unwrapErrUnchecked() const
+    {
         import std.sumtype : get;
 
         static assert(is(typeof(result) == const(Result))); // <--
@@ -122,10 +126,7 @@ struct Result(T, E)
             return defaultValue;
         }
 
-        import std.sumtype : get;
-
-        static assert(is(typeof(result) == const(Result))); // <--
-        return result.get!(const(Ok!T)).okValue;
+        return unwrapUnchecked();
     }
 
     import std.functional : unaryFun;
@@ -144,6 +145,16 @@ struct Result(T, E)
             return unaryFun!fun(result.get!(const(Err!E)).errValue);
         }
 
+        return unwrapUnchecked();
+    }
+
+    /// Returns the containing `Ok!T` value,
+    /// without checking that the value is not an `Err!E`
+    T unwrapUnchecked() const
+    {
+        import std.sumtype : get;
+
+        static assert(is(typeof(result) == const(Result))); // <--
         return result.get!(const(Ok!T)).okValue;
     }
 }
@@ -262,6 +273,26 @@ struct Result(T, E)
     assertThrown!UnwrapException(resultOk.unwrapErr());
 }
 
+// unwrapErrUnchecked
+unittest
+{
+    import std.exception : assertThrown, assertNotThrown;
+    import core.exception : AssertError;
+
+    auto resultErr1 = Result!(int, string)(Err!string("123"));
+    static assert(is(typeof(resultErr1.unwrapErrUnchecked()) == string));
+    assert(resultErr1.unwrapErrUnchecked() == "123");
+    assertNotThrown!AssertError(resultErr1.unwrapErrUnchecked());
+
+    auto resultErr2 = Result!(string, uint)(Err!uint(123));
+    static assert(is(typeof(resultErr2.unwrapErrUnchecked()) == uint));
+    assert(resultErr2.unwrapErrUnchecked() == 123);
+    assertNotThrown!AssertError(resultErr2.unwrapErrUnchecked());
+
+    auto resultOk = Result!(string, uint)(Ok!string("123"));
+    assertThrown!AssertError(resultOk.unwrapErrUnchecked());
+}
+
 // unwrapOr
 @safe @nogc nothrow unittest
 {
@@ -298,4 +329,24 @@ struct Result(T, E)
     assert(resultErr.unwrapOrElse!"to!string(a+2)"() == "125");
     static assert(is(typeof(resultErr.unwrapOrElse!"`foo`"()) == string));
     assert(resultErr.unwrapOrElse!"`foo`"() == "foo");
+}
+
+// unwrapUnchecked
+unittest
+{
+    import std.exception : assertThrown, assertNotThrown;
+    import core.exception : AssertError;
+
+    auto resultOk1 = Result!(int, string)(Ok!int(123));
+    static assert(is(typeof(resultOk1.unwrapUnchecked()) == int));
+    assert(resultOk1.unwrapUnchecked() == 123);
+    assertNotThrown!AssertError(resultOk1.unwrapUnchecked());
+
+    auto resultOk2 = Result!(string, uint)(Ok!string("123"));
+    static assert(is(typeof(resultOk2.unwrapUnchecked()) == string));
+    assert(resultOk2.unwrapUnchecked() == "123");
+    assertNotThrown!AssertError(resultOk2.unwrapUnchecked());
+
+    auto resultErr = Result!(string, uint)(Err!uint(123));
+    assertThrown!AssertError(resultErr.unwrapUnchecked());
 }
