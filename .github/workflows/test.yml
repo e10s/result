@@ -7,8 +7,10 @@ jobs:
         strategy:
             fail-fast: false
             matrix:
-                os: [ubuntu-slim, windows-latest, macOS-latest]
+                os: [ubuntu-slim, windows-latest, macos-latest]
                 dc: [dmd, ldc]
+                exclude:
+                    - { os: macos-latest, dc: dmd }
         runs-on: ${{ matrix.os }}
         steps:
             - name: Checkout
