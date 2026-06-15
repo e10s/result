@@ -437,9 +437,7 @@ OkValueTypeOf!R tryUnwrap(R)(auto ref R result) if (isResult!R)
     import std.exception : assertThrown, assertNotThrown;
 
     auto resultOk = Result!(uint, string)(Ok!uint(2));
-    assert(tryUnwrap(resultOk) == 2);
-
-    import std.exception : assertThrown;
+    assert(assertNotThrown!UnwrapException(tryUnwrap(resultOk)) == 2);
 
     auto resultErr = Result!(uint, string)(Err!string("emergency failure"));
     assertThrown!UnwrapException(tryUnwrap(resultErr));
@@ -475,13 +473,13 @@ ErrValueTypeOf!R tryUnwrapErr(R)(auto ref R result) if (isResult!R)
 ///
 @safe unittest
 {
-    import std.exception : assertThrown;
+    import std.exception : assertThrown, assertNotThrown;
 
     auto resultOk = Result!(uint, string)(Ok!uint(2));
     assertThrown!UnwrapException(tryUnwrapErr(resultOk));
 
     auto resultErr = Result!(uint, string)(Err!string("emergency failure"));
-    assert(tryUnwrapErr(resultErr) == "emergency failure");
+    assert(assertNotThrown!UnwrapException(tryUnwrapErr(resultErr)) == "emergency failure");
 }
 
 @safe unittest
