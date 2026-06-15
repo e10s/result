@@ -59,117 +59,10 @@ struct Result(T, E)
     }
 
     /// Supports assignment of `Result!(T, E)`, `Ok!T` and `Err!E` values.
-    ref opAssign(R)(auto ref R value) if (is(typeof({ Result.init = R.init; })))
+    ref opAssign(R)(auto ref R rhs) if (is(typeof({ Result.init = R.init; })))
     {
-        this.result = value;
+        this.result = rhs;
         return this;
-    }
-
-    /// Returns `true` if `this` has an `Ok!T` value.
-    bool isOk() const
-    {
-        import std.sumtype : has;
-
-        static assert(is(typeof(result) == const(Result))); // <--
-        return result.has!(const(Ok!T)); // <--
-    }
-
-    /// Returns `true` if `this` has an `Err!E` value.
-    bool isErr() const
-    {
-        import std.sumtype : has;
-
-        static assert(is(typeof(result) == const(Result))); // <--
-        return result.has!(const(Err!E)); // <--
-    }
-
-    /// Returns the containing `Ok!T` value.
-    /// Throws `UnwrapException` if the value is an `Err!E`.
-    T unwrap() const
-    {
-        if (this.isErr())
-        {
-            throw new UnwrapException("Bad"); // FIXME: message should be reasonable
-        }
-
-        return unwrapUnchecked();
-    }
-
-    /// Returns the contained `Err!E` value.
-    /// Throws `UnwrapException` if the value is an `Ok!T`.
-    E unwrapErr() const
-    {
-        if (this.isOk())
-        {
-            throw new UnwrapException("Bad"); // FIXME: message should be reasonable
-        }
-
-        return unwrapErrUnchecked();
-    }
-
-    /// Returns the contained `Err!E` value.
-    /// without checking that the value is not an `Ok!T`.
-    E unwrapErrUnchecked() const
-    {
-        import std.sumtype : get;
-
-        static assert(is(typeof(result) == const(Result))); // <--
-        return result.get!(const(Err!E)).errValue;
-    }
-
-    /// Returns the contained `Ok!T` value.
-    /// Or returns the contained `defaultValue` if the value is an `Err!E`.
-    T unwrapOr(T defaultValue) const
-    {
-        if (this.isErr())
-        {
-            return defaultValue;
-        }
-
-        return unwrapUnchecked();
-    }
-
-    import std.functional : unaryFun;
-
-    /// Returns the contained `Ok!T` value.
-    /// If the value is an `Err!E`, calls `fun` with the value of `Err!E` and returns the resulting `Ok!T` value.
-    T unwrapOrElse(alias fun = "a")() const
-            if (is(typeof(unaryFun!fun(E.init)) : T))
-    {
-        import std.sumtype : get;
-
-        static assert(is(typeof(result) == const(Result))); // <--
-
-        if (this.isErr())
-        {
-            return unaryFun!fun(result.get!(const(Err!E)).errValue);
-        }
-
-        return unwrapUnchecked();
-    }
-
-    import std.traits : isCallable;
-
-    /// Ditto
-    T unwrapOrElse(F)(auto ref F fun) const
-            if (isCallable!F && is(typeof(fun(E.init)) : T))
-    {
-        if (this.isErr())
-        {
-            return fun(unwrapErrUnchecked);
-        }
-
-        return unwrapUnchecked();
-    }
-
-    /// Returns the containing `Ok!T` value,
-    /// without checking that the value is not an `Err!E`
-    T unwrapUnchecked() const
-    {
-        import std.sumtype : get;
-
-        static assert(is(typeof(result) == const(Result))); // <--
-        return result.get!(const(Ok!T)).okValue;
     }
 }
 
@@ -213,93 +106,216 @@ struct Result(T, E)
     assert(resultEither.get!(Err!dstring) == Err!dstring("1234"d));
 }
 
-// isOk
-@safe @nogc nothrow unittest
-{
-    auto resultOk = Result!(int, string)(Ok!int(123));
-    assert(resultOk.isOk());
-    const constResultOk = Result!(int, string)(Ok!int(123));
-    assert(constResultOk.isOk());
-    immutable immutableResultOk = Result!(int, string)(Ok!int(123));
-    assert(immutableResultOk.isOk());
+import std.traits : TemplateArgsOf, CopyTypeQualifiers;
 
-    auto resultErr = Result!(int, string)(Err!string("123"));
-    assert(!resultErr.isOk());
-    const constResultErr = Result!(int, string)(Err!string("123"));
-    assert(!constResultErr.isOk());
-    immutable immutableResultErr = Result!(int, string)(Err!string("123"));
-    assert(!immutableResultErr.isOk());
+alias OkTypeOf(R) = TemplateArgsOf!(typeof(R.result))[0];
+unittest
+{
+    alias R = Result!(int, string);
+    assert(is(OkTypeOf!R == Ok!int));
+    assert(is(OkTypeOf!(const(R)) == Ok!int));
+    assert(is(OkTypeOf!(immutable(R)) == Ok!int));
 }
 
-// isErr
+alias QualifiedOkTypeOf(R) = CopyTypeQualifiers!(R, OkTypeOf!R);
+unittest
+{
+    alias R = Result!(int, string);
+    assert(is(QualifiedOkTypeOf!R == Ok!int));
+    assert(is(QualifiedOkTypeOf!(const(R)) == const(Ok!int)));
+    assert(is(QualifiedOkTypeOf!(immutable(R)) == immutable(Ok!int)));
+}
+
+alias ErrTypeOf(R) = TemplateArgsOf!(typeof(R.result))[1];
+unittest
+{
+    alias R = Result!(int, string);
+    assert(is(ErrTypeOf!R == Err!string));
+    assert(is(ErrTypeOf!(const(R)) == Err!string));
+    assert(is(ErrTypeOf!(immutable(R)) == Err!string));
+}
+
+alias QualifiedErrTypeOf(R) = CopyTypeQualifiers!(R, ErrTypeOf!R);
+unittest
+{
+    alias R = Result!(int, string);
+    assert(is(QualifiedErrTypeOf!R == Err!string));
+    assert(is(QualifiedErrTypeOf!(const(R)) == const(Err!string)));
+    assert(is(QualifiedErrTypeOf!(immutable(R)) == immutable(Err!string)));
+}
+
+alias OkValueTypeOf(R) = TemplateArgsOf!(OkTypeOf!R)[0];
+unittest
+{
+    alias R = Result!(int, string);
+    assert(is(OkValueTypeOf!R == int));
+    assert(is(OkValueTypeOf!(const(R)) == int));
+    assert(is(OkValueTypeOf!(immutable(R)) == int));
+}
+
+alias ErrValueTypeOf(R) = TemplateArgsOf!(ErrTypeOf!R)[0];
+unittest
+{
+    alias R = Result!(int, string);
+    assert(is(ErrValueTypeOf!R == string));
+    assert(is(ErrValueTypeOf!(const(R)) == string));
+    assert(is(ErrValueTypeOf!(immutable(R)) == string));
+}
+
+enum bool isResult(R) = is(R : Result!(T, E), T, E);
+///
+unittest
+{
+    alias R = Result!(int, string);
+    assert(isResult!R);
+    assert(isResult!(const(R)));
+    assert(isResult!(immutable(R)));
+    assert(isResult!(shared(R)));
+}
+
+/// Returns `true` if `result` has an [Ok] value.
+bool isOk(R)(auto ref R result) if (isResult!R)
+{
+    import std.sumtype : match;
+
+    return result.result.match!((OkTypeOf!R _) => true, (ErrTypeOf!R _) => false);
+}
+
+///
 @safe @nogc nothrow unittest
 {
+    auto resultOk = Result!(int, string)(Ok!int(-3));
+    assert(isOk(resultOk));
+
+    auto resultErr = Result!(int, string)(Err!string("Some error message"));
+    assert(!isOk(resultErr));
+
+}
+
+@safe @nogc nothrow unittest
+{
+    const constResultOk = Result!(int, string)(Ok!int(123));
+    assert(isOk(constResultOk));
+
+    immutable immutableResultOk = Result!(int, string)(Ok!int(123));
+    assert(isOk(immutableResultOk));
+
     auto resultErr = Result!(int, string)(Err!string("123"));
-    assert(resultErr.isErr());
+    assert(!isOk(resultErr));
+
+    const constResultErr = Result!(int, string)(Err!string("123"));
+    assert(!isOk(constResultErr));
+
+    immutable immutableResultErr = Result!(int, string)(Err!string("123"));
+    assert(!isOk(immutableResultErr));
+}
+
+/// Returns `true` if `this` has an `Err!E` value.
+bool isErr(R)(auto ref R result) if (isResult!R)
+{
+    return !isOk(result);
+}
+
+///
+@safe @nogc nothrow unittest
+{
+    auto resultOk = Result!(int, string)(Ok!int(-3));
+    assert(!isErr(resultOk));
+
+    auto resultErr = Result!(int, string)(Err!string("Some error message"));
+    assert(isErr(resultErr));
+}
+
+@safe @nogc nothrow unittest
+{
     const constResultErr = Result!(int, string)(Err!string("123"));
     assert(constResultErr.isErr());
+
     immutable immutableResultErr = Result!(int, string)(Err!string("123"));
     assert(immutableResultErr.isErr());
 
     auto resultOk = Result!(int, string)(Ok!int(123));
     assert(!resultOk.isErr());
+
     const constResultOk = Result!(int, string)(Ok!int(123));
     assert(!constResultOk.isErr());
+
     immutable immutableResultOk = Result!(int, string)(Ok!int(123));
     assert(!immutableResultOk.isErr());
 }
 
-// unwrap
-@safe unittest
+/// Returns the containing `Ok!T` value,
+/// without checking that the value is not an `Err!E`
+OkValueTypeOf!R unwrapUnchecked(R)(auto ref R result) if (isResult!R)
+{
+    import std.sumtype : get;
+
+    return result.get!(QualifiedOkTypeOf!R).okValue;
+}
+
+///
+unittest
+{
+    auto resultOk = Result!(uint, string)(Ok!uint(2));
+    assert(unwrapUnchecked(resultOk) == 2);
+
+    import std.exception : assertThrown;
+    import core.exception : AssertError;
+
+    auto resultErr = Result!(uint, string)(Err!string("emergency failure"));
+    assertThrown!AssertError(unwrapUnchecked(resultErr)); // Assert will fail
+}
+
+unittest
 {
     import std.exception : assertThrown, assertNotThrown;
+    import core.exception : AssertError;
 
     auto resultOk1 = Result!(int, string)(Ok!int(123));
-    static assert(is(typeof(resultOk1.unwrap()) == int));
-    assert(resultOk1.unwrap() == 123);
-    assertNotThrown!UnwrapException(resultOk1.unwrap());
+    assert(resultOk1.unwrapUnchecked() == 123);
+    assertNotThrown!AssertError(resultOk1.unwrapUnchecked());
 
     auto resultOk2 = Result!(string, uint)(Ok!string("123"));
-    static assert(is(typeof(resultOk2.unwrap()) == string));
-    assert(resultOk2.unwrap() == "123");
-    assertNotThrown!UnwrapException(resultOk2.unwrap());
-
+    assert(resultOk2.unwrapUnchecked() == "123");
+    assertNotThrown!AssertError(resultOk2.unwrapUnchecked());
+    auto resultOk22 = Result!(string, uint)(Ok!string("123"));
+    assert(resultOk22.unwrapUnchecked() == "123");
     auto resultErr = Result!(string, uint)(Err!uint(123));
-    assertThrown!UnwrapException(resultErr.unwrap());
+    assertThrown!AssertError(resultErr.unwrapUnchecked());
 }
 
-// unwrapErr
-@safe unittest
+/// Returns the contained `Err!E` value.
+/// without checking that the value is not an `Ok!T`.
+ErrValueTypeOf!R unwrapErrUnchecked(R)(auto ref R result) if (isResult!R)
 {
-    import std.exception : assertThrown, assertNotThrown;
+    import std.sumtype : get;
 
-    auto resultErr1 = Result!(int, string)(Err!string("123"));
-    static assert(is(typeof(resultErr1.unwrapErr()) == string));
-    assert(resultErr1.unwrapErr() == "123");
-    assertNotThrown!UnwrapException(resultErr1.unwrapErr());
-
-    auto resultErr2 = Result!(string, uint)(Err!uint(123));
-    static assert(is(typeof(resultErr2.unwrapErr()) == uint));
-    assert(resultErr2.unwrapErr() == 123);
-    assertNotThrown!UnwrapException(resultErr2.unwrapErr());
-
-    auto resultOk = Result!(string, uint)(Ok!string("123"));
-    assertThrown!UnwrapException(resultOk.unwrapErr());
+    return result.get!(QualifiedErrTypeOf!R).errValue;
 }
 
-// unwrapErrUnchecked
+///
+unittest
+{
+    import std.exception : assertThrown;
+    import core.exception : AssertError;
+
+    auto resultOk = Result!(uint, string)(Ok!uint(2));
+    assertThrown!AssertError(unwrapErrUnchecked(resultOk));
+
+    auto resultErr = Result!(uint, string)(Err!string("emergency failure"));
+    assert(unwrapErrUnchecked(resultErr) == "emergency failure");
+}
+
 unittest
 {
     import std.exception : assertThrown, assertNotThrown;
     import core.exception : AssertError;
 
     auto resultErr1 = Result!(int, string)(Err!string("123"));
-    static assert(is(typeof(resultErr1.unwrapErrUnchecked()) == string));
     assert(resultErr1.unwrapErrUnchecked() == "123");
     assertNotThrown!AssertError(resultErr1.unwrapErrUnchecked());
 
     auto resultErr2 = Result!(string, uint)(Err!uint(123));
-    static assert(is(typeof(resultErr2.unwrapErrUnchecked()) == uint));
     assert(resultErr2.unwrapErrUnchecked() == 123);
     assertNotThrown!AssertError(resultErr2.unwrapErrUnchecked());
 
@@ -307,45 +323,199 @@ unittest
     assertThrown!AssertError(resultOk.unwrapErrUnchecked());
 }
 
-// unwrapOr
+/// Returns the containing `Ok!T` value.
+/// Throws `UnwrapException` if the value is an `Err!E`.
+OkValueTypeOf!R unwrap(R)(auto ref R result) if (isResult!R)
+{
+    if (isErr(result))
+    {
+        throw new UnwrapException("Bad"); // FIXME: message should be reasonable
+    }
+
+    return unwrapUnchecked(result);
+}
+
+///
+@safe unittest
+{
+    import std.exception : assertThrown, assertNotThrown;
+
+    auto resultOk = Result!(uint, string)(Ok!uint(2));
+    assert(unwrap(resultOk) == 2);
+
+    import std.exception : assertThrown;
+
+    auto resultErr = Result!(uint, string)(Err!string("emergency failure"));
+    assertThrown!UnwrapException(unwrap(resultErr));
+}
+
+@safe unittest
+{
+    import std.exception : assertThrown, assertNotThrown;
+
+    auto resultOk1 = Result!(int, string)(Ok!int(123));
+    assert(resultOk1.unwrap() == 123);
+    assertNotThrown!UnwrapException(resultOk1.unwrap());
+
+    auto resultOk2 = Result!(string, uint)(Ok!string("123"));
+    assert(resultOk2.unwrap() == "123");
+    assertNotThrown!UnwrapException(resultOk2.unwrap());
+
+    auto resultErr = Result!(string, uint)(Err!uint(123));
+    assertThrown!UnwrapException(resultErr.unwrap());
+}
+
+/// Returns the contained `Err!E` value.
+/// Throws `UnwrapException` if the value is an `Ok!T`.
+ErrValueTypeOf!R unwrapErr(R)(auto ref R result) if (isResult!R)
+{
+    if (isOk(result))
+    {
+        throw new UnwrapException("Bad"); // FIXME: message should be reasonable
+    }
+
+    return unwrapErrUnchecked(result);
+}
+
+///
+@safe unittest
+{
+    import std.exception : assertThrown;
+
+    auto resultOk = Result!(uint, string)(Ok!uint(2));
+    assertThrown!UnwrapException(unwrapErr(resultOk));
+
+    auto resultErr = Result!(uint, string)(Err!string("emergency failure"));
+    assert(unwrapErr(resultErr) == "emergency failure");
+}
+
+@safe unittest
+{
+    import std.exception : assertThrown, assertNotThrown;
+
+    auto resultErr1 = Result!(int, string)(Err!string("123"));
+    assert(resultErr1.unwrapErr() == "123");
+    assertNotThrown!UnwrapException(resultErr1.unwrapErr());
+
+    auto resultErr2 = Result!(string, uint)(Err!uint(123));
+    assert(resultErr2.unwrapErr() == 123);
+    assertNotThrown!UnwrapException(resultErr2.unwrapErr());
+
+    auto resultOk = Result!(string, uint)(Ok!string("123"));
+    assertThrown!UnwrapException(resultOk.unwrapErr());
+}
+
+/// Returns the contained `Ok!T` value.
+/// Or returns the contained `defaultValue` if the value is an `Err!E`.
+OkValueTypeOf!R unwrapOr(R, T)(auto ref R result, T defaultValue)
+        if (isResult!R && is(T : OkValueTypeOf!R))
+{
+    import std.sumtype : match;
+
+    return result.result.match!((OkTypeOf!R t) => t.okValue, (ErrTypeOf!R _) => defaultValue);
+}
+
+///
+@safe @nogc nothrow unittest
+{
+    immutable defaultValue = 2;
+    auto resultOk = Result!(uint, string)(Ok!uint(9));
+    assert(unwrapOr(resultOk, defaultValue) == 9);
+
+    auto resultErr = Result!(uint, string)(Err!string("error"));
+    assert(unwrapOr(resultErr, defaultValue) == defaultValue);
+}
+
 @safe @nogc nothrow unittest
 {
     auto resultOk1 = Result!(int, string)(Ok!int(123));
-    static assert(is(typeof(resultOk1.unwrapOr(456)) == int));
     assert(resultOk1.unwrapOr(456) == 123);
 
-    auto resultOk2 = Result!(string, uint)(Ok!string("123"));
-    static assert(is(typeof(resultOk2.unwrapOr("456")) == string));
+    const resultOk2 = Result!(string, uint)(Ok!string("123"));
     assert(resultOk2.unwrapOr("456") == "123");
 
     auto resultErr = Result!(string, uint)(Err!uint(123));
-    static assert(is(typeof(resultErr.unwrapOr("456")) == string));
     assert(resultErr.unwrapOr("456") == "456");
 }
 
-// unwrapOrElse
+import std.functional : unaryFun;
+
+/// Returns the contained `Ok!T` value.
+/// If the value is an `Err!E`, calls `fun` with the value of `Err!E` and returns the resulting `Ok!T` value.
+OkValueTypeOf!R unwrapOrElse(alias fun = "a", R)(auto ref R result)
+        if (isResult!R && is(typeof(unaryFun!fun(ErrValueTypeOf!R.init)) : OkValueTypeOf!R))
+{
+    import std.sumtype : match;
+
+    return result.result.match!((OkTypeOf!R t) => t.okValue,
+            (ErrTypeOf!R e) => unaryFun!fun(e.errValue));
+}
+
+///
+@safe nothrow unittest
+{
+    alias count = x => x.length;
+
+    auto resultOk = Result!(size_t, string)(Ok!size_t(2));
+    assert(unwrapOrElse!count(resultOk) == 2);
+
+    auto resultErr = Result!(size_t, string)(Err!string("foo"));
+    assert(unwrapOrElse!count(resultErr) == 3);
+    assert(unwrapOrElse!`a.length`(resultErr) == 3);
+}
+
 @safe nothrow unittest
 {
     import std.conv : to;
 
+    auto f999(string s)
+    {
+        return 999;
+    }
+
+    auto fFoo(uint n)
+    {
+        return "Foo is " ~ to!string(n);
+    }
+
     auto resultOk1 = Result!(int, string)(Ok!int(123));
-    static assert(is(typeof(resultOk1.unwrapOrElse!"999"()) == int));
     assert(resultOk1.unwrapOrElse!"999"() == 123);
+    assert(resultOk1.unwrapOrElse!f999() == 123);
 
     immutable resultOk2 = Result!(string, uint)(Ok!string("123"));
-    static assert(is(typeof(resultOk2.unwrapOrElse!(to!string)()) == string));
     assert(resultOk2.unwrapOrElse!(to!string)() == "123");
+    assert(resultOk2.unwrapOrElse!fFoo() == "123");
 
     auto resultErr = Result!(string, uint)(Err!uint(123));
-    static assert(is(typeof(resultErr.unwrapOrElse!(to!string)()) == string));
     assert(resultErr.unwrapOrElse!(to!string)() == "123");
-    static assert(is(typeof(resultErr.unwrapOrElse!"to!string(a+2)"()) == string));
     assert(resultErr.unwrapOrElse!"to!string(a+2)"() == "125");
-    static assert(is(typeof(resultErr.unwrapOrElse!"`foo`"()) == string));
     assert(resultErr.unwrapOrElse!"`foo`"() == "foo");
+    assert(resultErr.unwrapOrElse!fFoo() == "Foo is 123");
 }
 
-// unwrapOrElse
+import std.traits : isCallable;
+
+/// Ditto
+OkValueTypeOf!R unwrapOrElse(F, R)(auto ref R result, auto ref F fun)
+        if (isCallable!F && is(typeof(fun(ErrValueTypeOf!R.init)) : OkValueTypeOf!R))
+{
+    import std.sumtype : match;
+
+    return result.result.match!((OkTypeOf!R t) => t.okValue, (ErrTypeOf!R e) => fun(e.errValue));
+}
+
+///
+@safe nothrow unittest
+{
+    auto count = (string x) => x.length;
+
+    auto resultOk = Result!(size_t, string)(Ok!size_t(2));
+    assert(unwrapOrElse(resultOk, count) == 2);
+
+    auto resultErr = Result!(size_t, string)(Err!string("foo"));
+    assert(unwrapOrElse(resultErr, count) == 3);
+}
+
 @safe nothrow unittest
 {
     import std.conv : to;
@@ -373,24 +543,4 @@ unittest
     assert(resultErr.unwrapOrElse((uint a) => a.to!string) == "123");
     static assert(is(typeof(resultErr.unwrapOrElse(&fFoo)) == string));
     assert(resultErr.unwrapOrElse(&fFoo) == "Foo is 123");
-}
-
-// unwrapUnchecked
-unittest
-{
-    import std.exception : assertThrown, assertNotThrown;
-    import core.exception : AssertError;
-
-    auto resultOk1 = Result!(int, string)(Ok!int(123));
-    static assert(is(typeof(resultOk1.unwrapUnchecked()) == int));
-    assert(resultOk1.unwrapUnchecked() == 123);
-    assertNotThrown!AssertError(resultOk1.unwrapUnchecked());
-
-    auto resultOk2 = Result!(string, uint)(Ok!string("123"));
-    static assert(is(typeof(resultOk2.unwrapUnchecked()) == string));
-    assert(resultOk2.unwrapUnchecked() == "123");
-    assertNotThrown!AssertError(resultOk2.unwrapUnchecked());
-
-    auto resultErr = Result!(string, uint)(Err!uint(123));
-    assertThrown!AssertError(resultErr.unwrapUnchecked());
 }
