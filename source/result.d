@@ -76,13 +76,59 @@ struct Result(T, E)
     assert(!resultOk.has!(Err!string));
     assert(resultOk.get!(Ok!int) == Ok!int(123));
 
-    Result!(bool, dstring) resultErr = Err!dstring("123"d);
+    const constResultOk = Result!(int, string)(Ok!int(123));
+    assert(!constResultOk.has!(Ok!int));
+    assert(!constResultOk.has!(Err!string));
+    assert(constResultOk.has!(const(Ok!int)));
+    assert(!constResultOk.has!(const(Err!string)));
+    assert(constResultOk.get!(const(Ok!int)) == Ok!int(123));
+
+    immutable immutableResultOk = Result!(int, string)(Ok!int(123));
+    assert(!immutableResultOk.has!(Ok!int));
+    assert(!immutableResultOk.has!(Err!string));
+    assert(immutableResultOk.has!(immutable(Ok!int)));
+    assert(!immutableResultOk.has!(immutable(Err!string)));
+    assert(immutableResultOk.get!(immutable(Ok!int)) == Ok!int(123));
+
+    auto resultErr = Result!(bool, dstring)(Err!dstring("123"d));
     assert(resultErr.has!(Err!dstring));
     assert(!resultErr.has!(Ok!bool));
     assert(resultErr.get!(Err!dstring) == Err!dstring("123"d));
 
-    auto newResult = Result!(bool, dstring)(resultErr);
-    assert(newResult.get!(Err!dstring) == Err!dstring("123"d));
+    const constResultErr = Result!(bool, dstring)(Err!dstring("123"d));
+    assert(!constResultErr.has!(Ok!bool));
+    assert(!constResultErr.has!(Err!dstring));
+    assert(!constResultErr.has!(const(Ok!bool)));
+    assert(constResultErr.has!(const(Err!dstring)));
+    assert(constResultErr.get!(const(Err!dstring)) == Err!dstring("123"d));
+
+    immutable immutableResultErr = Result!(bool, dstring)(Err!dstring("123"d));
+    assert(!immutableResultErr.has!(Ok!bool));
+    assert(!immutableResultErr.has!(Err!dstring));
+    assert(!immutableResultErr.has!(immutable(Ok!bool)));
+    assert(immutableResultErr.has!(immutable(Err!dstring)));
+    assert(immutableResultErr.get!(immutable(Err!dstring)) == Err!dstring("123"d));
+
+    auto newResult1 = Result!(bool, dstring)(resultErr);
+    assert(newResult1.has!(Err!dstring));
+    auto newResult2 = Result!(bool, dstring)(constResultErr);
+    assert(newResult2.has!(Err!dstring));
+    auto newResult3 = Result!(bool, dstring)(immutableResultErr);
+    assert(newResult3.has!(Err!dstring));
+
+    const newConstResult1 = Result!(bool, dstring)(resultErr);
+    assert(newConstResult1.has!(const(Err!dstring)));
+    const newConstResult2 = Result!(bool, dstring)(constResultErr);
+    assert(newConstResult2.has!(const(Err!dstring)));
+    const newConstResult3 = Result!(bool, dstring)(immutableResultErr);
+    assert(newConstResult3.has!(const(Err!dstring)));
+
+    immutable newImmutableResult1 = Result!(bool, dstring)(resultErr);
+    assert(newImmutableResult1.has!(immutable(Err!dstring)));
+    immutable newImmutableResult2 = Result!(bool, dstring)(constResultErr);
+    assert(newImmutableResult2.has!(immutable(Err!dstring)));
+    immutable newImmutableResult3 = Result!(bool, dstring)(immutableResultErr);
+    assert(newImmutableResult3.has!(immutable(Err!dstring)));
 }
 
 // opAssign
