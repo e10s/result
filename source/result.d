@@ -425,11 +425,9 @@ unittest
 @("Unique to D")
 OkValueTypeOf!R tryUnwrap(R)(auto ref R result) if (isResult!R)
 {
-    if (isErr(result))
-    {
-        throw new UnwrapException("Bad"); // FIXME: message should be reasonable
-    }
+    import std.exception : enforce;
 
+    enforce!UnwrapException(isOk(result), "Result does not have an Ok value.");
     return unwrapUnchecked(result);
 }
 
@@ -468,11 +466,9 @@ OkValueTypeOf!R tryUnwrap(R)(auto ref R result) if (isResult!R)
 @("Unique to D")
 ErrValueTypeOf!R tryUnwrapErr(R)(auto ref R result) if (isResult!R)
 {
-    if (isOk(result))
-    {
-        throw new UnwrapException("Bad"); // FIXME: message should be reasonable
-    }
+    import std.exception : enforce;
 
+    enforce!UnwrapException(isErr(result), "Result does not have an Err value.");
     return unwrapErrUnchecked(result);
 }
 
