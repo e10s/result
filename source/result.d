@@ -136,20 +136,36 @@ struct Result(T, E)
 {
     import std.sumtype : get;
 
-    auto resultOk = Result!(int, string)(Ok!int(123));
-    resultOk = Ok!int(1234);
-    assert(resultOk.get!(Ok!int) == Ok!int(1234));
+    Result!(int, string) result1, result2;
 
-    auto resultErr = Result!(bool, dstring)(Err!dstring("123"d));
-    resultErr = Err!dstring("1234"d);
-    assert(resultErr.get!(Err!dstring) == Err!dstring("1234"d));
+    result1 = Ok!int(10);
+    assert(result1.get!(Ok!int) == Ok!int(10));
 
-    auto resultEither = Result!(bool, dstring)(Err!dstring("123"d));
-    resultEither = Ok!bool(false);
-    assert(resultEither.get!(Ok!bool) == Ok!bool(false));
+    result1 = const(Ok!int)(20);
+    assert(result1.get!(Ok!int) == Ok!int(20));
 
-    resultEither = resultErr;
-    assert(resultEither.get!(Err!dstring) == Err!dstring("1234"d));
+    result1 = immutable(Ok!int)(30);
+    assert(result1.get!(Ok!int) == Ok!int(30));
+
+    result1 = Err!string("11");
+    assert(result1.get!(Err!string) == Err!string("11"));
+
+    result1 = const(Err!string)("22");
+    assert(result1.get!(Err!string) == Err!string("22"));
+
+    result1 = immutable(Err!string)("33");
+    assert(result1.get!(Err!string) == Err!string("33"));
+
+    result2 = result1;
+    assert(result2.get!(Err!string) == Err!string("33"));
+
+    const result3 = Result!(int, string)(Ok!int(100));
+    result2 = result3;
+    assert(result2.get!(Ok!int) == Ok!int(100));
+
+    immutable result4 = Result!(int, string)(Err!string("1000"));
+    result2 = result4;
+    assert(result2.get!(Err!string) == Err!string("1000"));
 }
 
 import std.traits : TemplateArgsOf, CopyTypeQualifiers;
