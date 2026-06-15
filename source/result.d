@@ -168,64 +168,9 @@ struct Result(T, E)
     assert(result2.get!(Err!string) == Err!string("1000"));
 }
 
-import std.traits : TemplateArgsOf, CopyTypeQualifiers;
+/* Convenience templates begin */
+private enum bool isResult(R) = is(R : Result!(T, E), T, E);
 
-alias OkTypeOf(R) = TemplateArgsOf!(typeof(R.payload))[0];
-unittest
-{
-    alias R = Result!(int, string);
-    assert(is(OkTypeOf!R == Ok!int));
-    assert(is(OkTypeOf!(const(R)) == Ok!int));
-    assert(is(OkTypeOf!(immutable(R)) == Ok!int));
-}
-
-alias QualifiedOkTypeOf(R) = CopyTypeQualifiers!(R, OkTypeOf!R);
-unittest
-{
-    alias R = Result!(int, string);
-    assert(is(QualifiedOkTypeOf!R == Ok!int));
-    assert(is(QualifiedOkTypeOf!(const(R)) == const(Ok!int)));
-    assert(is(QualifiedOkTypeOf!(immutable(R)) == immutable(Ok!int)));
-}
-
-alias ErrTypeOf(R) = TemplateArgsOf!(typeof(R.payload))[1];
-unittest
-{
-    alias R = Result!(int, string);
-    assert(is(ErrTypeOf!R == Err!string));
-    assert(is(ErrTypeOf!(const(R)) == Err!string));
-    assert(is(ErrTypeOf!(immutable(R)) == Err!string));
-}
-
-alias QualifiedErrTypeOf(R) = CopyTypeQualifiers!(R, ErrTypeOf!R);
-unittest
-{
-    alias R = Result!(int, string);
-    assert(is(QualifiedErrTypeOf!R == Err!string));
-    assert(is(QualifiedErrTypeOf!(const(R)) == const(Err!string)));
-    assert(is(QualifiedErrTypeOf!(immutable(R)) == immutable(Err!string)));
-}
-
-alias OkValueTypeOf(R) = TemplateArgsOf!(OkTypeOf!R)[0];
-unittest
-{
-    alias R = Result!(int, string);
-    assert(is(OkValueTypeOf!R == int));
-    assert(is(OkValueTypeOf!(const(R)) == int));
-    assert(is(OkValueTypeOf!(immutable(R)) == int));
-}
-
-alias ErrValueTypeOf(R) = TemplateArgsOf!(ErrTypeOf!R)[0];
-unittest
-{
-    alias R = Result!(int, string);
-    assert(is(ErrValueTypeOf!R == string));
-    assert(is(ErrValueTypeOf!(const(R)) == string));
-    assert(is(ErrValueTypeOf!(immutable(R)) == string));
-}
-
-enum bool isResult(R) = is(R : Result!(T, E), T, E);
-///
 unittest
 {
     alias R = Result!(int, string);
@@ -234,6 +179,97 @@ unittest
     assert(isResult!(immutable(R)));
     assert(isResult!(shared(R)));
 }
+
+private template OkTypeOf(R) if (isResult!R)
+{
+    import std.traits : TemplateArgsOf;
+
+    alias OkTypeOf = TemplateArgsOf!(typeof(R.payload))[0];
+}
+
+unittest
+{
+    alias R = Result!(int, string);
+    assert(is(OkTypeOf!R == Ok!int));
+    assert(is(OkTypeOf!(const(R)) == Ok!int));
+    assert(is(OkTypeOf!(immutable(R)) == Ok!int));
+}
+
+private template QualifiedOkTypeOf(R) if (isResult!R)
+{
+    import std.traits : CopyTypeQualifiers;
+
+    alias QualifiedOkTypeOf = CopyTypeQualifiers!(R, OkTypeOf!R);
+}
+
+unittest
+{
+    alias R = Result!(int, string);
+    assert(is(QualifiedOkTypeOf!R == Ok!int));
+    assert(is(QualifiedOkTypeOf!(const(R)) == const(Ok!int)));
+    assert(is(QualifiedOkTypeOf!(immutable(R)) == immutable(Ok!int)));
+}
+
+private template ErrTypeOf(R) if (isResult!R)
+{
+    import std.traits : TemplateArgsOf;
+
+    alias ErrTypeOf = TemplateArgsOf!(typeof(R.payload))[1];
+}
+
+unittest
+{
+    alias R = Result!(int, string);
+    assert(is(ErrTypeOf!R == Err!string));
+    assert(is(ErrTypeOf!(const(R)) == Err!string));
+    assert(is(ErrTypeOf!(immutable(R)) == Err!string));
+}
+
+private template QualifiedErrTypeOf(R) if (isResult!R)
+{
+    import std.traits : CopyTypeQualifiers;
+
+    alias QualifiedErrTypeOf = CopyTypeQualifiers!(R, ErrTypeOf!R);
+}
+
+unittest
+{
+    alias R = Result!(int, string);
+    assert(is(QualifiedErrTypeOf!R == Err!string));
+    assert(is(QualifiedErrTypeOf!(const(R)) == const(Err!string)));
+    assert(is(QualifiedErrTypeOf!(immutable(R)) == immutable(Err!string)));
+}
+
+private template OkValueTypeOf(R) if (isResult!R)
+{
+    import std.traits : TemplateArgsOf;
+
+    alias OkValueTypeOf = TemplateArgsOf!(OkTypeOf!R)[0];
+}
+
+unittest
+{
+    alias R = Result!(int, string);
+    assert(is(OkValueTypeOf!R == int));
+    assert(is(OkValueTypeOf!(const(R)) == int));
+    assert(is(OkValueTypeOf!(immutable(R)) == int));
+}
+
+private template ErrValueTypeOf(R) if (isResult!R)
+{
+    import std.traits : TemplateArgsOf;
+
+    alias ErrValueTypeOf = TemplateArgsOf!(ErrTypeOf!R)[0];
+}
+
+unittest
+{
+    alias R = Result!(int, string);
+    assert(is(ErrValueTypeOf!R == string));
+    assert(is(ErrValueTypeOf!(const(R)) == string));
+    assert(is(ErrValueTypeOf!(immutable(R)) == string));
+}
+/* Convenience templates end */
 
 /// Returns `true` if `result` has an [Ok] value.
 bool isOk(R)(auto ref R result) if (isResult!R)
