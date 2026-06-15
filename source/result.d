@@ -4,14 +4,14 @@ module result;
 struct Ok(T)
 {
     ///
-    T okValue;
-    alias okValue this;
+    T value;
+    alias value this;
 }
 
 ///
 @safe @nogc nothrow unittest
 {
-    assert(Ok!int(314).okValue == 314);
+    assert(Ok!int(314).value == 314);
     assert(Ok!int(314) == 314); // alias this
     assert(Ok!string("Good day.") == "Good day."); // alias this
 }
@@ -20,14 +20,14 @@ struct Ok(T)
 struct Err(E)
 {
     ///
-    E errValue;
-    alias errValue this;
+    E value;
+    alias value this;
 }
 
 ///
 @safe @nogc nothrow unittest
 {
-    assert(Err!int(314).errValue == 314);
+    assert(Err!int(314).value == 314);
     assert(Err!int(314) == 314); // alias this
     assert(Err!string("Good day.") == "Good day."); // alias this
 }
@@ -49,19 +49,19 @@ struct Result(T, E)
 
     ///
     alias Result = SumType!(Ok!T, Err!E);
-    Result result;
-    alias result this;
+    Result payload;
+    alias payload this;
 
     /// The constructor accepts `Result!(T, E)`, `Ok!T` and `Err!E` values.
     this(R)(auto ref R value) if (is(typeof({ Result.init = R.init; })))
     {
-        this.result = value;
+        payload = value;
     }
 
     /// Supports assignment of `Result!(T, E)`, `Ok!T` and `Err!E` values.
     ref opAssign(R)(auto ref R rhs) if (is(typeof({ Result.init = R.init; })))
     {
-        this.result = rhs;
+        payload = rhs;
         return this;
     }
 }
@@ -108,7 +108,7 @@ struct Result(T, E)
 
 import std.traits : TemplateArgsOf, CopyTypeQualifiers;
 
-alias OkTypeOf(R) = TemplateArgsOf!(typeof(R.result))[0];
+alias OkTypeOf(R) = TemplateArgsOf!(typeof(R.payload))[0];
 unittest
 {
     alias R = Result!(int, string);
@@ -126,7 +126,7 @@ unittest
     assert(is(QualifiedOkTypeOf!(immutable(R)) == immutable(Ok!int)));
 }
 
-alias ErrTypeOf(R) = TemplateArgsOf!(typeof(R.result))[1];
+alias ErrTypeOf(R) = TemplateArgsOf!(typeof(R.payload))[1];
 unittest
 {
     alias R = Result!(int, string);
@@ -178,7 +178,7 @@ bool isOk(R)(auto ref R result) if (isResult!R)
 {
     import std.sumtype : match;
 
-    return result.result.match!((OkTypeOf!R _) => true, (ErrTypeOf!R _) => false);
+    return result.payload.match!((OkTypeOf!R _) => true, (ErrTypeOf!R _) => false);
 }
 
 ///
@@ -189,7 +189,6 @@ bool isOk(R)(auto ref R result) if (isResult!R)
 
     auto resultErr = Result!(int, string)(Err!string("Some error message"));
     assert(!isOk(resultErr));
-
 }
 
 @safe @nogc nothrow unittest
@@ -250,7 +249,7 @@ OkValueTypeOf!R unwrapUnchecked(R)(auto ref R result) if (isResult!R)
 {
     import std.sumtype : get;
 
-    return result.get!(QualifiedOkTypeOf!R).okValue;
+    return result.payload.get!(QualifiedOkTypeOf!R).value;
 }
 
 ///
@@ -290,7 +289,7 @@ ErrValueTypeOf!R unwrapErrUnchecked(R)(auto ref R result) if (isResult!R)
 {
     import std.sumtype : get;
 
-    return result.get!(QualifiedErrTypeOf!R).errValue;
+    return result.payload.get!(QualifiedErrTypeOf!R).value;
 }
 
 ///
@@ -412,7 +411,7 @@ OkValueTypeOf!R unwrapOr(R, T)(auto ref R result, T defaultValue)
 {
     import std.sumtype : match;
 
-    return result.result.match!((OkTypeOf!R t) => t.okValue, (ErrTypeOf!R _) => defaultValue);
+    return result.payload.match!((OkTypeOf!R t) => t.value, (ErrTypeOf!R _) => defaultValue);
 }
 
 ///
@@ -447,8 +446,8 @@ OkValueTypeOf!R unwrapOrElse(alias fun = "a", R)(auto ref R result)
 {
     import std.sumtype : match;
 
-    return result.result.match!((OkTypeOf!R t) => t.okValue,
-            (ErrTypeOf!R e) => unaryFun!fun(e.errValue));
+    return result.payload.match!((OkTypeOf!R t) => t.value,
+            (ErrTypeOf!R e) => unaryFun!fun(e.value));
 }
 
 ///
@@ -501,7 +500,7 @@ OkValueTypeOf!R unwrapOrElse(F, R)(auto ref R result, auto ref F fun)
 {
     import std.sumtype : match;
 
-    return result.result.match!((OkTypeOf!R t) => t.okValue, (ErrTypeOf!R e) => fun(e.errValue));
+    return result.payload.match!((OkTypeOf!R t) => t.value, (ErrTypeOf!R e) => fun(e.value));
 }
 
 ///
