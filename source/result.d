@@ -422,7 +422,8 @@ unittest
 
 /// Returns the containing `Ok!T` value.
 /// Throws `UnwrapException` if the value is an `Err!E`.
-OkValueTypeOf!R unwrap(R)(auto ref R result) if (isResult!R)
+@("Unique to D")
+OkValueTypeOf!R tryUnwrap(R)(auto ref R result) if (isResult!R)
 {
     if (isErr(result))
     {
@@ -438,12 +439,12 @@ OkValueTypeOf!R unwrap(R)(auto ref R result) if (isResult!R)
     import std.exception : assertThrown, assertNotThrown;
 
     auto resultOk = Result!(uint, string)(Ok!uint(2));
-    assert(unwrap(resultOk) == 2);
+    assert(tryUnwrap(resultOk) == 2);
 
     import std.exception : assertThrown;
 
     auto resultErr = Result!(uint, string)(Err!string("emergency failure"));
-    assertThrown!UnwrapException(unwrap(resultErr));
+    assertThrown!UnwrapException(tryUnwrap(resultErr));
 }
 
 @safe unittest
@@ -451,20 +452,21 @@ OkValueTypeOf!R unwrap(R)(auto ref R result) if (isResult!R)
     import std.exception : assertThrown, assertNotThrown;
 
     auto resultOk1 = Result!(int, string)(Ok!int(123));
-    assert(resultOk1.unwrap() == 123);
-    assertNotThrown!UnwrapException(resultOk1.unwrap());
+    assert(resultOk1.tryUnwrap() == 123);
+    assertNotThrown!UnwrapException(resultOk1.tryUnwrap());
 
     auto resultOk2 = Result!(string, uint)(Ok!string("123"));
-    assert(resultOk2.unwrap() == "123");
-    assertNotThrown!UnwrapException(resultOk2.unwrap());
+    assert(resultOk2.tryUnwrap() == "123");
+    assertNotThrown!UnwrapException(resultOk2.tryUnwrap());
 
     auto resultErr = Result!(string, uint)(Err!uint(123));
-    assertThrown!UnwrapException(resultErr.unwrap());
+    assertThrown!UnwrapException(resultErr.tryUnwrap());
 }
 
 /// Returns the contained `Err!E` value.
 /// Throws `UnwrapException` if the value is an `Ok!T`.
-ErrValueTypeOf!R unwrapErr(R)(auto ref R result) if (isResult!R)
+@("Unique to D")
+ErrValueTypeOf!R tryUnwrapErr(R)(auto ref R result) if (isResult!R)
 {
     if (isOk(result))
     {
@@ -480,10 +482,10 @@ ErrValueTypeOf!R unwrapErr(R)(auto ref R result) if (isResult!R)
     import std.exception : assertThrown;
 
     auto resultOk = Result!(uint, string)(Ok!uint(2));
-    assertThrown!UnwrapException(unwrapErr(resultOk));
+    assertThrown!UnwrapException(tryUnwrapErr(resultOk));
 
     auto resultErr = Result!(uint, string)(Err!string("emergency failure"));
-    assert(unwrapErr(resultErr) == "emergency failure");
+    assert(tryUnwrapErr(resultErr) == "emergency failure");
 }
 
 @safe unittest
@@ -491,15 +493,15 @@ ErrValueTypeOf!R unwrapErr(R)(auto ref R result) if (isResult!R)
     import std.exception : assertThrown, assertNotThrown;
 
     auto resultErr1 = Result!(int, string)(Err!string("123"));
-    assert(resultErr1.unwrapErr() == "123");
-    assertNotThrown!UnwrapException(resultErr1.unwrapErr());
+    assert(resultErr1.tryUnwrapErr() == "123");
+    assertNotThrown!UnwrapException(resultErr1.tryUnwrapErr());
 
     auto resultErr2 = Result!(string, uint)(Err!uint(123));
-    assert(resultErr2.unwrapErr() == 123);
-    assertNotThrown!UnwrapException(resultErr2.unwrapErr());
+    assert(resultErr2.tryUnwrapErr() == 123);
+    assertNotThrown!UnwrapException(resultErr2.tryUnwrapErr());
 
     auto resultOk = Result!(string, uint)(Ok!string("123"));
-    assertThrown!UnwrapException(resultOk.unwrapErr());
+    assertThrown!UnwrapException(resultOk.tryUnwrapErr());
 }
 
 /// Returns the contained `Ok!T` value.
