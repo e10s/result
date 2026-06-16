@@ -488,6 +488,58 @@ bool isErrAnd(alias pred = "a", R)(auto ref R result)
     assert(!isErrAnd!isNumeric(resultErr2));
 }
 
+/// Ditto
+bool isErrAnd(F, R)(auto ref R result, auto ref F pred)
+        if (isCallable!F && is(typeof(unaryFun!pred(ErrValueTypeOf!R.init))))
+{
+    import std.sumtype : match;
+
+    return result.payload.match!((OkTypeOf!R _) => false,
+            (ErrTypeOf!R e) => unaryFun!pred(e.value) && true);
+}
+
+///
+@safe nothrow unittest
+{
+    auto resultErr1 = Result!(uint, string)(Err!string("!!!"));
+    assert(isErrAnd(resultErr1, (string e) => e == "!!!") == true);
+
+    auto resultErr2 = Result!(uint, string)(Err!string("?"));
+    assert(isErrAnd(resultErr2, (string e) => e == "!!!") == false);
+
+    auto resultOk = Result!(uint, string)(Ok!uint(123));
+    assert(isErrAnd(resultOk, (string e) => e == "!!!") == false);
+}
+
+@safe nothrow unittest
+{
+    auto somePred(string s)
+    {
+        return s.length > 2 && s[$ - 2] == '2';
+    }
+
+    auto resultOk = Result!(int, string)(Ok!int(123));
+    assert(!isErrAnd(resultOk, &somePred));
+
+    const constResultOk = Result!(int, string)(Ok!int(123));
+    assert(!isErrAnd(constResultOk, &somePred));
+
+    immutable immutableResultOk = Result!(int, string)(Ok!int(123));
+    assert(!isErrAnd(immutableResultOk, &somePred));
+
+    auto resultErr = Result!(int, string)(Err!string("123"));
+    assert(isErrAnd(resultErr, &somePred));
+
+    const constResultErr = Result!(int, string)(Err!string("123"));
+    assert(isErrAnd(constResultErr, &somePred));
+
+    immutable immutableResultErr = Result!(int, string)(Err!string("123"));
+    assert(isErrAnd(immutableResultErr, &somePred));
+
+    auto resultErr2 = Result!(int, string)(Err!string("Good morning, 007."));
+    assert(!isErrAnd(resultErr2, &somePred));
+}
+
 /// Returns the containing `Ok!T` value.
 OkValueTypeOf!R unwrap(R)(auto ref R result) if (isResult!R)
 {
