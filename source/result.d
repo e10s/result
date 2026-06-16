@@ -182,9 +182,7 @@ unittest
 
 private template OkTypeOf(R) if (isResult!R)
 {
-    import std.traits : TemplateArgsOf;
-
-    alias OkTypeOf = TemplateArgsOf!(typeof(R.payload))[0];
+    alias OkTypeOf = R.payload.Types[0];
 }
 
 unittest
@@ -212,9 +210,7 @@ unittest
 
 private template ErrTypeOf(R) if (isResult!R)
 {
-    import std.traits : TemplateArgsOf;
-
-    alias ErrTypeOf = TemplateArgsOf!(typeof(R.payload))[1];
+    alias ErrTypeOf = R.payload.Types[1];
 }
 
 unittest
