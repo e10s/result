@@ -341,10 +341,11 @@ bool isErr(R)(auto ref R result) if (isResult!R)
     assert(!immutableResultOk.isErr());
 }
 
-/// Returns the containing `Ok!T` value,
-/// without checking that the value is not an `Err!E`
+/// Returns the containing `Ok!T` value.
 OkValueTypeOf!R unwrap(R)(auto ref R result) if (isResult!R)
 {
+    assert(isOk(result), "Result does not have an Ok value.");
+
     import std.sumtype : get;
 
     return result.payload.get!(QualifiedOkTypeOf!R).value;
@@ -382,9 +383,10 @@ unittest
 }
 
 /// Returns the contained `Err!E` value.
-/// without checking that the value is not an `Ok!T`.
 ErrValueTypeOf!R unwrapErr(R)(auto ref R result) if (isResult!R)
 {
+    assert(isErr(result), "Result does not have an Err value.");
+
     import std.sumtype : get;
 
     return result.payload.get!(QualifiedErrTypeOf!R).value;
