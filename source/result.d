@@ -356,6 +356,57 @@ bool isOkAnd(alias pred = "a", R)(auto ref R result)
     assert(!isOkAnd!isOdd(immutableResultErr));
 }
 
+import std.traits : isCallable;
+
+/// Ditto
+bool isOkAnd(F, R)(auto ref R result, auto ref F pred)
+        if (isCallable!F && is(typeof(unaryFun!pred(OkValueTypeOf!R.init))))
+{
+    import std.sumtype : match;
+
+    return result.payload.match!((OkTypeOf!R t) => unaryFun!pred(t.value)
+            && true, (ErrTypeOf!R _) => false);
+}
+
+///
+@safe nothrow unittest
+{
+    auto resultOk1 = Result!(uint, string)(Ok!uint(2));
+    assert(isOkAnd(resultOk1, (uint a) => a > 1) == true);
+
+    auto resultOk2 = Result!(uint, string)(Ok!uint(0));
+    assert(isOkAnd(resultOk2, (uint a) => a > 1) == false);
+
+    auto resultErr = Result!(uint, string)(Err!string("hey"));
+    assert(isOkAnd(resultErr, (uint a) => a > 1) == false);
+}
+
+@safe nothrow unittest
+{
+    size_t isOdd(int n)
+    {
+        return n & 1;
+    }
+
+    auto resultOk = Result!(int, string)(Ok!int(123));
+    assert(isOkAnd(resultOk, &isOdd));
+
+    const constResultOk = Result!(int, string)(Ok!int(123));
+    assert(isOkAnd(constResultOk, &isOdd));
+
+    immutable immutableResultOk = Result!(int, string)(Ok!int(123));
+    assert(isOkAnd(immutableResultOk, &isOdd));
+
+    auto resultErr = Result!(int, string)(Err!string("123"));
+    assert(!isOkAnd(resultErr, &isOdd));
+
+    const constResultErr = Result!(int, string)(Err!string("123"));
+    assert(!isOkAnd(constResultErr, &isOdd));
+
+    immutable immutableResultErr = Result!(int, string)(Err!string("123"));
+    assert(!isOkAnd(immutableResultErr, &isOdd));
+}
+
 /// Returns `true` if `this` has an `Err!E` value.
 bool isErr(R)(auto ref R result) if (isResult!R)
 {
@@ -683,8 +734,6 @@ OkValueTypeOf!R unwrapOrElse(alias fun = "a", R)(auto ref R result)
     assert(resultErr.unwrapOrElse!"`foo`"() == "foo");
     assert(resultErr.unwrapOrElse!fFoo() == "Foo is 123");
 }
-
-import std.traits : isCallable;
 
 /// Ditto
 OkValueTypeOf!R unwrapOrElse(F, R)(auto ref R result, auto ref F fun)
