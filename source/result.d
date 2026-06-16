@@ -343,7 +343,7 @@ bool isErr(R)(auto ref R result) if (isResult!R)
 
 /// Returns the containing `Ok!T` value,
 /// without checking that the value is not an `Err!E`
-OkValueTypeOf!R unwrapUnchecked(R)(auto ref R result) if (isResult!R)
+OkValueTypeOf!R unwrap(R)(auto ref R result) if (isResult!R)
 {
     import std.sumtype : get;
 
@@ -354,13 +354,13 @@ OkValueTypeOf!R unwrapUnchecked(R)(auto ref R result) if (isResult!R)
 unittest
 {
     auto resultOk = Result!(uint, string)(Ok!uint(2));
-    assert(unwrapUnchecked(resultOk) == 2);
+    assert(unwrap(resultOk) == 2);
 
     import std.exception : assertThrown;
     import core.exception : AssertError;
 
     auto resultErr = Result!(uint, string)(Err!string("emergency failure"));
-    assertThrown!AssertError(unwrapUnchecked(resultErr)); // Assert will fail
+    assertThrown!AssertError(unwrap(resultErr)); // Assert will fail
 }
 
 unittest
@@ -369,21 +369,21 @@ unittest
     import core.exception : AssertError;
 
     auto resultOk1 = Result!(int, string)(Ok!int(123));
-    assert(resultOk1.unwrapUnchecked() == 123);
-    assertNotThrown!AssertError(resultOk1.unwrapUnchecked());
+    assert(resultOk1.unwrap() == 123);
+    assertNotThrown!AssertError(resultOk1.unwrap());
 
     auto resultOk2 = Result!(string, uint)(Ok!string("123"));
-    assert(resultOk2.unwrapUnchecked() == "123");
-    assertNotThrown!AssertError(resultOk2.unwrapUnchecked());
+    assert(resultOk2.unwrap() == "123");
+    assertNotThrown!AssertError(resultOk2.unwrap());
     auto resultOk22 = Result!(string, uint)(Ok!string("123"));
-    assert(resultOk22.unwrapUnchecked() == "123");
+    assert(resultOk22.unwrap() == "123");
     auto resultErr = Result!(string, uint)(Err!uint(123));
-    assertThrown!AssertError(resultErr.unwrapUnchecked());
+    assertThrown!AssertError(resultErr.unwrap());
 }
 
 /// Returns the contained `Err!E` value.
 /// without checking that the value is not an `Ok!T`.
-ErrValueTypeOf!R unwrapErrUnchecked(R)(auto ref R result) if (isResult!R)
+ErrValueTypeOf!R unwrapErr(R)(auto ref R result) if (isResult!R)
 {
     import std.sumtype : get;
 
@@ -397,10 +397,10 @@ unittest
     import core.exception : AssertError;
 
     auto resultOk = Result!(uint, string)(Ok!uint(2));
-    assertThrown!AssertError(unwrapErrUnchecked(resultOk));
+    assertThrown!AssertError(unwrapErr(resultOk));
 
     auto resultErr = Result!(uint, string)(Err!string("emergency failure"));
-    assert(unwrapErrUnchecked(resultErr) == "emergency failure");
+    assert(unwrapErr(resultErr) == "emergency failure");
 }
 
 unittest
@@ -409,15 +409,15 @@ unittest
     import core.exception : AssertError;
 
     auto resultErr1 = Result!(int, string)(Err!string("123"));
-    assert(resultErr1.unwrapErrUnchecked() == "123");
-    assertNotThrown!AssertError(resultErr1.unwrapErrUnchecked());
+    assert(resultErr1.unwrapErr() == "123");
+    assertNotThrown!AssertError(resultErr1.unwrapErr());
 
     auto resultErr2 = Result!(string, uint)(Err!uint(123));
-    assert(resultErr2.unwrapErrUnchecked() == 123);
-    assertNotThrown!AssertError(resultErr2.unwrapErrUnchecked());
+    assert(resultErr2.unwrapErr() == 123);
+    assertNotThrown!AssertError(resultErr2.unwrapErr());
 
     auto resultOk = Result!(string, uint)(Ok!string("123"));
-    assertThrown!AssertError(resultOk.unwrapErrUnchecked());
+    assertThrown!AssertError(resultOk.unwrapErr());
 }
 
 /// Returns the containing `Ok!T` value.
@@ -428,7 +428,7 @@ OkValueTypeOf!R tryUnwrap(R)(auto ref R result) if (isResult!R)
     import std.exception : enforce;
 
     enforce!UnwrapException(isOk(result), "Result does not have an Ok value.");
-    return unwrapUnchecked(result);
+    return unwrap(result);
 }
 
 ///
@@ -467,7 +467,7 @@ ErrValueTypeOf!R tryUnwrapErr(R)(auto ref R result) if (isResult!R)
     import std.exception : enforce;
 
     enforce!UnwrapException(isErr(result), "Result does not have an Err value.");
-    return unwrapErrUnchecked(result);
+    return unwrapErr(result);
 }
 
 ///
