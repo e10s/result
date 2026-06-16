@@ -57,6 +57,17 @@ struct Result(T, E)
     {
         payload = value;
     }
+    /// Ditto
+    this(R)(auto ref R value) const if (is(typeof({ ResultPayload.init = R.init; })))
+    {
+        payload = value;
+    }
+    /// Ditto
+    this(R)(auto ref R value) immutable
+            if (is(typeof({ ResultPayload.init = R.init; })))
+    {
+        payload = value;
+    }
 
     /// Supports assignment of `Result!(T, E)`, `Ok!T` and `Err!E` values.
     ref opAssign(R)(auto ref R rhs) if (is(typeof({ ResultPayload.init = R.init; })))
@@ -129,6 +140,60 @@ struct Result(T, E)
     assert(newImmutableResult2.has!(immutable(Err!dstring)));
     immutable newImmutableResult3 = Result!(bool, dstring)(immutableResultErr);
     assert(newImmutableResult3.has!(immutable(Err!dstring)));
+}
+
+// Ctor const
+@safe @nogc nothrow unittest
+{
+    import std.sumtype : has;
+
+    alias R = Result!(int, string);
+    alias O = Ok!int;
+
+    auto constResult1 = const(R)(O(123));
+    assert(constResult1.has!(const(O)));
+    auto constResult2 = const(R)(const(O)(123));
+    assert(constResult2.has!(const(O)));
+    auto constResult3 = const(R)(immutable(O)(123));
+    assert(constResult3.has!(const(O)));
+
+    auto result = R(O(123));
+    const constResult = R(O(123));
+    immutable immutableResult = R(O(123));
+
+    auto constResult4 = const(R)(result);
+    assert(constResult4.has!(const(O)));
+    auto constResult5 = const(R)(constResult);
+    assert(constResult5.has!(const(O)));
+    auto constResult6 = const(R)(immutableResult);
+    assert(constResult6.has!(const(O)));
+}
+
+// Ctor immutable
+@safe @nogc nothrow unittest
+{
+    import std.sumtype : has;
+
+    alias R = Result!(int, string);
+    alias O = Ok!int;
+
+    auto immutableResult1 = immutable(R)(O(123));
+    assert(immutableResult1.has!(immutable(O)));
+    auto immutableResult2 = immutable(R)(immutable(O)(123));
+    assert(immutableResult2.has!(immutable(O)));
+    auto immutableResult3 = immutable(R)(immutable(O)(123));
+    assert(immutableResult3.has!(immutable(O)));
+
+    auto result = R(O(123));
+    const constResult = R(O(123));
+    immutable immutableResult = R(O(123));
+
+    auto immutableResult4 = immutable(R)(result);
+    assert(immutableResult4.has!(immutable(O)));
+    auto immutableResult5 = immutable(R)(constResult);
+    assert(immutableResult5.has!(immutable(O)));
+    auto immutableResult6 = immutable(R)(immutableResult);
+    assert(immutableResult6.has!(immutable(O)));
 }
 
 // opAssign
