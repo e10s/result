@@ -330,8 +330,6 @@ bool isOkAnd(alias pred = "a", R)(auto ref R result)
 
 @safe nothrow unittest
 {
-    import std.conv : to;
-
     size_t isOdd(int n)
     {
         return n & 1;
