@@ -307,6 +307,59 @@ bool isOk(R)(auto ref R result) if (isResult!R)
     assert(!isOk(immutableResultErr));
 }
 
+import std.functional : unaryFun;
+
+/// Returns `true` if `result` has an [Ok] value and its value satisfies `pred`.
+bool isOkAnd(alias pred = "a", R)(auto ref R result)
+        if (isResult!R && is(typeof(unaryFun!pred(OkValueTypeOf!R.init))))
+{
+    import std.sumtype : match;
+
+    return result.payload.match!((OkTypeOf!R t) => unaryFun!pred(t.value)
+            && true, (ErrTypeOf!R _) => false);
+}
+
+///
+@safe nothrow unittest
+{
+    auto resultOk1 = Result!(uint, string)(Ok!uint(2));
+    assert(isOkAnd!(a => a > 1)(resultOk1) == true);
+
+    auto resultOk2 = Result!(uint, string)(Ok!uint(0));
+    assert(isOkAnd!"a>1"(resultOk2) == false);
+
+    auto resultErr = Result!(uint, string)(Err!string("hey"));
+    assert(isOkAnd!"a>1"(resultErr) == false);
+}
+
+@safe nothrow unittest
+{
+    import std.conv : to;
+
+    size_t isOdd(int n)
+    {
+        return n & 1;
+    }
+
+    auto resultOk = Result!(int, string)(Ok!int(123));
+    assert(isOkAnd!isOdd(resultOk));
+
+    const constResultOk = Result!(int, string)(Ok!int(123));
+    assert(isOkAnd!isOdd(constResultOk));
+
+    immutable immutableResultOk = Result!(int, string)(Ok!int(123));
+    assert(isOkAnd!isOdd(immutableResultOk));
+
+    auto resultErr = Result!(int, string)(Err!string("123"));
+    assert(!isOkAnd!isOdd(resultErr));
+
+    const constResultErr = Result!(int, string)(Err!string("123"));
+    assert(!isOkAnd!isOdd(constResultErr));
+
+    immutable immutableResultErr = Result!(int, string)(Err!string("123"));
+    assert(!isOkAnd!isOdd(immutableResultErr));
+}
+
 /// Returns `true` if `this` has an `Err!E` value.
 bool isErr(R)(auto ref R result) if (isResult!R)
 {
@@ -532,8 +585,6 @@ OkValueTypeOf!R unwrapOr(R, T)(auto ref R result, T defaultValue)
     auto resultErr = Result!(string, uint)(Err!uint(123));
     assert(resultErr.unwrapOr("456") == "456");
 }
-
-import std.functional : unaryFun;
 
 /// Returns the contained `Ok!T` value.
 /// If the value is an `Err!E`, calls `fun` with the value of `Err!E` and returns the resulting `Ok!T` value.
