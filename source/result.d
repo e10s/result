@@ -48,18 +48,18 @@ struct Result(T, E)
     import std.sumtype : SumType;
 
     ///
-    alias Result = SumType!(Ok!T, Err!E);
-    Result payload;
+    alias ResultPayload = SumType!(Ok!T, Err!E);
+    ResultPayload payload;
     alias payload this;
 
     /// The constructor accepts `Result!(T, E)`, `Ok!T` and `Err!E` values.
-    this(R)(auto ref R value) if (is(typeof({ Result.init = R.init; })))
+    this(R)(auto ref R value) if (is(typeof({ ResultPayload.init = R.init; })))
     {
         payload = value;
     }
 
     /// Supports assignment of `Result!(T, E)`, `Ok!T` and `Err!E` values.
-    ref opAssign(R)(auto ref R rhs) if (is(typeof({ Result.init = R.init; })))
+    ref opAssign(R)(auto ref R rhs) if (is(typeof({ ResultPayload.init = R.init; })))
     {
         payload = rhs;
         return this;
