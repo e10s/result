@@ -3,8 +3,12 @@ module result;
 ///
 struct Ok(T)
 {
-    ///
-    T value;
+    private T value_;
+    @property ref value() const
+    {
+        return value_;
+    }
+
     alias value this;
 }
 
@@ -19,8 +23,12 @@ struct Ok(T)
 ///
 struct Err(E)
 {
-    ///
-    E value;
+    private E value_;
+    @property ref value() const
+    {
+        return value_;
+    }
+
     alias value this;
 }
 
@@ -63,8 +71,7 @@ struct Result(T, E)
         payload = value;
     }
     /// Ditto
-    this(R)(auto ref R value) immutable
-            if (is(typeof({ Payload.init = R.init; })))
+    this(R)(auto ref R value) immutable if (is(typeof({ Payload.init = R.init; })))
     {
         payload = value;
     }
