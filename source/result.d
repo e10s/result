@@ -106,35 +106,35 @@ struct Result(T, E)
     assert(!resultOk.has!(Err!string));
     assert(resultOk.get!(Ok!int) == Ok!int(123));
 
-    const constResultOk = Result!(int, string)(Ok!int(123));
-    assert(!constResultOk.has!(Ok!int));
-    assert(!constResultOk.has!(Err!string));
-    assert(constResultOk.has!(const(Ok!int)));
-    assert(!constResultOk.has!(const(Err!string)));
-    assert(constResultOk.get!(const(Ok!int)) == Ok!int(123));
-    immutable immutableResultOk = Result!(int, string)(Ok!int(123));
-    assert(!immutableResultOk.has!(Ok!int));
-    assert(!immutableResultOk.has!(Err!string));
-    assert(immutableResultOk.has!(immutable(Ok!int)));
-    assert(!immutableResultOk.has!(immutable(Err!string)));
-    assert(immutableResultOk.get!(immutable(Ok!int)) == Ok!int(123));
+    const cResultOk = Result!(int, string)(Ok!int(123));
+    assert(!cResultOk.has!(Ok!int));
+    assert(!cResultOk.has!(Err!string));
+    assert(cResultOk.has!(const(Ok!int)));
+    assert(!cResultOk.has!(const(Err!string)));
+    assert(cResultOk.get!(const(Ok!int)) == Ok!int(123));
+    immutable iResultOk = Result!(int, string)(Ok!int(123));
+    assert(!iResultOk.has!(Ok!int));
+    assert(!iResultOk.has!(Err!string));
+    assert(iResultOk.has!(immutable(Ok!int)));
+    assert(!iResultOk.has!(immutable(Err!string)));
+    assert(iResultOk.get!(immutable(Ok!int)) == Ok!int(123));
     auto resultErr = Result!(bool, dstring)(Err!dstring("123"d));
     assert(resultErr.has!(Err!dstring));
     assert(!resultErr.has!(Ok!bool));
     assert(resultErr.get!(Err!dstring) == Err!dstring("123"d));
-    const constResultErr = Result!(bool, dstring)(Err!dstring("123"d));
-    assert(!constResultErr.has!(Ok!bool));
-    assert(!constResultErr.has!(Err!dstring));
-    assert(!constResultErr.has!(const(Ok!bool)));
-    assert(constResultErr.has!(const(Err!dstring)));
-    assert(constResultErr.get!(const(Err!dstring)) == Err!dstring("123"d));
+    const cResultErr = Result!(bool, dstring)(Err!dstring("123"d));
+    assert(!cResultErr.has!(Ok!bool));
+    assert(!cResultErr.has!(Err!dstring));
+    assert(!cResultErr.has!(const(Ok!bool)));
+    assert(cResultErr.has!(const(Err!dstring)));
+    assert(cResultErr.get!(const(Err!dstring)) == Err!dstring("123"d));
 
-    immutable immutableResultErr = Result!(bool, dstring)(Err!dstring("123"d));
-    assert(!immutableResultErr.has!(Ok!bool));
-    assert(!immutableResultErr.has!(Err!dstring));
-    assert(!immutableResultErr.has!(immutable(Ok!bool)));
-    assert(immutableResultErr.has!(immutable(Err!dstring)));
-    assert(immutableResultErr.get!(immutable(Err!dstring)) == Err!dstring("123"d));
+    immutable iResultErr = Result!(bool, dstring)(Err!dstring("123"d));
+    assert(!iResultErr.has!(Ok!bool));
+    assert(!iResultErr.has!(Err!dstring));
+    assert(!iResultErr.has!(immutable(Ok!bool)));
+    assert(iResultErr.has!(immutable(Err!dstring)));
+    assert(iResultErr.get!(immutable(Err!dstring)) == Err!dstring("123"d));
 }
 
 // opAssign
@@ -265,26 +265,30 @@ bool isOk(R)(auto ref R result) if (isResult!R)
 ///
 @safe @nogc nothrow unittest
 {
-    auto resultOk = Result!(int, string)(Ok!int(-3));
+    alias R = Result!(int, string);
+
+    auto resultOk = R.ok(-3);
     assert(isOk(resultOk));
-    auto resultErr = Result!(int, string)(Err!string("Some error message"));
+
+    auto resultErr = R.err("Some error message");
     assert(!isOk(resultErr));
 }
 
 @safe @nogc nothrow unittest
 {
-    const constResultOk = Result!(int, string)(Ok!int(123));
-    assert(isOk(constResultOk));
-    immutable immutableResultOk = Result!(int, string)(Ok!int(123));
-    assert(isOk(immutableResultOk));
+    alias R = Result!(int, string);
 
-    auto resultErr = Result!(int, string)(Err!string("123"));
-    assert(!isOk(resultErr));
-    const constResultErr = Result!(int, string)(Err!string("123"));
-    assert(!isOk(constResultErr));
+    const cResultOk = R.ok(123);
+    assert(isOk(cResultOk));
 
-    immutable immutableResultErr = Result!(int, string)(Err!string("123"));
-    assert(!isOk(immutableResultErr));
+    immutable iResultOk = R.ok(123);
+    assert(isOk(iResultOk));
+
+    const cResultErr = R.err("123");
+    assert(!isOk(cResultErr));
+
+    immutable iResultErr = R.err("123");
+    assert(!isOk(iResultErr));
 }
 
 import std.functional : unaryFun;
@@ -302,13 +306,15 @@ bool isOkAnd(alias pred = "a", R)(auto ref R result)
 ///
 @safe nothrow unittest
 {
-    auto resultOk1 = Result!(uint, string)(Ok!uint(2));
+    alias R = Result!(uint, string);
+
+    auto resultOk1 = R.ok(2);
     assert(isOkAnd!(a => a > 1)(resultOk1) == true);
 
-    auto resultOk2 = Result!(uint, string)(Ok!uint(0));
+    auto resultOk2 = R.ok(0);
     assert(isOkAnd!"a>1"(resultOk2) == false);
 
-    auto resultErr = Result!(uint, string)(Err!string("hey"));
+    auto resultErr = R.err("hey");
     assert(isOkAnd!"a>1"(resultErr) == false);
 }
 
@@ -319,23 +325,25 @@ bool isOkAnd(alias pred = "a", R)(auto ref R result)
         return n & 1;
     }
 
-    auto resultOk = Result!(int, string)(Ok!int(123));
+    alias R = Result!(int, string);
+
+    auto resultOk = R.ok(123);
     assert(isOkAnd!isOdd(resultOk));
 
-    const constResultOk = Result!(int, string)(Ok!int(123));
-    assert(isOkAnd!isOdd(constResultOk));
+    const cResultOk = R.ok(123);
+    assert(isOkAnd!isOdd(cResultOk));
 
-    immutable immutableResultOk = Result!(int, string)(Ok!int(123));
-    assert(isOkAnd!isOdd(immutableResultOk));
+    immutable iResultOk = R.ok(123);
+    assert(isOkAnd!isOdd(iResultOk));
 
-    auto resultErr = Result!(int, string)(Err!string("123"));
+    auto resultErr = R.err("123");
     assert(!isOkAnd!isOdd(resultErr));
 
-    const constResultErr = Result!(int, string)(Err!string("123"));
-    assert(!isOkAnd!isOdd(constResultErr));
+    const cResultErr = R.err("123");
+    assert(!isOkAnd!isOdd(cResultErr));
 
-    immutable immutableResultErr = Result!(int, string)(Err!string("123"));
-    assert(!isOkAnd!isOdd(immutableResultErr));
+    immutable iResultErr = R.err("123");
+    assert(!isOkAnd!isOdd(iResultErr));
 }
 
 import std.traits : isCallable;
@@ -353,13 +361,15 @@ bool isOkAnd(F, R)(auto ref R result, auto ref F pred)
 ///
 @safe nothrow unittest
 {
-    auto resultOk1 = Result!(uint, string)(Ok!uint(2));
+    alias R = Result!(uint, string);
+
+    auto resultOk1 = R.ok(2);
     assert(isOkAnd(resultOk1, (uint a) => a > 1) == true);
 
-    auto resultOk2 = Result!(uint, string)(Ok!uint(0));
+    auto resultOk2 = R.ok(0);
     assert(isOkAnd(resultOk2, (uint a) => a > 1) == false);
 
-    auto resultErr = Result!(uint, string)(Err!string("hey"));
+    auto resultErr = R.err("hey");
     assert(isOkAnd(resultErr, (uint a) => a > 1) == false);
 }
 
@@ -370,18 +380,25 @@ bool isOkAnd(F, R)(auto ref R result, auto ref F pred)
         return n & 1;
     }
 
-    auto resultOk = Result!(int, string)(Ok!int(123));
+    alias R = Result!(int, string);
+
+    auto resultOk = R.ok(123);
     assert(isOkAnd(resultOk, &isOdd));
-    const constResultOk = Result!(int, string)(Ok!int(123));
-    assert(isOkAnd(constResultOk, &isOdd));
-    immutable immutableResultOk = Result!(int, string)(Ok!int(123));
-    assert(isOkAnd(immutableResultOk, &isOdd));
-    auto resultErr = Result!(int, string)(Err!string("123"));
+
+    const cResultOk = R.ok(123);
+    assert(isOkAnd(cResultOk, &isOdd));
+
+    immutable iResultOk = R.ok(123);
+    assert(isOkAnd(iResultOk, &isOdd));
+
+    auto resultErr = R.err("123");
     assert(!isOkAnd(resultErr, &isOdd));
-    const constResultErr = Result!(int, string)(Err!string("123"));
-    assert(!isOkAnd(constResultErr, &isOdd));
-    immutable immutableResultErr = Result!(int, string)(Err!string("123"));
-    assert(!isOkAnd(immutableResultErr, &isOdd));
+
+    const cResultErr = R.err("123");
+    assert(!isOkAnd(cResultErr, &isOdd));
+
+    immutable iResultErr = R.err("123");
+    assert(!isOkAnd(iResultErr, &isOdd));
 }
 
 /// Returns `true` if `this` has an `Err!E` value.
@@ -393,29 +410,33 @@ bool isErr(R)(auto ref R result) if (isResult!R)
 ///
 @safe @nogc nothrow unittest
 {
-    auto resultOk = Result!(int, string)(Ok!int(-3));
+    alias R = Result!(int, string);
+
+    auto resultOk = R.ok(-3);
     assert(!isErr(resultOk));
 
-    auto resultErr = Result!(int, string)(Err!string("Some error message"));
+    auto resultErr = R.err("Some error message");
     assert(isErr(resultErr));
 }
 
 @safe @nogc nothrow unittest
 {
-    const constResultErr = Result!(int, string)(Err!string("123"));
-    assert(constResultErr.isErr());
+    alias R = Result!(int, string);
 
-    immutable immutableResultErr = Result!(int, string)(Err!string("123"));
-    assert(immutableResultErr.isErr());
+    const cResultErr = R.err("123");
+    assert(isErr(cResultErr));
 
-    auto resultOk = Result!(int, string)(Ok!int(123));
-    assert(!resultOk.isErr());
+    immutable iResultErr = R.err("123");
+    assert(isErr(iResultErr));
 
-    const constResultOk = Result!(int, string)(Ok!int(123));
-    assert(!constResultOk.isErr());
+    auto resultOk = R.ok(123);
+    assert(!isErr(resultOk));
 
-    immutable immutableResultOk = Result!(int, string)(Ok!int(123));
-    assert(!immutableResultOk.isErr());
+    const cResultOk = R.ok(123);
+    assert(!isErr(cResultOk));
+
+    immutable iResultOk = R.ok(123);
+    assert(!isErr(iResultOk));
 }
 
 /// Returns `true` if `result` has an [Err] value and its value satisfies `pred`.
@@ -431,13 +452,15 @@ bool isErrAnd(alias pred = "a", R)(auto ref R result)
 ///
 @safe nothrow unittest
 {
-    auto resultErr1 = Result!(uint, string)(Err!string("!!!"));
+    alias R = Result!(uint, string);
+
+    auto resultErr1 = R.err("!!!");
     assert(isErrAnd!(e => e == "!!!")(resultErr1) == true);
 
-    auto resultErr2 = Result!(uint, string)(Err!string("?"));
+    auto resultErr2 = R.err("?");
     assert(isErrAnd!`a=="!!!"`(resultErr2) == false);
 
-    auto resultOk = Result!(uint, string)(Ok!uint(123));
+    auto resultOk = R.ok(123);
     assert(isErrAnd!`a=="!!!"`(resultOk) == false);
 }
 
@@ -445,25 +468,27 @@ bool isErrAnd(alias pred = "a", R)(auto ref R result)
 {
     import std.string : isNumeric;
 
-    auto resultOk = Result!(int, string)(Ok!int(123));
+    alias R = Result!(int, string);
+
+    auto resultOk = R.ok(123);
     assert(!isErrAnd!isNumeric(resultOk));
 
-    const constResultOk = Result!(int, string)(Ok!int(123));
-    assert(!isErrAnd!isNumeric(constResultOk));
+    const cResultOk = R.ok(123);
+    assert(!isErrAnd!isNumeric(cResultOk));
 
-    immutable immutableResultOk = Result!(int, string)(Ok!int(123));
-    assert(!isErrAnd!isNumeric(immutableResultOk));
+    immutable iResultOk = R.ok(123);
+    assert(!isErrAnd!isNumeric(iResultOk));
 
-    auto resultErr = Result!(int, string)(Err!string("123"));
+    auto resultErr = R.err("123");
     assert(isErrAnd!isNumeric(resultErr));
 
-    const constResultErr = Result!(int, string)(Err!string("123"));
-    assert(isErrAnd!isNumeric(constResultErr));
+    const cResultErr = R.err("123");
+    assert(isErrAnd!isNumeric(cResultErr));
 
-    immutable immutableResultErr = Result!(int, string)(Err!string("123"));
-    assert(isErrAnd!isNumeric(immutableResultErr));
+    immutable iResultErr = R.err("123");
+    assert(isErrAnd!isNumeric(iResultErr));
 
-    auto resultErr2 = Result!(int, string)(Err!string("Good morning, 007."));
+    auto resultErr2 = R.err("Good morning, 007.");
     assert(!isErrAnd!isNumeric(resultErr2));
 }
 
@@ -480,13 +505,15 @@ bool isErrAnd(F, R)(auto ref R result, auto ref F pred)
 ///
 @safe nothrow unittest
 {
-    auto resultErr1 = Result!(uint, string)(Err!string("!!!"));
+    alias R = Result!(uint, string);
+
+    auto resultErr1 = R.err("!!!");
     assert(isErrAnd(resultErr1, (string e) => e == "!!!") == true);
 
-    auto resultErr2 = Result!(uint, string)(Err!string("?"));
+    auto resultErr2 = R.err("?");
     assert(isErrAnd(resultErr2, (string e) => e == "!!!") == false);
 
-    auto resultOk = Result!(uint, string)(Ok!uint(123));
+    auto resultOk = R.ok(123);
     assert(isErrAnd(resultOk, (string e) => e == "!!!") == false);
 }
 
@@ -497,25 +524,27 @@ bool isErrAnd(F, R)(auto ref R result, auto ref F pred)
         return s.length > 2 && s[$ - 2] == '2';
     }
 
-    auto resultOk = Result!(int, string)(Ok!int(123));
+    alias R = Result!(int, string);
+
+    auto resultOk = R.ok(123);
     assert(!isErrAnd(resultOk, &somePred));
 
-    const constResultOk = Result!(int, string)(Ok!int(123));
-    assert(!isErrAnd(constResultOk, &somePred));
+    const cResultOk = R.ok(123);
+    assert(!isErrAnd(cResultOk, &somePred));
 
-    immutable immutableResultOk = Result!(int, string)(Ok!int(123));
-    assert(!isErrAnd(immutableResultOk, &somePred));
+    immutable iResultOk = R.ok(123);
+    assert(!isErrAnd(iResultOk, &somePred));
 
-    auto resultErr = Result!(int, string)(Err!string("123"));
+    auto resultErr = R.err("123");
     assert(isErrAnd(resultErr, &somePred));
 
-    const constResultErr = Result!(int, string)(Err!string("123"));
-    assert(isErrAnd(constResultErr, &somePred));
+    const cResultErr = R.err("123");
+    assert(isErrAnd(cResultErr, &somePred));
 
-    immutable immutableResultErr = Result!(int, string)(Err!string("123"));
-    assert(isErrAnd(immutableResultErr, &somePred));
+    immutable iResultErr = R.err("123");
+    assert(isErrAnd(iResultErr, &somePred));
 
-    auto resultErr2 = Result!(int, string)(Err!string("Good morning, 007."));
+    auto resultErr2 = R.err("Good morning, 007.");
     assert(!isErrAnd(resultErr2, &somePred));
 }
 
@@ -532,14 +561,16 @@ OkValueTypeOf!R unwrap(R)(auto ref R result) if (isResult!R)
 ///
 unittest
 {
-    auto resultOk = Result!(uint, string)(Ok!uint(2));
+    alias R = Result!(uint, string);
+
+    auto resultOk = R.ok(2);
     assert(unwrap(resultOk) == 2);
 
     import std.exception : assertThrown;
     import core.exception : AssertError;
 
-    auto resultErr = Result!(uint, string)(Err!string("emergency failure"));
-    assertThrown!AssertError(unwrap(resultErr)); // Assert will fail
+    auto resultErr = R.err("emergency failure");
+    assertThrown!AssertError(unwrap(resultErr)); // Assert will fail, due to SumType
 }
 
 unittest
@@ -547,17 +578,16 @@ unittest
     import std.exception : assertThrown, assertNotThrown;
     import core.exception : AssertError;
 
-    auto resultOk1 = Result!(int, string)(Ok!int(123));
-    assert(resultOk1.unwrap() == 123);
-    assertNotThrown!AssertError(resultOk1.unwrap());
+    auto resultOk1 = Result!(int, string).ok(123);
+    assert(assertNotThrown!AssertError(unwrap(resultOk1)) == 123);
 
-    auto resultOk2 = Result!(string, uint)(Ok!string("123"));
-    assert(resultOk2.unwrap() == "123");
-    assertNotThrown!AssertError(resultOk2.unwrap());
-    auto resultOk22 = Result!(string, uint)(Ok!string("123"));
-    assert(resultOk22.unwrap() == "123");
-    auto resultErr = Result!(string, uint)(Err!uint(123));
-    assertThrown!AssertError(resultErr.unwrap());
+    alias R = Result!(string, uint);
+
+    auto resultOk2 = R.ok("123");
+    assert(assertNotThrown!AssertError(unwrap(resultOk2)) == "123");
+
+    auto resultErr = R.err(123);
+    assertThrown!AssertError(unwrap(resultErr));
 }
 
 /// Returns the contained `Err!E` value.
@@ -576,10 +606,12 @@ unittest
     import std.exception : assertThrown;
     import core.exception : AssertError;
 
-    auto resultOk = Result!(uint, string)(Ok!uint(2));
-    assertThrown!AssertError(unwrapErr(resultOk));
+    alias R = Result!(uint, string);
 
-    auto resultErr = Result!(uint, string)(Err!string("emergency failure"));
+    auto resultOk = R.ok(2);
+    assertThrown!AssertError(unwrapErr(resultOk)); // Assert will fail, due to SumType
+
+    auto resultErr = R.err("emergency failure");
     assert(unwrapErr(resultErr) == "emergency failure");
 }
 
@@ -588,16 +620,16 @@ unittest
     import std.exception : assertThrown, assertNotThrown;
     import core.exception : AssertError;
 
-    auto resultErr1 = Result!(int, string)(Err!string("123"));
-    assert(resultErr1.unwrapErr() == "123");
-    assertNotThrown!AssertError(resultErr1.unwrapErr());
+    auto resultErr1 = Result!(int, string).err("123");
+    assert(assertNotThrown!AssertError(unwrapErr(resultErr1)) == "123");
 
-    auto resultErr2 = Result!(string, uint)(Err!uint(123));
-    assert(resultErr2.unwrapErr() == 123);
-    assertNotThrown!AssertError(resultErr2.unwrapErr());
+    alias R = Result!(string, uint);
 
-    auto resultOk = Result!(string, uint)(Ok!string("123"));
-    assertThrown!AssertError(resultOk.unwrapErr());
+    auto resultErr2 = R.err(123);
+    assert(assertNotThrown!AssertError(unwrapErr(resultErr2)) == 123);
+
+    auto resultOk = R.ok("123");
+    assertThrown!AssertError(unwrapErr(resultOk));
 }
 
 /// Returns the containing `Ok!T` value.
@@ -616,10 +648,12 @@ OkValueTypeOf!R tryUnwrap(R)(auto ref R result) if (isResult!R)
 {
     import std.exception : assertThrown, assertNotThrown;
 
-    auto resultOk = Result!(uint, string)(Ok!uint(2));
+    alias R = Result!(uint, string);
+
+    auto resultOk = R.ok(2);
     assert(assertNotThrown!UnwrapException(tryUnwrap(resultOk)) == 2);
 
-    auto resultErr = Result!(uint, string)(Err!string("emergency failure"));
+    auto resultErr = R.err("emergency failure");
     assertThrown!UnwrapException(tryUnwrap(resultErr));
 }
 
@@ -627,16 +661,16 @@ OkValueTypeOf!R tryUnwrap(R)(auto ref R result) if (isResult!R)
 {
     import std.exception : assertThrown, assertNotThrown;
 
-    auto resultOk1 = Result!(int, string)(Ok!int(123));
-    assert(resultOk1.tryUnwrap() == 123);
-    assertNotThrown!UnwrapException(resultOk1.tryUnwrap());
+    auto resultOk1 = Result!(int, string).ok(123);
+    assert(assertNotThrown!UnwrapException(tryUnwrap(resultOk1)) == 123);
 
-    auto resultOk2 = Result!(string, uint)(Ok!string("123"));
-    assert(resultOk2.tryUnwrap() == "123");
-    assertNotThrown!UnwrapException(resultOk2.tryUnwrap());
+    alias R = Result!(string, uint);
 
-    auto resultErr = Result!(string, uint)(Err!uint(123));
-    assertThrown!UnwrapException(resultErr.tryUnwrap());
+    auto resultOk2 = R.ok("123");
+    assert(assertNotThrown!UnwrapException(tryUnwrap(resultOk2)) == "123");
+
+    auto resultErr = R.err(123);
+    assertThrown!UnwrapException(tryUnwrap(resultErr));
 }
 
 /// Returns the contained `Err!E` value.
@@ -655,10 +689,12 @@ ErrValueTypeOf!R tryUnwrapErr(R)(auto ref R result) if (isResult!R)
 {
     import std.exception : assertThrown, assertNotThrown;
 
-    auto resultOk = Result!(uint, string)(Ok!uint(2));
+    alias R = Result!(uint, string);
+
+    auto resultOk = R.ok(2);
     assertThrown!UnwrapException(tryUnwrapErr(resultOk));
 
-    auto resultErr = Result!(uint, string)(Err!string("emergency failure"));
+    auto resultErr = R.err("emergency failure");
     assert(assertNotThrown!UnwrapException(tryUnwrapErr(resultErr)) == "emergency failure");
 }
 
@@ -666,16 +702,16 @@ ErrValueTypeOf!R tryUnwrapErr(R)(auto ref R result) if (isResult!R)
 {
     import std.exception : assertThrown, assertNotThrown;
 
-    auto resultErr1 = Result!(int, string)(Err!string("123"));
-    assert(resultErr1.tryUnwrapErr() == "123");
-    assertNotThrown!UnwrapException(resultErr1.tryUnwrapErr());
+    auto resultErr1 = Result!(int, string).err("123");
+    assert(assertNotThrown!UnwrapException(tryUnwrapErr(resultErr1)) == "123");
 
-    auto resultErr2 = Result!(string, uint)(Err!uint(123));
-    assert(resultErr2.tryUnwrapErr() == 123);
-    assertNotThrown!UnwrapException(resultErr2.tryUnwrapErr());
+    alias R = Result!(string, uint);
 
-    auto resultOk = Result!(string, uint)(Ok!string("123"));
-    assertThrown!UnwrapException(resultOk.tryUnwrapErr());
+    auto resultErr2 = R.err(123);
+    assert(assertNotThrown!UnwrapException(tryUnwrapErr(resultErr2)) == 123);
+
+    auto resultOk = R.ok("123");
+    assertThrown!UnwrapException(tryUnwrapErr(resultOk));
 }
 
 /// Returns the contained `Ok!T` value.
@@ -691,23 +727,28 @@ OkValueTypeOf!R unwrapOr(R, T)(auto ref R result, T defaultValue)
 ///
 @safe @nogc nothrow unittest
 {
+    alias R = Result!(uint, string);
+
     immutable defaultValue = 2;
-    auto resultOk = Result!(uint, string)(Ok!uint(9));
+
+    auto resultOk = R.ok(9);
     assert(unwrapOr(resultOk, defaultValue) == 9);
 
-    auto resultErr = Result!(uint, string)(Err!string("error"));
+    auto resultErr = R.err("error");
     assert(unwrapOr(resultErr, defaultValue) == defaultValue);
 }
 
 @safe @nogc nothrow unittest
 {
-    auto resultOk1 = Result!(int, string)(Ok!int(123));
+    auto resultOk1 = Result!(int, string).ok(123);
     assert(resultOk1.unwrapOr(456) == 123);
 
-    const resultOk2 = Result!(string, uint)(Ok!string("123"));
+    alias R = Result!(string, uint);
+
+    const resultOk2 = R.ok("123");
     assert(resultOk2.unwrapOr("456") == "123");
 
-    auto resultErr = Result!(string, uint)(Err!uint(123));
+    auto resultErr = R.err(123);
     assert(resultErr.unwrapOr("456") == "456");
 }
 
@@ -727,10 +768,12 @@ OkValueTypeOf!R unwrapOrElse(alias fun = "a", R)(auto ref R result)
 {
     alias count = x => x.length;
 
-    auto resultOk = Result!(size_t, string)(Ok!size_t(2));
+    alias R = Result!(size_t, string);
+
+    auto resultOk = R.ok(2);
     assert(unwrapOrElse!count(resultOk) == 2);
 
-    auto resultErr = Result!(size_t, string)(Err!string("foo"));
+    auto resultErr = R.err("foo");
     assert(unwrapOrElse!count(resultErr) == 3);
     assert(unwrapOrElse!`a.length`(resultErr) == 3);
 }
@@ -749,19 +792,21 @@ OkValueTypeOf!R unwrapOrElse(alias fun = "a", R)(auto ref R result)
         return "Foo is " ~ to!string(n);
     }
 
-    auto resultOk1 = Result!(int, string)(Ok!int(123));
-    assert(resultOk1.unwrapOrElse!"999"() == 123);
-    assert(resultOk1.unwrapOrElse!f999() == 123);
+    auto resultOk1 = Result!(int, string).ok(123);
+    assert(unwrapOrElse!"999"(resultOk1) == 123);
+    assert(unwrapOrElse!f999(resultOk1) == 123);
 
-    immutable resultOk2 = Result!(string, uint)(Ok!string("123"));
-    assert(resultOk2.unwrapOrElse!(to!string)() == "123");
-    assert(resultOk2.unwrapOrElse!fFoo() == "123");
+    alias R = Result!(string, uint);
 
-    auto resultErr = Result!(string, uint)(Err!uint(123));
-    assert(resultErr.unwrapOrElse!(to!string)() == "123");
-    assert(resultErr.unwrapOrElse!"to!string(a+2)"() == "125");
-    assert(resultErr.unwrapOrElse!"`foo`"() == "foo");
-    assert(resultErr.unwrapOrElse!fFoo() == "Foo is 123");
+    immutable resultOk2 = R.ok("123");
+    assert(unwrapOrElse!(to!string)(resultOk2) == "123");
+    assert(unwrapOrElse!fFoo(resultOk2) == "123");
+
+    auto resultErr = R.err(123);
+    assert(unwrapOrElse!(to!string)(resultErr) == "123");
+    assert(unwrapOrElse!"to!string(a+2)"(resultErr) == "125");
+    assert(unwrapOrElse!"`foo`"(resultErr) == "foo");
+    assert(unwrapOrElse!fFoo(resultErr) == "Foo is 123");
 }
 
 /// Ditto
@@ -778,10 +823,12 @@ OkValueTypeOf!R unwrapOrElse(F, R)(auto ref R result, auto ref F fun)
 {
     auto count = (string x) => x.length;
 
-    auto resultOk = Result!(size_t, string)(Ok!size_t(2));
+    alias R = Result!(size_t, string);
+
+    auto resultOk = R.ok(2);
     assert(unwrapOrElse(resultOk, count) == 2);
 
-    auto resultErr = Result!(size_t, string)(Err!string("foo"));
+    auto resultErr = R.err("foo");
     assert(unwrapOrElse(resultErr, count) == 3);
 }
 
@@ -799,17 +846,19 @@ OkValueTypeOf!R unwrapOrElse(F, R)(auto ref R result, auto ref F fun)
         return "Foo is " ~ to!string(n);
     }
 
-    auto resultOk1 = Result!(int, string)(Ok!int(123));
-    static assert(is(typeof(resultOk1.unwrapOrElse(&f999)) == int));
-    assert(resultOk1.unwrapOrElse(&f999) == 123);
+    auto resultOk1 = Result!(int, string).ok(123);
+    static assert(is(typeof(unwrapOrElse(resultOk1, &f999)) == int));
+    assert(unwrapOrElse(resultOk1, &f999) == 123);
 
-    immutable resultOk2 = Result!(string, uint)(Ok!string("123"));
-    static assert(is(typeof(resultOk2.unwrapOrElse((uint a) => "456")) == string));
-    assert(resultOk2.unwrapOrElse!(to!string)() == "123");
+    alias R = Result!(string, uint);
 
-    auto resultErr = Result!(string, uint)(Err!uint(123));
-    static assert(is(typeof(resultErr.unwrapOrElse((uint a) => a.to!string)) == string));
-    assert(resultErr.unwrapOrElse((uint a) => a.to!string) == "123");
-    static assert(is(typeof(resultErr.unwrapOrElse(&fFoo)) == string));
-    assert(resultErr.unwrapOrElse(&fFoo) == "Foo is 123");
+    immutable resultOk2 = R.ok("123");
+    static assert(is(typeof(unwrapOrElse(resultOk2, (uint a) => "456")) == string));
+    assert(unwrapOrElse!(to!string)(resultOk2) == "123");
+
+    auto resultErr = R.err(123);
+    static assert(is(typeof(unwrapOrElse(resultErr, (uint a) => a.to!string)) == string));
+    assert(unwrapOrElse(resultErr, (uint a) => a.to!string) == "123");
+    static assert(is(typeof(unwrapOrElse(resultErr, &fFoo)) == string));
+    assert(unwrapOrElse(resultErr, &fFoo) == "Foo is 123");
 }
