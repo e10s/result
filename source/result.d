@@ -753,6 +753,55 @@ OkValueTypeOf!R unwrapOr(R, T)(auto ref R result, T defaultValue)
 }
 
 /// Returns the contained `Ok!T` value.
+/// Or returns `T.init` if the contained value is an `Err!E`.
+OkValueTypeOf!R unwrapOrDefault(R)(auto ref R result) if (isResult!R)
+{
+    import std.sumtype : match;
+
+    return result.payload.match!((OkTypeOf!R t) => t.value,
+            (ErrTypeOf!R _) => OkValueTypeOf!R.init);
+}
+
+@safe nothrow unittest
+{
+    auto parse(string s)
+    {
+        alias R = Result!(int, string);
+
+        try
+        {
+            import std.conv : to;
+
+            return R.ok(to!int(s));
+        }
+        catch (Exception _)
+        {
+            return R.err(s);
+        }
+    }
+
+    immutable goodYearFromInput = "1909";
+    immutable badYearFromInput = "190blarg";
+
+    assert(unwrapOrDefault(parse(goodYearFromInput)) == 1909);
+    assert(unwrapOrDefault(parse(badYearFromInput)) == 0);
+}
+
+@safe @nogc nothrow unittest
+{
+    auto resultOk1 = Result!(int, string).ok(123);
+    assert(unwrapOrDefault(resultOk1) == 123);
+
+    alias R = Result!(string, uint);
+
+    const resultOk2 = R.ok("123");
+    assert(unwrapOrDefault(resultOk2) == "123");
+
+    auto resultErr = R.err(123);
+    assert(unwrapOrDefault(resultErr) == "");
+}
+
+/// Returns the contained `Ok!T` value.
 /// If the value is an `Err!E`, calls `fun` with the value of `Err!E` and returns the resulting `Ok!T` value.
 OkValueTypeOf!R unwrapOrElse(alias fun = "a", R)(auto ref R result)
         if (isResult!R && is(typeof(unaryFun!fun(ErrValueTypeOf!R.init)) : OkValueTypeOf!R))
