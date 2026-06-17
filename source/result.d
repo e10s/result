@@ -61,17 +61,19 @@ struct Result(T, E)
     alias payload this;
 
     /// The constructor accepts `Result!(T, E)`, `Ok!T` and `Err!E` values.
-    this(R)(auto ref R value) if (is(typeof({ Payload.init = R.init; })))
+    private this(R)(auto ref R value) if (is(typeof({ Payload.init = R.init; })))
     {
         payload = value;
     }
     /// Ditto
-    this(R)(auto ref R value) const if (is(typeof({ Payload.init = R.init; })))
+    private this(R)(auto ref R value) const
+            if (is(typeof({ Payload.init = R.init; })))
     {
         payload = value;
     }
     /// Ditto
-    this(R)(auto ref R value) immutable if (is(typeof({ Payload.init = R.init; })))
+    private this(R)(auto ref R value) immutable
+            if (is(typeof({ Payload.init = R.init; })))
     {
         payload = value;
     }
@@ -83,12 +85,16 @@ struct Result(T, E)
         return this;
     }
 
-    static ok(T value)
+    /// Constructs [Result]`!(T, E)` that has [Ok]`!T` with `value`.
+    @("Unique to D")
+    static Result!(T, E) ok(T value)
     {
         return Result!(T, E)(Ok!T(value));
     }
 
-    static err(E value)
+    /// Constructs [Result]`!(T, E)` that has [Err]`!E` with `value`.
+    @("Unique to D")
+    static Result!(T, E) err(E value)
     {
         return Result!(T, E)(Err!E(value));
     }
