@@ -48,29 +48,29 @@ struct Result(T, E)
     import std.sumtype : SumType;
 
     ///
-    alias ResultPayload = SumType!(Ok!T, Err!E);
-    ResultPayload payload;
+    alias Payload = SumType!(Ok!T, Err!E);
+    Payload payload;
     alias payload this;
 
     /// The constructor accepts `Result!(T, E)`, `Ok!T` and `Err!E` values.
-    this(R)(auto ref R value) if (is(typeof({ ResultPayload.init = R.init; })))
+    this(R)(auto ref R value) if (is(typeof({ Payload.init = R.init; })))
     {
         payload = value;
     }
     /// Ditto
-    this(R)(auto ref R value) const if (is(typeof({ ResultPayload.init = R.init; })))
+    this(R)(auto ref R value) const if (is(typeof({ Payload.init = R.init; })))
     {
         payload = value;
     }
     /// Ditto
     this(R)(auto ref R value) immutable
-            if (is(typeof({ ResultPayload.init = R.init; })))
+            if (is(typeof({ Payload.init = R.init; })))
     {
         payload = value;
     }
 
     /// Supports assignment of `Result!(T, E)`, `Ok!T` and `Err!E` values.
-    ref opAssign(R)(auto ref R rhs) if (is(typeof({ ResultPayload.init = R.init; })))
+    ref opAssign(R)(auto ref R rhs) if (is(typeof({ Payload.init = R.init; })))
     {
         payload = rhs;
         return this;
@@ -247,7 +247,7 @@ unittest
 
 private template OkTypeOf(R) if (isResult!R)
 {
-    alias OkTypeOf = R.payload.Types[0];
+    alias OkTypeOf = R.Payload.Types[0];
 }
 
 unittest
@@ -275,7 +275,7 @@ unittest
 
 private template ErrTypeOf(R) if (isResult!R)
 {
-    alias ErrTypeOf = R.payload.Types[1];
+    alias ErrTypeOf = R.Payload.Types[1];
 }
 
 unittest
