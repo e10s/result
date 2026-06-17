@@ -78,10 +78,11 @@ struct Result(T, E)
         payload = value;
     }
 
-    /// Supports assignment of `Result!(T, E)`, `Ok!T` and `Err!E` values.
-    ref opAssign(R)(auto ref R rhs) if (is(typeof({ Payload.init = R.init; })))
+    /// Supports assignment of [Result]
+    ref opAssign(R)(auto ref R rhs)
+            if (isResult!R && is(typeof({ Payload.init = R.Payload.init; })))
     {
-        payload = rhs;
+        payload = rhs.payload;
         return this;
     }
 
@@ -222,25 +223,15 @@ struct Result(T, E)
 {
     import std.sumtype : get;
 
-    Result!(int, string) result1, result2;
-    result1 = Ok!int(10);
-    assert(result1.get!(Ok!int) == Ok!int(10));
-    result1 = const(Ok!int)(20);
-    assert(result1.get!(Ok!int) == Ok!int(20));
-    result1 = immutable(Ok!int)(30);
-    assert(result1.get!(Ok!int) == Ok!int(30));
-    result1 = Err!string("11");
-    assert(result1.get!(Err!string) == Err!string("11"));
-    result1 = const(Err!string)("22");
-    assert(result1.get!(Err!string) == Err!string("22"));
-    result1 = immutable(Err!string)("33");
-    assert(result1.get!(Err!string) == Err!string("33"));
+    auto result1 = Result!(int, string).err("333");
+    auto result2 = Result!(int, string).err("3");
+
     result2 = result1;
-    assert(result2.get!(Err!string) == Err!string("33"));
-    const result3 = Result!(int, string)(Ok!int(100));
+    assert(result2.get!(Err!string) == Err!string("333"));
+    const result3 = Result!(int, string).ok(100);
     result2 = result3;
     assert(result2.get!(Ok!int) == Ok!int(100));
-    immutable result4 = Result!(int, string)(Err!string("1000"));
+    immutable result4 = Result!(int, string).err("1000");
     result2 = result4;
     assert(result2.get!(Err!string) == Err!string("1000"));
 }
