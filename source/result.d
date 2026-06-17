@@ -715,7 +715,7 @@ ErrValueTypeOf!R tryUnwrapErr(R)(auto ref R result) if (isResult!R)
 }
 
 /// Returns the contained `Ok!T` value.
-/// Or returns the contained `defaultValue` if the value is an `Err!E`.
+/// Or returns `defaultValue` if the contained value is an `Err!E`.
 OkValueTypeOf!R unwrapOr(R, T)(auto ref R result, T defaultValue)
         if (isResult!R && is(T : OkValueTypeOf!R))
 {
@@ -741,15 +741,15 @@ OkValueTypeOf!R unwrapOr(R, T)(auto ref R result, T defaultValue)
 @safe @nogc nothrow unittest
 {
     auto resultOk1 = Result!(int, string).ok(123);
-    assert(resultOk1.unwrapOr(456) == 123);
+    assert(unwrapOr(resultOk1, 456) == 123);
 
     alias R = Result!(string, uint);
 
     const resultOk2 = R.ok("123");
-    assert(resultOk2.unwrapOr("456") == "123");
+    assert(unwrapOr(resultOk2, "456") == "123");
 
     auto resultErr = R.err(123);
-    assert(resultErr.unwrapOr("456") == "456");
+    assert(unwrapOr(resultErr, "456") == "456");
 }
 
 /// Returns the contained `Ok!T` value.
