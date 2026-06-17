@@ -82,6 +82,23 @@ struct Result(T, E)
         payload = rhs;
         return this;
     }
+
+    static ok(T value)
+    {
+        return Result!(T, E)(Ok!T(value));
+    }
+
+    static err(E value)
+    {
+        return Result!(T, E)(Err!E(value));
+    }
+}
+
+// static wrapper of ctor
+@safe @nogc nothrow unittest
+{
+    assert(Result!(int, string).ok(3) == Result!(int, string)(Ok!int(3)));
+    assert(Result!(int, string).err("3") == Result!(int, string)(Err!string("3")));
 }
 
 // Ctor
@@ -100,19 +117,16 @@ struct Result(T, E)
     assert(constResultOk.has!(const(Ok!int)));
     assert(!constResultOk.has!(const(Err!string)));
     assert(constResultOk.get!(const(Ok!int)) == Ok!int(123));
-
     immutable immutableResultOk = Result!(int, string)(Ok!int(123));
     assert(!immutableResultOk.has!(Ok!int));
     assert(!immutableResultOk.has!(Err!string));
     assert(immutableResultOk.has!(immutable(Ok!int)));
     assert(!immutableResultOk.has!(immutable(Err!string)));
     assert(immutableResultOk.get!(immutable(Ok!int)) == Ok!int(123));
-
     auto resultErr = Result!(bool, dstring)(Err!dstring("123"d));
     assert(resultErr.has!(Err!dstring));
     assert(!resultErr.has!(Ok!bool));
     assert(resultErr.get!(Err!dstring) == Err!dstring("123"d));
-
     const constResultErr = Result!(bool, dstring)(Err!dstring("123"d));
     assert(!constResultErr.has!(Ok!bool));
     assert(!constResultErr.has!(Err!dstring));
@@ -140,7 +154,6 @@ struct Result(T, E)
     assert(newConstResult2.has!(const(Err!dstring)));
     const newConstResult3 = Result!(bool, dstring)(immutableResultErr);
     assert(newConstResult3.has!(const(Err!dstring)));
-
     immutable newImmutableResult1 = Result!(bool, dstring)(resultErr);
     assert(newImmutableResult1.has!(immutable(Err!dstring)));
     immutable newImmutableResult2 = Result!(bool, dstring)(constResultErr);
@@ -156,18 +169,15 @@ struct Result(T, E)
 
     alias R = Result!(int, string);
     alias O = Ok!int;
-
     auto constResult1 = const(R)(O(123));
     assert(constResult1.has!(const(O)));
     auto constResult2 = const(R)(const(O)(123));
     assert(constResult2.has!(const(O)));
     auto constResult3 = const(R)(immutable(O)(123));
     assert(constResult3.has!(const(O)));
-
     auto result = R(O(123));
     const constResult = R(O(123));
     immutable immutableResult = R(O(123));
-
     auto constResult4 = const(R)(result);
     assert(constResult4.has!(const(O)));
     auto constResult5 = const(R)(constResult);
@@ -183,14 +193,12 @@ struct Result(T, E)
 
     alias R = Result!(int, string);
     alias O = Ok!int;
-
     auto immutableResult1 = immutable(R)(O(123));
     assert(immutableResult1.has!(immutable(O)));
     auto immutableResult2 = immutable(R)(immutable(O)(123));
     assert(immutableResult2.has!(immutable(O)));
     auto immutableResult3 = immutable(R)(immutable(O)(123));
     assert(immutableResult3.has!(immutable(O)));
-
     auto result = R(O(123));
     const constResult = R(O(123));
     immutable immutableResult = R(O(123));
@@ -209,32 +217,23 @@ struct Result(T, E)
     import std.sumtype : get;
 
     Result!(int, string) result1, result2;
-
     result1 = Ok!int(10);
     assert(result1.get!(Ok!int) == Ok!int(10));
-
     result1 = const(Ok!int)(20);
     assert(result1.get!(Ok!int) == Ok!int(20));
-
     result1 = immutable(Ok!int)(30);
     assert(result1.get!(Ok!int) == Ok!int(30));
-
     result1 = Err!string("11");
     assert(result1.get!(Err!string) == Err!string("11"));
-
     result1 = const(Err!string)("22");
     assert(result1.get!(Err!string) == Err!string("22"));
-
     result1 = immutable(Err!string)("33");
     assert(result1.get!(Err!string) == Err!string("33"));
-
     result2 = result1;
     assert(result2.get!(Err!string) == Err!string("33"));
-
     const result3 = Result!(int, string)(Ok!int(100));
     result2 = result3;
     assert(result2.get!(Ok!int) == Ok!int(100));
-
     immutable result4 = Result!(int, string)(Err!string("1000"));
     result2 = result4;
     assert(result2.get!(Err!string) == Err!string("1000"));
@@ -352,7 +351,6 @@ bool isOk(R)(auto ref R result) if (isResult!R)
 {
     auto resultOk = Result!(int, string)(Ok!int(-3));
     assert(isOk(resultOk));
-
     auto resultErr = Result!(int, string)(Err!string("Some error message"));
     assert(!isOk(resultErr));
 }
@@ -361,13 +359,11 @@ bool isOk(R)(auto ref R result) if (isResult!R)
 {
     const constResultOk = Result!(int, string)(Ok!int(123));
     assert(isOk(constResultOk));
-
     immutable immutableResultOk = Result!(int, string)(Ok!int(123));
     assert(isOk(immutableResultOk));
 
     auto resultErr = Result!(int, string)(Err!string("123"));
     assert(!isOk(resultErr));
-
     const constResultErr = Result!(int, string)(Err!string("123"));
     assert(!isOk(constResultErr));
 
@@ -460,19 +456,14 @@ bool isOkAnd(F, R)(auto ref R result, auto ref F pred)
 
     auto resultOk = Result!(int, string)(Ok!int(123));
     assert(isOkAnd(resultOk, &isOdd));
-
     const constResultOk = Result!(int, string)(Ok!int(123));
     assert(isOkAnd(constResultOk, &isOdd));
-
     immutable immutableResultOk = Result!(int, string)(Ok!int(123));
     assert(isOkAnd(immutableResultOk, &isOdd));
-
     auto resultErr = Result!(int, string)(Err!string("123"));
     assert(!isOkAnd(resultErr, &isOdd));
-
     const constResultErr = Result!(int, string)(Err!string("123"));
     assert(!isOkAnd(constResultErr, &isOdd));
-
     immutable immutableResultErr = Result!(int, string)(Err!string("123"));
     assert(!isOkAnd(immutableResultErr, &isOdd));
 }
