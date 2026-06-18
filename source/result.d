@@ -548,6 +548,63 @@ bool isErrAnd(F, R)(auto ref R result, auto ref F pred)
     assert(!isErrAnd(resultErr2, &somePred));
 }
 
+/// Returns `result2` if `result1` is [Err], otherwise returns a new result of `S` with `result1`'s [Ok] value.
+S or(R, S)(auto ref R result1, auto ref S result2)
+        if (isResult!R && isResult!S && is(OkValueTypeOf!R == OkValueTypeOf!S))
+{
+    if (isErr(result1))
+    {
+        return result2;
+    }
+
+    return S.ok(unwrap(result1));
+}
+
+///
+@safe @nogc nothrow unittest
+{
+    alias R = Result!(uint, string);
+    alias S = Result!(uint, dstring);
+
+    auto x1 = R.ok(2);
+    auto y1 = S.err("late error");
+    assert(or(x1, y1) == S.ok(2));
+
+    auto x2 = R.err("early error");
+    auto y2 = S.ok(2);
+    assert(or(x2, y2) == S.ok(2));
+
+    auto x3 = R.err("not a 2");
+    auto y3 = S.err("late error");
+    assert(or(x3, y3) == S.err("late error"));
+
+    auto x4 = R.ok(2);
+    auto y4 = S.ok(100);
+    assert(or(x4, y4) == S.ok(2));
+}
+
+@safe @nogc nothrow unittest
+{
+    alias R = Result!(uint, string);
+    alias S = Result!(uint, dstring);
+
+    auto x1 = R.ok(2);
+    const y1 = S.err("late error");
+    assert(or(x1, y1) == S.ok(2));
+
+    immutable x2 = R.err("early error");
+    const y2 = S.ok(2);
+    assert(or(x2, y2) == S.ok(2));
+
+    immutable x3 = R.err("not a 2");
+    immutable y3 = S.err("late error");
+    assert(or(x3, y3) == S.err("late error"));
+
+    const x4 = R.ok(2);
+    const y4 = S.ok(100);
+    assert(or(x4, y4) == S.ok(2));
+}
+
 /// Returns the containing `Ok!T` value.
 OkValueTypeOf!R unwrap(R)(auto ref R result) if (isResult!R)
 {
