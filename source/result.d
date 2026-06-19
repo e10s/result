@@ -486,6 +486,81 @@ S and(R, S)(auto ref R result1, auto ref S result2)
     assert(and(x4, y4) == S.ok("different result type"));
 }
 
+/// Calls `fun` with the [Ok] value if `result` is [Ok],
+/// otherwise returns a new result with `result`'s [Err] value.
+S andThen(alias fun = "a", R, S = typeof(unaryFun!fun(OkValueTypeOf!R.init)))(auto ref R result)
+        if (isResult!R && isResult!S && is(ErrValueTypeOf!R == ErrValueTypeOf!S))
+{
+    if (isErr(result))
+    {
+        return S.err(unwrapErr(result));
+    }
+
+    return unaryFun!fun(unwrap(result));
+}
+
+// FIXME: need to reproduce `Option`
+///
+@safe nothrow unittest
+{
+    alias Q = Result!(uint, string);
+    alias R = Result!(string, bool);
+    alias S = Result!(string, string);
+
+    auto checkedMulToString(uint x, uint y)
+    {
+        import std.checkedint : opChecked;
+
+        bool overflow;
+        immutable r = opChecked!"*"(x, y, overflow);
+        if (overflow)
+        {
+            return R.err(true);
+        }
+        import std.conv : to;
+
+        return R.ok(to!string(r));
+    }
+
+    auto sqThenToString(uint x)
+    {
+        return orElse!(r => S.err("overflowed"))(checkedMulToString(x, x));
+    }
+
+    assert(andThen!sqThenToString(Q.ok(2)) == S.ok("4"));
+    assert(andThen!sqThenToString(Q.ok(1_000_000)) == S.err("overflowed"));
+    assert(andThen!sqThenToString(Q.err("not a number")) == S.err("not a number"));
+}
+
+@safe nothrow unittest
+{
+    alias R = Result!(float, string);
+    alias S = Result!(int, string);
+
+    S toInt(float x)
+    {
+        try
+        {
+            import std.conv : to;
+
+            return S.ok(to!int(x));
+        }
+        catch (Exception e)
+        {
+            return S.err(typeid(e).toString());
+        }
+    }
+
+    auto resultOk1 = R.ok(2.3);
+    assert(andThen!toInt(resultOk1) == S.ok(2));
+
+    auto resultOk2 = R.ok(float.nan);
+    assert(andThen!toInt(resultOk2) == S.err("std.conv.ConvException"));
+
+    auto resultErr = R.err("bad value");
+    assert(andThen!toInt(resultErr) == S.err("bad value"));
+}
+
 /// Returns `result2` if `result1` is [Err], otherwise returns a new result of `S` with `result1`'s [Ok] value.
 S or(R, S)(auto ref R result1, auto ref S result2)
         if (isResult!R && isResult!S && is(OkValueTypeOf!R == OkValueTypeOf!S))
