@@ -662,6 +662,65 @@ S or(R, S)(auto ref R result1, auto ref S result2)
     assert(or(x4, y4) == S.ok(2));
 }
 
+/// Calls `fun` with the [Err] value if `result` is [Err],
+/// otherwise returns a new result with `result`'s [Ok] value.
+S orElse(alias fun = "a", R, S = typeof(unaryFun!fun(ErrValueTypeOf!R.init)))(auto ref R result)
+        if (isResult!R && isResult!S && is(OkValueTypeOf!R == OkValueTypeOf!S))
+{
+    if (isOk(result))
+    {
+        return S.ok(unwrap(result));
+    }
+
+    return unaryFun!fun(unwrapErr(result));
+}
+
+///
+@safe @nogc nothrow unittest
+{
+    alias R = Result!(uint, uint);
+
+    R sq(uint x)
+    {
+        return R.ok(x * x);
+    }
+
+    R err(uint x)
+    {
+        return R.err(x);
+    }
+
+    assert(orElse!sq(orElse!sq(R.ok(2))) == R.ok(2));
+    assert(orElse!sq(orElse!err(R.ok(2))) == R.ok(2));
+    assert(orElse!err(orElse!sq(R.err(3))) == R.ok(9));
+    assert(orElse!err(orElse!err(R.err(3))) == R.err(3));
+}
+
+@safe @nogc nothrow unittest
+{
+    alias R = Result!(bool, string);
+    alias S = Result!(bool, size_t);
+
+    S isEmpty(string x)
+    {
+        if (x.length > 0)
+        {
+            return S.err(x.length);
+        }
+
+        return S.ok(true);
+    }
+
+    auto resultOk = R.ok(false);
+    assert(orElse!isEmpty(resultOk) == S.ok(false));
+
+    auto resultErr1 = R.err("");
+    assert(orElse!isEmpty(resultErr1) == S.ok(true));
+
+    auto resultErr2 = R.err("too long string");
+    assert(orElse!isEmpty(resultErr2) == S.err(15));
+}
+
 /// Returns the containing `Ok!T` value.
 OkValueTypeOf!R unwrap(R)(auto ref R result) if (isResult!R)
 {
