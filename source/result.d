@@ -344,56 +344,6 @@ bool isOkAnd(alias pred = "a", R)(auto ref R result)
     assert(!isOkAnd!isOdd(iResultErr));
 }
 
-/// Ditto
-bool isOkAnd(F, R)(auto ref R result, auto ref F pred)
-        if (isCallable!F && is(typeof(unaryFun!pred(OkValueTypeOf!R.init))))
-{
-    return isOk(result) && unaryFun!pred(unwrap(result));
-}
-
-///
-@safe nothrow unittest
-{
-    alias R = Result!(uint, string);
-
-    auto resultOk1 = R.ok(2);
-    assert(isOkAnd(resultOk1, (uint a) => a > 1) == true);
-
-    auto resultOk2 = R.ok(0);
-    assert(isOkAnd(resultOk2, (uint a) => a > 1) == false);
-
-    auto resultErr = R.err("hey");
-    assert(isOkAnd(resultErr, (uint a) => a > 1) == false);
-}
-
-@safe nothrow unittest
-{
-    size_t isOdd(int n)
-    {
-        return n & 1;
-    }
-
-    alias R = Result!(int, string);
-
-    auto resultOk = R.ok(123);
-    assert(isOkAnd(resultOk, &isOdd));
-
-    const cResultOk = R.ok(123);
-    assert(isOkAnd(cResultOk, &isOdd));
-
-    immutable iResultOk = R.ok(123);
-    assert(isOkAnd(iResultOk, &isOdd));
-
-    auto resultErr = R.err("123");
-    assert(!isOkAnd(resultErr, &isOdd));
-
-    const cResultErr = R.err("123");
-    assert(!isOkAnd(cResultErr, &isOdd));
-
-    immutable iResultErr = R.err("123");
-    assert(!isOkAnd(iResultErr, &isOdd));
-}
-
 /// Returns `true` if `this` has an `Err!E` value.
 alias isErr = not!isOk;
 
@@ -477,59 +427,6 @@ bool isErrAnd(alias pred = "a", R)(auto ref R result)
 
     auto resultErr2 = R.err("Good morning, 007.");
     assert(!isErrAnd!isNumeric(resultErr2));
-}
-
-/// Ditto
-bool isErrAnd(F, R)(auto ref R result, auto ref F pred)
-        if (isCallable!F && is(typeof(unaryFun!pred(ErrValueTypeOf!R.init))))
-{
-    return isErr(result) && unaryFun!pred(unwrapErr(result));
-}
-
-///
-@safe nothrow unittest
-{
-    alias R = Result!(uint, string);
-
-    auto resultErr1 = R.err("!!!");
-    assert(isErrAnd(resultErr1, (string e) => e == "!!!") == true);
-
-    auto resultErr2 = R.err("?");
-    assert(isErrAnd(resultErr2, (string e) => e == "!!!") == false);
-
-    auto resultOk = R.ok(123);
-    assert(isErrAnd(resultOk, (string e) => e == "!!!") == false);
-}
-
-@safe nothrow unittest
-{
-    auto somePred(string s)
-    {
-        return s.length > 2 && s[$ - 2] == '2';
-    }
-
-    alias R = Result!(int, string);
-
-    auto resultOk = R.ok(123);
-    assert(!isErrAnd(resultOk, &somePred));
-
-    const cResultOk = R.ok(123);
-    assert(!isErrAnd(cResultOk, &somePred));
-
-    immutable iResultOk = R.ok(123);
-    assert(!isErrAnd(iResultOk, &somePred));
-
-    auto resultErr = R.err("123");
-    assert(isErrAnd(resultErr, &somePred));
-
-    const cResultErr = R.err("123");
-    assert(isErrAnd(cResultErr, &somePred));
-
-    immutable iResultErr = R.err("123");
-    assert(isErrAnd(iResultErr, &somePred));
-
-    auto resultErr2 = R.err("Good morning, 007.");
-    assert(!isErrAnd(resultErr2, &somePred));
 }
 
 /// Returns `result2` if `result1` is [Ok], otherwise returns a new result of `S` with `result1`'s [Err] value.
@@ -1015,61 +912,4 @@ OkValueTypeOf!R unwrapOrElse(alias fun = "a", R)(auto ref R result)
     assert(unwrapOrElse!"to!string(a+2)"(resultErr) == "125");
     assert(unwrapOrElse!"`foo`"(resultErr) == "foo");
     assert(unwrapOrElse!fFoo(resultErr) == "Foo is 123");
-}
-
-/// Ditto
-OkValueTypeOf!R unwrapOrElse(F, R)(auto ref R result, auto ref F fun)
-        if (isCallable!F && is(typeof(fun(ErrValueTypeOf!R.init)) : OkValueTypeOf!R))
-{
-    if (isErr(result))
-    {
-        return unaryFun!fun(unwrapErr(result));
-    }
-
-    return unwrap(result);
-}
-
-///
-@safe nothrow unittest
-{
-    auto count = (string x) => x.length;
-
-    alias R = Result!(size_t, string);
-
-    auto resultOk = R.ok(2);
-    assert(unwrapOrElse(resultOk, count) == 2);
-
-    auto resultErr = R.err("foo");
-    assert(unwrapOrElse(resultErr, count) == 3);
-}
-
-@safe nothrow unittest
-{
-    import std.conv : to;
-
-    auto f999(string s)
-    {
-        return 999;
-    }
-
-    auto fFoo(uint n)
-    {
-        return "Foo is " ~ to!string(n);
-    }
-
-    auto resultOk1 = Result!(int, string).ok(123);
-    static assert(is(typeof(unwrapOrElse(resultOk1, &f999)) == int));
-    assert(unwrapOrElse(resultOk1, &f999) == 123);
-
-    alias R = Result!(string, uint);
-
-    immutable resultOk2 = R.ok("123");
-    static assert(is(typeof(unwrapOrElse(resultOk2, (uint a) => "456")) == string));
-    assert(unwrapOrElse!(to!string)(resultOk2) == "123");
-
-    auto resultErr = R.err(123);
-    static assert(is(typeof(unwrapOrElse(resultErr, (uint a) => a.to!string)) == string));
-    assert(unwrapOrElse(resultErr, (uint a) => a.to!string) == "123");
-    static assert(is(typeof(unwrapOrElse(resultErr, &fFoo)) == string));
-    assert(unwrapOrElse(resultErr, &fFoo) == "Foo is 123");
 }
