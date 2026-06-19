@@ -1,4 +1,7 @@
 module result;
+import std.functional : not;
+import std.functional : unaryFun;
+import std.traits : isCallable;
 
 ///
 struct Ok(T)
@@ -291,16 +294,11 @@ bool isOk(R)(auto ref R result) if (isResult!R)
     assert(!isOk(iResultErr));
 }
 
-import std.functional : unaryFun;
-
 /// Returns `true` if `result` has an [Ok] value and its value satisfies `pred`.
 bool isOkAnd(alias pred = "a", R)(auto ref R result)
         if (isResult!R && is(typeof(unaryFun!pred(OkValueTypeOf!R.init))))
 {
-    import std.sumtype : match;
-
-    return result.payload.match!((OkTypeOf!R t) => unaryFun!pred(t.value)
-            && true, (ErrTypeOf!R _) => false);
+    return isOk(result) && unaryFun!pred(unwrap(result));
 }
 
 ///
@@ -346,16 +344,11 @@ bool isOkAnd(alias pred = "a", R)(auto ref R result)
     assert(!isOkAnd!isOdd(iResultErr));
 }
 
-import std.traits : isCallable;
-
 /// Ditto
 bool isOkAnd(F, R)(auto ref R result, auto ref F pred)
         if (isCallable!F && is(typeof(unaryFun!pred(OkValueTypeOf!R.init))))
 {
-    import std.sumtype : match;
-
-    return result.payload.match!((OkTypeOf!R t) => unaryFun!pred(t.value)
-            && true, (ErrTypeOf!R _) => false);
+    return isOk(result) && unaryFun!pred(unwrap(result));
 }
 
 ///
@@ -402,10 +395,7 @@ bool isOkAnd(F, R)(auto ref R result, auto ref F pred)
 }
 
 /// Returns `true` if `this` has an `Err!E` value.
-bool isErr(R)(auto ref R result) if (isResult!R)
-{
-    return !isOk(result);
-}
+alias isErr = not!isOk;
 
 ///
 @safe @nogc nothrow unittest
@@ -443,10 +433,7 @@ bool isErr(R)(auto ref R result) if (isResult!R)
 bool isErrAnd(alias pred = "a", R)(auto ref R result)
         if (isResult!R && is(typeof(unaryFun!pred(ErrValueTypeOf!R.init))))
 {
-    import std.sumtype : match;
-
-    return result.payload.match!((OkTypeOf!R _) => false,
-            (ErrTypeOf!R e) => unaryFun!pred(e.value) && true);
+    return isErr(result) && unaryFun!pred(unwrapErr(result));
 }
 
 ///
@@ -496,10 +483,7 @@ bool isErrAnd(alias pred = "a", R)(auto ref R result)
 bool isErrAnd(F, R)(auto ref R result, auto ref F pred)
         if (isCallable!F && is(typeof(unaryFun!pred(ErrValueTypeOf!R.init))))
 {
-    import std.sumtype : match;
-
-    return result.payload.match!((OkTypeOf!R _) => false,
-            (ErrTypeOf!R e) => unaryFun!pred(e.value) && true);
+    return isErr(result) && unaryFun!pred(unwrapErr(result));
 }
 
 ///
@@ -892,9 +876,12 @@ ErrValueTypeOf!R tryUnwrapErr(R)(auto ref R result) if (isResult!R)
 OkValueTypeOf!R unwrapOr(R, T)(auto ref R result, T defaultValue)
         if (isResult!R && is(T : OkValueTypeOf!R))
 {
-    import std.sumtype : match;
+    if (isErr(result))
+    {
+        return defaultValue;
+    }
 
-    return result.payload.match!((OkTypeOf!R t) => t.value, (ErrTypeOf!R _) => defaultValue);
+    return unwrap(result);
 }
 
 ///
@@ -929,10 +916,7 @@ OkValueTypeOf!R unwrapOr(R, T)(auto ref R result, T defaultValue)
 /// Or returns `T.init` if the contained value is an `Err!E`.
 OkValueTypeOf!R unwrapOrDefault(R)(auto ref R result) if (isResult!R)
 {
-    import std.sumtype : match;
-
-    return result.payload.match!((OkTypeOf!R t) => t.value,
-            (ErrTypeOf!R _) => OkValueTypeOf!R.init);
+    return unwrapOr(result, OkValueTypeOf!R.init);
 }
 
 @safe nothrow unittest
@@ -979,10 +963,12 @@ OkValueTypeOf!R unwrapOrDefault(R)(auto ref R result) if (isResult!R)
 OkValueTypeOf!R unwrapOrElse(alias fun = "a", R)(auto ref R result)
         if (isResult!R && is(typeof(unaryFun!fun(ErrValueTypeOf!R.init)) : OkValueTypeOf!R))
 {
-    import std.sumtype : match;
+    if (isErr(result))
+    {
+        return unaryFun!fun(unwrapErr(result));
+    }
 
-    return result.payload.match!((OkTypeOf!R t) => t.value,
-            (ErrTypeOf!R e) => unaryFun!fun(e.value));
+    return unwrap(result);
 }
 
 ///
@@ -1035,9 +1021,12 @@ OkValueTypeOf!R unwrapOrElse(alias fun = "a", R)(auto ref R result)
 OkValueTypeOf!R unwrapOrElse(F, R)(auto ref R result, auto ref F fun)
         if (isCallable!F && is(typeof(fun(ErrValueTypeOf!R.init)) : OkValueTypeOf!R))
 {
-    import std.sumtype : match;
+    if (isErr(result))
+    {
+        return unaryFun!fun(unwrapErr(result));
+    }
 
-    return result.payload.match!((OkTypeOf!R t) => t.value, (ErrTypeOf!R e) => fun(e.value));
+    return unwrap(result);
 }
 
 ///
