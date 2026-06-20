@@ -257,12 +257,12 @@ unittest
 }
 /* Convenience templates end */
 
-/// Returns `true` if `result` has an [Ok] value.
-bool isOk(R)(auto ref R result) if (isResult!R)
+/// Returns `true` if `r` has an [Ok] value.
+bool isOk(T, E)(scope const auto ref Result!(T, E) r)
 {
     import std.sumtype : match;
 
-    return result.payload.match!((OkTypeOf!R _) => true, (ErrTypeOf!R _) => false);
+    return r.payload.match!((Ok!T _) => true, (Err!E _) => false);
 }
 
 ///
@@ -294,11 +294,11 @@ bool isOk(R)(auto ref R result) if (isResult!R)
     assert(!isOk(iResultErr));
 }
 
-/// Returns `true` if `result` has an [Ok] value and its value satisfies `pred`.
-bool isOkAnd(alias pred = "a", R)(auto ref R result)
-        if (isResult!R && is(typeof(unaryFun!pred(OkValueTypeOf!R.init))))
+/// Returns `true` if `r` has an [Ok] value and its value satisfies `pred`.
+bool isOkAnd(alias pred = "a", T, E)(scope const auto ref Result!(T, E) r)
+        if (is(typeof(unaryFun!pred(T.init))))
 {
-    return isOk(result) && unaryFun!pred(unwrap(result));
+    return isOk(r) && unaryFun!pred(unwrap(r));
 }
 
 ///
@@ -379,11 +379,11 @@ alias isErr = not!isOk;
     assert(!isErr(iResultOk));
 }
 
-/// Returns `true` if `result` has an [Err] value and its value satisfies `pred`.
-bool isErrAnd(alias pred = "a", R)(auto ref R result)
-        if (isResult!R && is(typeof(unaryFun!pred(ErrValueTypeOf!R.init))))
+/// Returns `true` if `r` has an [Err] value and its value satisfies `pred`.
+bool isErrAnd(alias pred = "a", T, E)(scope const auto ref Result!(T, E) r)
+        if (is(typeof(unaryFun!pred(E.init))))
 {
-    return isErr(result) && unaryFun!pred(unwrapErr(result));
+    return isErr(r) && unaryFun!pred(unwrapErr(r));
 }
 
 ///
@@ -429,16 +429,15 @@ bool isErrAnd(alias pred = "a", R)(auto ref R result)
     assert(!isErrAnd!isNumeric(resultErr2));
 }
 
-/// Returns `result2` if `result1` is [Ok], otherwise returns a new result of `S` with `result1`'s [Err] value.
-S and(R, S)(auto ref R result1, auto ref S result2)
-        if (isResult!R && isResult!S && is(ErrValueTypeOf!R == ErrValueTypeOf!S))
+/// Returns `r2` if `r1` is [Ok], otherwise returns `Result!(U, E)` with `r1`'s [Err] value.
+Result!(U, E) and(T, U, E)(scope const auto ref Result!(T, E) r1, scope const auto ref Result!(U, E) r2)
 {
-    if (isOk(result1))
+    if (isOk(r1))
     {
-        return result2;
+        return r2;
     }
 
-    return S.err(unwrapErr(result1));
+    return Result!(U, E).err(unwrapErr(r1));
 }
 
 ///
@@ -486,17 +485,21 @@ S and(R, S)(auto ref R result1, auto ref S result2)
     assert(and(x4, y4) == S.ok("different result type"));
 }
 
-/// Calls `fun` with the [Ok] value if `result` is [Ok],
-/// otherwise returns a new result with `result`'s [Err] value.
-S andThen(alias fun = "a", R, S = typeof(unaryFun!fun(OkValueTypeOf!R.init)))(auto ref R result)
-        if (isResult!R && isResult!S && is(ErrValueTypeOf!R == ErrValueTypeOf!S))
+/// Calls `fun` with the [Ok] value if `r` is [Ok],
+/// otherwise returns a new result with `r`'s [Err] value.
+
+auto andThen(alias fun = "a", T, E)(scope const auto ref Result!(T, E) r)
+        if (is(E == ErrValueTypeOf!(typeof(unaryFun!fun(T.init)))))
 {
-    if (isErr(result))
+    alias U = OkValueTypeOf!(typeof(unaryFun!fun(T.init)));
+    alias S = Result!(U, E);
+
+    if (isErr(r))
     {
-        return S.err(unwrapErr(result));
+        return S.err(unwrapErr(r));
     }
 
-    return unaryFun!fun(unwrap(result));
+    return cast(S) unaryFun!fun(unwrap(r));
 }
 
 // FIXME: need to reproduce `Option`
@@ -561,16 +564,15 @@ S andThen(alias fun = "a", R, S = typeof(unaryFun!fun(OkValueTypeOf!R.init)))(au
     assert(andThen!toInt(resultErr) == S.err("bad value"));
 }
 
-/// Returns `result2` if `result1` is [Err], otherwise returns a new result of `S` with `result1`'s [Ok] value.
-S or(R, S)(auto ref R result1, auto ref S result2)
-        if (isResult!R && isResult!S && is(OkValueTypeOf!R == OkValueTypeOf!S))
+/// Returns `r2` if `result1` is [Err], otherwise returns a new result of `S` with `r1`'s [Ok] value.
+Result!(T, F) or(T, E, F)(scope const auto ref Result!(T, E) r1, scope const auto ref Result!(T, F) r2)
 {
-    if (isErr(result1))
+    if (isErr(r1))
     {
-        return result2;
+        return r2;
     }
 
-    return S.ok(unwrap(result1));
+    return Result!(T, F).ok(unwrap(r1));
 }
 
 ///
@@ -620,15 +622,18 @@ S or(R, S)(auto ref R result1, auto ref S result2)
 
 /// Calls `fun` with the [Err] value if `result` is [Err],
 /// otherwise returns a new result with `result`'s [Ok] value.
-S orElse(alias fun = "a", R, S = typeof(unaryFun!fun(ErrValueTypeOf!R.init)))(auto ref R result)
-        if (isResult!R && isResult!S && is(OkValueTypeOf!R == OkValueTypeOf!S))
+auto orElse(alias fun = "a", T, E)(scope const auto ref Result!(T, E) r)
+        if (is(T == OkValueTypeOf!(typeof(unaryFun!fun(E.init)))))
 {
-    if (isOk(result))
+    alias F = ErrValueTypeOf!(typeof(unaryFun!fun(E.init)));
+    alias S = Result!(T, F);
+
+    if (isOk(r))
     {
-        return S.ok(unwrap(result));
+        return S.ok(unwrap(r));
     }
 
-    return unaryFun!fun(unwrapErr(result));
+    return cast(S) unaryFun!fun(unwrapErr(r));
 }
 
 ///
@@ -678,13 +683,13 @@ S orElse(alias fun = "a", R, S = typeof(unaryFun!fun(ErrValueTypeOf!R.init)))(au
 }
 
 /// Returns the containing `Ok!T` value.
-OkValueTypeOf!R unwrap(R)(auto ref R result) if (isResult!R)
+T unwrap(T, E)(scope const auto ref Result!(T, E) r)
 {
-    assert(isOk(result), "Result does not have an Ok value.");
+    assert(isOk(r), "Result does not have an Ok value.");
 
     import std.sumtype : get;
 
-    return result.payload.get!(QualifiedOkTypeOf!R).value;
+    return r.payload.get!(QualifiedOkTypeOf!(typeof(r))).value;
 }
 
 ///
@@ -720,13 +725,13 @@ unittest
 }
 
 /// Returns the contained `Err!E` value.
-ErrValueTypeOf!R unwrapErr(R)(auto ref R result) if (isResult!R)
+E unwrapErr(T, E)(scope const auto ref Result!(T, E) r)
 {
-    assert(isErr(result), "Result does not have an Err value.");
+    assert(isErr(r), "Result does not have an Err value.");
 
     import std.sumtype : get;
 
-    return result.payload.get!(QualifiedErrTypeOf!R).value;
+    return r.payload.get!(QualifiedErrTypeOf!(typeof(r))).value;
 }
 
 ///
@@ -764,12 +769,12 @@ unittest
 /// Returns the containing `Ok!T` value.
 /// Throws `UnwrapException` if the value is an `Err!E`.
 @("Unique to D")
-OkValueTypeOf!R tryUnwrap(R)(auto ref R result) if (isResult!R)
+T tryUnwrap(T, E)(scope const auto ref Result!(T, E) r)
 {
     import std.exception : enforce;
 
-    enforce!UnwrapException(isOk(result), "Result does not have an Ok value.");
-    return unwrap(result);
+    enforce!UnwrapException(isOk(r), "Result does not have an Ok value.");
+    return unwrap(r);
 }
 
 ///
@@ -805,12 +810,12 @@ OkValueTypeOf!R tryUnwrap(R)(auto ref R result) if (isResult!R)
 /// Returns the contained `Err!E` value.
 /// Throws `UnwrapException` if the value is an `Ok!T`.
 @("Unique to D")
-ErrValueTypeOf!R tryUnwrapErr(R)(auto ref R result) if (isResult!R)
+E tryUnwrapErr(T, E)(scope const auto ref Result!(T, E) r)
 {
     import std.exception : enforce;
 
-    enforce!UnwrapException(isErr(result), "Result does not have an Err value.");
-    return unwrapErr(result);
+    enforce!UnwrapException(isErr(r), "Result does not have an Err value.");
+    return unwrapErr(r);
 }
 
 ///
@@ -845,15 +850,14 @@ ErrValueTypeOf!R tryUnwrapErr(R)(auto ref R result) if (isResult!R)
 
 /// Returns the contained `Ok!T` value.
 /// Or returns `defaultValue` if the contained value is an `Err!E`.
-OkValueTypeOf!R unwrapOr(R, T)(auto ref R result, T defaultValue)
-        if (isResult!R && is(T : OkValueTypeOf!R))
+T unwrapOr(T, E)(scope const auto ref Result!(T, E) r, T defaultValue)
 {
-    if (isErr(result))
+    if (isErr(r))
     {
         return defaultValue;
     }
 
-    return unwrap(result);
+    return unwrap(r);
 }
 
 ///
@@ -886,9 +890,9 @@ OkValueTypeOf!R unwrapOr(R, T)(auto ref R result, T defaultValue)
 
 /// Returns the contained `Ok!T` value.
 /// Or returns `T.init` if the contained value is an `Err!E`.
-OkValueTypeOf!R unwrapOrDefault(R)(auto ref R result) if (isResult!R)
+T unwrapOrDefault(T, E)(scope const auto ref Result!(T, E) r)
 {
-    return unwrapOr(result, OkValueTypeOf!R.init);
+    return unwrapOr(r, T.init);
 }
 
 @safe nothrow unittest
@@ -932,15 +936,15 @@ OkValueTypeOf!R unwrapOrDefault(R)(auto ref R result) if (isResult!R)
 
 /// Returns the contained `Ok!T` value.
 /// If the value is an `Err!E`, calls `fun` with the value of `Err!E` and returns the resulting `Ok!T` value.
-OkValueTypeOf!R unwrapOrElse(alias fun = "a", R)(auto ref R result)
-        if (isResult!R && is(typeof(unaryFun!fun(ErrValueTypeOf!R.init)) : OkValueTypeOf!R))
+T unwrapOrElse(alias fun = "a", T, E)(scope const auto ref Result!(T, E) r)
+        if (is(typeof(unaryFun!fun(E.init)) : T))
 {
-    if (isErr(result))
+    if (isErr(r))
     {
-        return unaryFun!fun(unwrapErr(result));
+        return unaryFun!fun(unwrapErr(r));
     }
 
-    return unwrap(result);
+    return unwrap(r);
 }
 
 ///
