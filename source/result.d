@@ -429,6 +429,46 @@ bool isErrAnd(alias pred = "a", T, E)(scope const auto ref Result!(T, E) r)
     assert(!isErrAnd!isNumeric(resultErr2));
 }
 
+/// Converts from [Result]`!(T, E)` to `Nullable!T`.
+Nullable!T ok(T, E)(scope const auto ref Result!(T, E) r)
+{
+    if (isErr(r))
+    {
+        return Nullable!T.init;
+    }
+
+    return Nullable!T(unwrap(r));
+}
+
+///
+@safe nothrow unittest
+{
+    alias R = Result!(uint, string);
+
+    auto resultOk = R.ok(2);
+    assert(ok(resultOk) == Nullable!uint(2));
+
+    auto resultErr = R.err("Nothing here");
+    assert(ok(resultErr).isNull);
+}
+
+@safe nothrow unittest
+{
+    alias R = Result!(uint, string);
+
+    const cResultOk = R.ok(2);
+    assert(ok(cResultOk) == Nullable!uint(2));
+
+    immutable iResultOk = R.ok(2);
+    assert(ok(iResultOk) == Nullable!uint(2));
+
+    const cResultErr = R.err("Nothing here");
+    assert(ok(cResultErr).isNull);
+
+    immutable iResultErr = R.err("Nothing here");
+    assert(ok(iResultErr).isNull);
+}
+
 /// Converts from [Result]`!(T, E)` to `Nullable!E`.
 Nullable!E err(T, E)(scope const auto ref Result!(T, E) r)
 {
