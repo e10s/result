@@ -1,7 +1,7 @@
 module result;
 import std.functional : not;
 import std.functional : unaryFun;
-import std.traits : isCallable;
+import std.typecons : Nullable;
 
 ///
 struct Ok(T)
@@ -427,6 +427,46 @@ bool isErrAnd(alias pred = "a", T, E)(scope const auto ref Result!(T, E) r)
 
     auto resultErr2 = R.err("Good morning, 007.");
     assert(!isErrAnd!isNumeric(resultErr2));
+}
+
+/// Converts from [Result]`!(T, E)` to `Nullable!E`.
+Nullable!E err(T, E)(scope const auto ref Result!(T, E) r)
+{
+    if (isOk(r))
+    {
+        return Nullable!E.init;
+    }
+
+    return Nullable!E(unwrapErr(r));
+}
+
+///
+@safe nothrow unittest
+{
+    alias R = Result!(uint, string);
+
+    auto resultOk = R.ok(2);
+    assert(err(resultOk).isNull);
+
+    auto resultErr = R.err("Nothing here");
+    assert(err(resultErr) == Nullable!string("Nothing here"));
+}
+
+@safe nothrow unittest
+{
+    alias R = Result!(uint, string);
+
+    const cResultOk = R.ok(2);
+    assert(err(cResultOk).isNull);
+
+    immutable iResultOk = R.ok(2);
+    assert(err(iResultOk).isNull);
+
+    const cResultErr = R.err("Nothing here");
+    assert(err(cResultErr) == Nullable!string("Nothing here"));
+
+    immutable iResultErr = R.err("Nothing here");
+    assert(err(iResultErr) == Nullable!string("Nothing here"));
 }
 
 /// Returns `r2` if `r1` is [Ok], otherwise returns `Result!(U, E)` with `r1`'s [Err] value.
