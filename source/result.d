@@ -1234,3 +1234,61 @@ auto map(alias fun, T, E)(scope const auto ref Result!(T, E) r)
     immutable iResultErr = R.err("bad");
     assert(map!(to!dstring)(iResultErr) == S.err("bad"));
 }
+
+/// Maps a [Result]`!(T, E)` to a new [Result] with the same [Ok] value
+/// by applying a function to a contained [Err] value.
+auto mapErr(alias fun, T, E)(scope const auto ref Result!(T, E) r)
+        if (is(typeof(unaryFun!fun(E.init))))
+{
+    alias F = typeof(unaryFun!fun(E.init));
+    alias S = Result!(T, F);
+    import std.sumtype : match;
+
+    return r.payload.match!((Ok!T t) => S.ok(t.value), (Err!E e) => S.err(unaryFun!fun(e.value)));
+}
+
+///
+@safe unittest
+{
+    auto stringify(uint x)
+    {
+        import std.format : format;
+
+        return format!"error code: %s"(x);
+    }
+
+    alias R = Result!(uint, uint);
+    alias S = Result!(uint, string);
+
+    auto resultOk = R.ok(2);
+    assert(mapErr!stringify(resultOk) == S.ok(2));
+
+    auto resultErr = R.err(13);
+    assert(mapErr!stringify(resultErr) == S.err("error code: 13"));
+}
+
+@safe unittest
+{
+    import std.conv : to;
+
+    alias R = Result!(int, string);
+    alias S = Result!(int, size_t);
+
+    auto resultOk = R.ok(-22);
+    assert(mapErr!(a => a.length)(resultOk) == S.ok(-22));
+
+    const cResultOk = R.ok(-22);
+    assert(mapErr!(a => a.length)(cResultOk) == S.ok(-22));
+
+    immutable iResultOk = R.ok(-22);
+    assert(mapErr!(a => a.length)(iResultOk) == S.ok(-22));
+
+    auto resultErr = R.err("bad");
+    assert(mapErr!(a => a.length)(resultErr) == S.err(3));
+
+    const cResultErr = R.err("bad");
+    assert(mapErr!(a => a.length)(cResultErr) == S.err(3));
+
+    immutable iResultErr = R.err("bad");
+    assert(mapErr!(a => a.length)(iResultErr) == S.err(3));
+}
