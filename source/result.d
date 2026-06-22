@@ -3,44 +3,72 @@ import std.functional : not;
 import std.functional : unaryFun;
 import std.typecons : Nullable;
 
-///
-struct Ok(T)
+private mixin template OkErrImpl(X)
 {
-    private T value_;
+    private X value_;
     @property ref value() const
     {
         return value_;
+    }
+
+    bool opEquals(scope const X rhs) const
+    {
+        return value_ == rhs;
+    }
+
+    bool opEquals(scope const ref X rhs) const
+    {
+        return value_ == rhs;
+    }
+
+    size_t toHash() const
+    {
+        return hashOf(value);
     }
 
     alias value this;
 }
 
 ///
-@safe @nogc nothrow unittest
+struct Ok(T)
 {
+    mixin OkErrImpl!T;
+}
+
+///
+unittest
+{
+    assert(Ok!int(314) == Ok!int(314));
     assert(Ok!int(314).value == 314);
-    assert(Ok!int(314) == 314); // alias this
-    assert(Ok!string("Good day.") == "Good day."); // alias this
+    assert(Ok!int(314) == 314);
+    assert(Ok!string("Good day.") == "Good day.");
+
+    class K
+    {
+    }
+
+    assert(Ok!K(new K) != Ok!K(new K));
 }
 
 ///
 struct Err(E)
 {
-    private E value_;
-    @property ref value() const
-    {
-        return value_;
-    }
-
-    alias value this;
+    mixin OkErrImpl!E;
 }
 
 ///
-@safe @nogc nothrow unittest
+unittest
 {
+    assert(Err!int(314) == Err!int(314));
     assert(Err!int(314).value == 314);
-    assert(Err!int(314) == 314); // alias this
-    assert(Err!string("Good day.") == "Good day."); // alias this
+    assert(Err!int(314) == 314);
+    assert(Err!string("Good day.") == "Good day.");
+
+    class K
+    {
+    }
+
+    assert(Err!K(new K) != Err!K(new K));
 }
 
 ///
