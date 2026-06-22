@@ -595,8 +595,7 @@ Result!(U, E) and(T, U, E)(scope const auto ref Result!(T, E) r1, scope const au
 
 /// Calls `fun` with the [Ok] value if `r` is [Ok],
 /// otherwise returns a new result with `r`'s [Err] value.
-
-auto andThen(alias fun = "a", T, E)(scope const auto ref Result!(T, E) r)
+auto andThen(alias fun, T, E)(scope const auto ref Result!(T, E) r)
         if (is(E == ErrValueTypeOf!(typeof(unaryFun!fun(T.init)))))
 {
     alias U = OkValueTypeOf!(typeof(unaryFun!fun(T.init)));
@@ -730,7 +729,7 @@ Result!(T, F) or(T, E, F)(scope const auto ref Result!(T, E) r1, scope const aut
 
 /// Calls `fun` with the [Err] value if `result` is [Err],
 /// otherwise returns a new result with `result`'s [Ok] value.
-auto orElse(alias fun = "a", T, E)(scope const auto ref Result!(T, E) r)
+auto orElse(alias fun, T, E)(scope const auto ref Result!(T, E) r)
         if (is(T == OkValueTypeOf!(typeof(unaryFun!fun(E.init)))))
 {
     alias F = ErrValueTypeOf!(typeof(unaryFun!fun(E.init)));
@@ -1123,7 +1122,7 @@ T unwrapOrDefault(T, E)(scope const auto ref Result!(T, E) r)
 
 /// Returns the contained `Ok!T` value.
 /// If the value is an `Err!E`, calls `fun` with the value of `Err!E` and returns the resulting `Ok!T` value.
-T unwrapOrElse(alias fun = "a", T, E)(scope const auto ref Result!(T, E) r)
+T unwrapOrElse(alias fun, T, E)(scope const auto ref Result!(T, E) r)
         if (is(typeof(unaryFun!fun(E.init)) : T))
 {
     if (isErr(r))
