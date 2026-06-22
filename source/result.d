@@ -1158,3 +1158,79 @@ T unwrapOrElse(alias fun, T, E)(scope const auto ref Result!(T, E) r)
     assert(unwrapOrElse!"`foo`"(resultErr) == "foo");
     assert(unwrapOrElse!fFoo(resultErr) == "Foo is 123");
 }
+
+/// Maps a [Result]`!(T, E)` to a new [Result] with the same [Err] value
+/// by applying a function to a contained [Ok] value.
+auto map(alias fun, T, E)(scope const auto ref Result!(T, E) r)
+        if (is(typeof(unaryFun!fun(T.init))))
+{
+    alias U = typeof(unaryFun!fun(T.init));
+    alias S = Result!(U, E);
+    import std.sumtype : match;
+
+    return r.payload.match!((Ok!T t) => S.ok(unaryFun!fun(t.value)), (Err!E e) => S.err(e.value));
+}
+
+///
+@safe nothrow unittest
+{
+    auto parse(string s)
+    {
+        alias R = Result!(int, string);
+
+        try
+        {
+            import std.conv : to;
+
+            return R.ok(to!int(s));
+        }
+        catch (Exception _)
+        {
+            return R.err(s);
+        }
+    }
+
+    immutable line = "1\n2\n3\n4\n";
+    int[] arr;
+
+    import std.string : lineSplitter;
+
+    foreach (num; lineSplitter(line))
+    {
+        import std.sumtype : match;
+
+        immutable r = map!`a*2`(parse(num));
+        if (isOk(r))
+        {
+            arr ~= unwrap(r);
+        }
+    }
+
+    assert(arr == [2, 4, 6, 8]);
+}
+
+@safe unittest
+{
+    import std.conv : to;
+
+    alias R = Result!(int, string);
+    alias S = Result!(dstring, string);
+
+    auto resultOk = R.ok(-22);
+    assert(map!(to!dstring)(resultOk) == S.ok("-22"));
+
+    const cResultOk = R.ok(-22);
+    assert(map!(to!dstring)(cResultOk) == S.ok("-22"));
+
+    immutable iResultOk = R.ok(-22);
+    assert(map!(to!dstring)(iResultOk) == S.ok("-22"));
+
+    auto resultErr = R.err("bad");
+    assert(map!(to!dstring)(resultErr) == S.err("bad"));
+
+    const cResultErr = R.err("bad");
+    assert(map!(to!dstring)(cResultErr) == S.err("bad"));
+
+    immutable iResultErr = R.err("bad");
+    assert(map!(to!dstring)(iResultErr) == S.err("bad"));
+}
