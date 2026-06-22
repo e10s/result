@@ -916,6 +916,49 @@ T expect(T, E)(scope const auto ref Result!(T, E) r, string msg)
     assert(collectExceptionMsg(expect(resultErr, "foo")) == "foo");
 }
 
+/// Returns the contained `Err!E` value.
+/// Throws `UnwrapException` with `msg` if the value is an `Ok!T`.
+E expectErr(T, E)(scope const auto ref Result!(T, E) r, string msg)
+{
+    import std.exception : enforce;
+
+    enforce!UnwrapException(isErr(r), msg);
+    return unwrapErr(r);
+}
+
+///
+@safe unittest
+{
+    import std.exception : assertThrown, assertNotThrown, collectExceptionMsg;
+
+    alias R = Result!(uint, string);
+
+    auto resultOk = R.ok(2);
+    assertThrown!UnwrapException(expectErr(resultOk, "Testing expectErr"));
+    assert(collectExceptionMsg(expectErr(resultOk, "Testing expectErr")) == "Testing expectErr");
+
+    auto resultErr = R.err("emergency failure");
+    assert(assertNotThrown!UnwrapException(expectErr(resultErr,
+            "Testing expectErr")) == "emergency failure");
+}
+
+@safe unittest
+{
+    import std.exception : assertThrown, assertNotThrown, collectExceptionMsg;
+
+    auto resultErr1 = Result!(int, string).err("123");
+    assert(assertNotThrown!UnwrapException(expectErr(resultErr1, "bar")) == "123");
+
+    alias R = Result!(string, uint);
+
+    auto resultErr2 = R.err(123);
+    assert(assertNotThrown!UnwrapException(expectErr(resultErr2, "bar")) == 123);
+
+    auto resultOk = R.ok("123");
+    assertThrown!UnwrapException(expectErr(resultOk, "bar"));
+    assert(collectExceptionMsg(expectErr(resultOk, "bar")) == "bar");
+}
+
 /// Returns the containing `Ok!T` value.
 /// Throws `UnwrapException` if the value is an `Err!E`.
 @("Unique to D")
@@ -959,10 +1002,7 @@ T tryUnwrap(T, E)(scope const auto ref Result!(T, E) r)
 @("Unique to D")
 E tryUnwrapErr(T, E)(scope const auto ref Result!(T, E) r)
 {
-    import std.exception : enforce;
-
-    enforce!UnwrapException(isErr(r), "Result does not have an Err value.");
-    return unwrapErr(r);
+    return expectErr(r, "Result does not have an Err value.");
 }
 
 ///
