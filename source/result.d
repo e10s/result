@@ -875,14 +875,53 @@ unittest
 }
 
 /// Returns the containing `Ok!T` value.
+/// Throws `UnwrapException` with `msg` if the value is an `Err!E`.
+T expect(T, E)(scope const auto ref Result!(T, E) r, string msg)
+{
+    import std.exception : enforce;
+
+    enforce!UnwrapException(isOk(r), msg);
+    return unwrap(r);
+}
+
+///
+@safe unittest
+{
+    import std.exception : assertThrown, assertNotThrown, collectExceptionMsg;
+
+    alias R = Result!(uint, string);
+
+    auto resultOk = R.ok(2);
+    assert(assertNotThrown!UnwrapException(expect(resultOk, "Testing expect")) == 2);
+
+    auto resultErr = R.err("emergency failure");
+    assertThrown!UnwrapException(expect(resultErr, "Testing expect"));
+    assert(collectExceptionMsg(expect(resultErr, "Testing expect")) == "Testing expect");
+}
+
+@safe unittest
+{
+    import std.exception : assertThrown, assertNotThrown, collectExceptionMsg;
+
+    auto resultOk1 = Result!(int, string).ok(123);
+    assert(assertNotThrown!UnwrapException(expect(resultOk1, "foo")) == 123);
+
+    alias R = Result!(string, uint);
+
+    auto resultOk2 = R.ok("123");
+    assert(assertNotThrown!UnwrapException(expect(resultOk2, "foo")) == "123");
+
+    auto resultErr = R.err(123);
+    assertThrown!UnwrapException(expect(resultErr, "foo"));
+    assert(collectExceptionMsg(expect(resultErr, "foo")) == "foo");
+}
+
+/// Returns the containing `Ok!T` value.
 /// Throws `UnwrapException` if the value is an `Err!E`.
 @("Unique to D")
 T tryUnwrap(T, E)(scope const auto ref Result!(T, E) r)
 {
-    import std.exception : enforce;
-
-    enforce!UnwrapException(isOk(r), "Result does not have an Ok value.");
-    return unwrap(r);
+    return expect(r, "Result does not have an Ok value.");
 }
 
 ///
