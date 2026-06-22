@@ -288,9 +288,7 @@ unittest
 /// Returns `true` if `r` has an [Ok] value.
 bool isOk(T, E)(scope const auto ref Result!(T, E) r)
 {
-    import std.sumtype : match;
-
-    return r.payload.match!((Ok!T _) => true, (Err!E _) => false);
+    return isOkAnd!"true"(r);
 }
 
 ///
@@ -326,7 +324,9 @@ bool isOk(T, E)(scope const auto ref Result!(T, E) r)
 bool isOkAnd(alias pred = "a", T, E)(scope const auto ref Result!(T, E) r)
         if (is(typeof(unaryFun!pred(T.init))))
 {
-    return isOk(r) && unaryFun!pred(unwrap(r));
+    import std.sumtype : match;
+
+    return r.payload.match!((Ok!T t) => !!unaryFun!pred(t.value), (Err!E _) => false);
 }
 
 ///
@@ -411,7 +411,9 @@ alias isErr = not!isOk;
 bool isErrAnd(alias pred = "a", T, E)(scope const auto ref Result!(T, E) r)
         if (is(typeof(unaryFun!pred(E.init))))
 {
-    return isErr(r) && unaryFun!pred(unwrapErr(r));
+    import std.sumtype : match;
+
+    return r.payload.match!((Ok!T _) => false, (Err!E e) => !!unaryFun!pred(e.value));
 }
 
 ///
@@ -460,12 +462,10 @@ bool isErrAnd(alias pred = "a", T, E)(scope const auto ref Result!(T, E) r)
 /// Converts from [Result]`!(T, E)` to `Nullable!T`.
 Nullable!T ok(T, E)(scope const auto ref Result!(T, E) r)
 {
-    if (isErr(r))
-    {
-        return Nullable!T.init;
-    }
+    alias N = Nullable!T;
+    import std.sumtype : match;
 
-    return Nullable!T(unwrap(r));
+    return r.payload.match!((Ok!T t) => N(t.value), (Err!E _) => N.init);
 }
 
 ///
@@ -500,12 +500,10 @@ Nullable!T ok(T, E)(scope const auto ref Result!(T, E) r)
 /// Converts from [Result]`!(T, E)` to `Nullable!E`.
 Nullable!E err(T, E)(scope const auto ref Result!(T, E) r)
 {
-    if (isOk(r))
-    {
-        return Nullable!E.init;
-    }
+    alias N = Nullable!E;
+    import std.sumtype : match;
 
-    return Nullable!E(unwrapErr(r));
+    return r.payload.match!((Ok!T _) => N.init, (Err!E e) => N(e.value));
 }
 
 ///
@@ -540,12 +538,7 @@ Nullable!E err(T, E)(scope const auto ref Result!(T, E) r)
 /// Returns `r2` if `r1` is [Ok], otherwise returns `Result!(U, E)` with `r1`'s [Err] value.
 Result!(U, E) and(T, U, E)(scope const auto ref Result!(T, E) r1, scope const auto ref Result!(U, E) r2)
 {
-    if (isOk(r1))
-    {
-        return r2;
-    }
-
-    return Result!(U, E).err(unwrapErr(r1));
+    return r1.andThen!(_ => r2)();
 }
 
 ///
@@ -674,12 +667,7 @@ auto andThen(alias fun, T, E)(scope const auto ref Result!(T, E) r)
 /// Returns `r2` if `result1` is [Err], otherwise returns a new result of `S` with `r1`'s [Ok] value.
 Result!(T, F) or(T, E, F)(scope const auto ref Result!(T, E) r1, scope const auto ref Result!(T, F) r2)
 {
-    if (isErr(r1))
-    {
-        return r2;
-    }
-
-    return Result!(T, F).ok(unwrap(r1));
+    return r1.orElse!(_ => r2)();
 }
 
 ///
@@ -1038,12 +1026,7 @@ E tryUnwrapErr(T, E)(scope const auto ref Result!(T, E) r)
 /// Or returns `defaultValue` if the contained value is an `Err!E`.
 T unwrapOr(T, E)(scope const auto ref Result!(T, E) r, T defaultValue)
 {
-    if (isErr(r))
-    {
-        return defaultValue;
-    }
-
-    return unwrap(r);
+    return unwrapOrElse!(_ => defaultValue)(r);
 }
 
 ///
@@ -1125,12 +1108,9 @@ T unwrapOrDefault(T, E)(scope const auto ref Result!(T, E) r)
 T unwrapOrElse(alias fun, T, E)(scope const auto ref Result!(T, E) r)
         if (is(typeof(unaryFun!fun(E.init)) : T))
 {
-    if (isErr(r))
-    {
-        return unaryFun!fun(unwrapErr(r));
-    }
+    import std.sumtype : match;
 
-    return unwrap(r);
+    return r.payload.match!((Ok!T t) => t.value, (Err!E e) => unaryFun!fun(e.value));
 }
 
 ///
@@ -1148,7 +1128,7 @@ T unwrapOrElse(alias fun, T, E)(scope const auto ref Result!(T, E) r)
     assert(unwrapOrElse!`a.length`(resultErr) == 3);
 }
 
-@safe nothrow unittest
+@safe unittest
 {
     import std.conv : to;
 
