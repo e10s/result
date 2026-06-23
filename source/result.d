@@ -1292,6 +1292,53 @@ auto mapErr(alias fun, T, E)(scope const auto ref Result!(T, E) r)
     immutable iResultErr = R.err("bad");
     assert(mapErr!(a => a.length)(iResultErr) == S.err(3));
 }
+/// Returns the provided `defaultValue` (if [Err]),
+/// or applies a function to the contained value (if [Ok]).
+auto mapOr(alias fun, T, U, E)(auto ref scope const Result!(T, E) r, U defaultValue)
+        if (is(typeof(unaryFun!fun(T.init))))
+{
+    return mapOrElse!(_ => defaultValue, fun)(r);
+}
+
+///
+@safe nothrow unittest
+{
+    alias R = Result!(string, string);
+
+    auto resultOk = R.ok("foo");
+    assert(mapOr!"a.length"(resultOk, 42) == 3);
+
+    auto resultErr = R.err("bar");
+    assert(mapOr!"a.length"(resultErr, 42) == 42);
+}
+
+@safe nothrow unittest
+{
+    bool isOdd(int x)
+    {
+        return x % 2 == 1;
+    }
+
+    alias R = Result!(int, string);
+
+    auto resultOk = R.ok(33);
+    assert(mapOr!isOdd(resultOk, -1) == 1);
+
+    const cResultOk = R.ok(33);
+    assert(mapOr!isOdd(cResultOk, -1) == 1);
+
+    immutable iResultOk = R.ok(33);
+    assert(mapOr!isOdd(iResultOk, -1) == 1);
+
+    auto resultErr = R.err("33");
+    assert(mapOr!isOdd(resultErr, -1) == -1);
+
+    const cResultErr = R.err("33");
+    assert(mapOr!isOdd(cResultErr, -1) == -1);
+
+    immutable iResultErr = R.err("33");
+    assert(mapOr!isOdd(iResultErr, -1) == -1);
+}
 
 /// Maps a [Result]`!(T, E)` to a new value by applying fallback function `defaultFun`
 /// to a contained [Err] value, or function `fun` to a contained [Ok] value.
