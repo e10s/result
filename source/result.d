@@ -1292,3 +1292,60 @@ auto mapErr(alias fun, T, E)(scope const auto ref Result!(T, E) r)
     immutable iResultErr = R.err("bad");
     assert(mapErr!(a => a.length)(iResultErr) == S.err(3));
 }
+
+/// Maps a [Result]`!(T, E)` to a new value by applying fallback function `defaultFun`
+/// to a contained [Err] value, or function `fun` to a contained [Ok] value.
+auto mapOrElse(alias defaultFun, alias fun, T, E)(auto ref scope const Result!(T, E) r)
+        if (is(typeof(unaryFun!defaultFun(E.init))) && is(typeof(unaryFun!fun(T.init))))
+{
+    import std.sumtype : match;
+
+    return r.payload.match!((Ok!T t) => unaryFun!fun(t.value),
+            (Err!E e) => unaryFun!defaultFun(e.value));
+}
+
+///
+@safe nothrow unittest
+{
+    alias R = Result!(string, string);
+    immutable k = 21;
+
+    auto resultOk = R.ok("foo");
+    assert(mapOrElse!(_ => k * 2, "a.length")(resultOk) == 3);
+
+    auto resultErr = R.err("bar");
+    assert(mapOrElse!(_ => k * 2, "a.length")(resultErr) == 42);
+}
+
+@safe nothrow unittest
+{
+    bool isPos(int x)
+    {
+        return x > 0;
+    }
+
+    size_t getLength(string x)
+    {
+        return x.length;
+    }
+
+    alias R = Result!(int, string);
+
+    auto resultOk = R.ok(33);
+    assert(mapOrElse!(getLength, isPos)(resultOk) == 1);
+
+    const cResultOk = R.ok(33);
+    assert(mapOrElse!(getLength, isPos)(cResultOk) == 1);
+
+    immutable iResultOk = R.ok(33);
+    assert(mapOrElse!(getLength, isPos)(iResultOk) == 1);
+
+    auto resultErr = R.err("33");
+    assert(mapOrElse!(getLength, isPos)(resultErr) == 2);
+
+    const cResultErr = R.err("33");
+    assert(mapOrElse!(getLength, isPos)(cResultErr) == 2);
+
+    immutable iResultErr = R.err("33");
+    assert(mapOrElse!(getLength, isPos)(iResultErr) == 2);
+}
