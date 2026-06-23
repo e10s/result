@@ -1485,3 +1485,37 @@ auto mapOrElse(alias defaultFun, alias fun, T, E)(auto ref scope const Result!(T
     immutable iResultErr = R.err("33");
     assert(mapOrElse!(getLength, isPos)(iResultErr) == 2);
 }
+
+/// Converts from [Result]`!(Result!(T, E), E)` to [Result]`!(T, E)`
+Result!(T, E) flatten(T, E)(auto ref scope const Result!(Result!(T, E), E) r)
+{
+    return andThen!"a"(r);
+}
+
+///
+@safe @nogc nothrow unittest
+{
+    alias R1 = Result!(string, uint);
+    alias R2 = Result!(R1, uint);
+
+    auto result1 = R2.ok(R1.ok("hello"));
+    assert(flatten(result1) == R1.ok("hello"));
+
+    auto result2 = R2.ok(R1.err(6));
+    assert(flatten(result2) == R1.err(6));
+
+    auto result3 = R2.err(6);
+    assert(flatten(result3) == R1.err(6));
+}
+
+///
+@safe @nogc nothrow unittest
+{
+    alias R1 = Result!(string, uint);
+    alias R2 = Result!(R1, uint);
+    alias R3 = Result!(R2, uint);
+
+    auto result = R3.ok(R2.ok(R1.ok("hello")));
+    assert(flatten(result) == R2.ok(R1.ok("hello")));
+    assert(flatten(flatten(result)) == R1.ok("hello"));
+}
