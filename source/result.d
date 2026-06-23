@@ -50,6 +50,28 @@ unittest
     assert(Ok!K(new K) != Ok!K(new K));
 }
 
+unittest
+{
+    auto ok1 = Ok!int(314);
+    auto ok2 = Ok!int(314);
+    auto ok3 = Ok!int(315);
+
+    assert(ok1 == ok2);
+    assert(ok2 != ok3);
+    assert(ok1.toHash() == ok2.toHash());
+    assert(ok1.toHash() != ok3.toHash());
+
+    class K
+    {
+    }
+
+    auto ok4 = Ok!K(new K);
+    auto ok5 = Ok!K(new K);
+
+    assert(ok4 != ok5);
+    assert(ok4.toHash() != ok5.toHash());
+}
+
 ///
 struct Err(E)
 {
@@ -69,6 +91,28 @@ unittest
     }
 
     assert(Err!K(new K) != Err!K(new K));
+}
+
+unittest
+{
+    auto err1 = Err!int(314);
+    auto err2 = Err!int(314);
+    auto err3 = Err!int(315);
+
+    assert(err1 == err2);
+    assert(err2 != err3);
+    assert(err1.toHash() == err2.toHash());
+    assert(err1.toHash() != err3.toHash());
+
+    class K
+    {
+    }
+
+    auto err4 = Err!K(new K);
+    auto err5 = Err!K(new K);
+
+    assert(err4 != err5);
+    assert(err4.toHash() != err5.toHash());
 }
 
 ///
