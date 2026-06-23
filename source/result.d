@@ -2,6 +2,7 @@ module result;
 import std.functional : not;
 import std.functional : unaryFun;
 import std.typecons : Nullable;
+import std.traits : CommonType;
 
 private mixin template OkErrImpl(X)
 {
@@ -30,7 +31,7 @@ private mixin template OkErrImpl(X)
 }
 
 ///
-struct Ok(T)
+struct Ok(T) if (!is(void == T))
 {
     mixin OkErrImpl!T;
 }
@@ -73,7 +74,7 @@ unittest
 }
 
 ///
-struct Err(E)
+struct Err(E) if (!is(void == E))
 {
     mixin OkErrImpl!E;
 }
@@ -126,7 +127,7 @@ class UnwrapException : Exception
 }
 
 /// Performs as a `std.sumtype.SumType` but has some additional features.
-struct Result(T, E)
+struct Result(T, E) if (!is(void == T) && !is(void == E))
 {
     import std.sumtype : SumType;
 
@@ -366,7 +367,7 @@ bool isOk(T, E)(scope const auto ref Result!(T, E) r)
 
 /// Returns `true` if `r` has an [Ok] value and its value satisfies `pred`.
 bool isOkAnd(alias pred = "a", T, E)(scope const auto ref Result!(T, E) r)
-        if (is(typeof(unaryFun!pred(T.init))))
+        if (!is(void == typeof(unaryFun!pred(T.init))))
 {
     import std.sumtype : match;
 
@@ -453,7 +454,7 @@ alias isErr = not!isOk;
 
 /// Returns `true` if `r` has an [Err] value and its value satisfies `pred`.
 bool isErrAnd(alias pred = "a", T, E)(scope const auto ref Result!(T, E) r)
-        if (is(typeof(unaryFun!pred(E.init))))
+        if (!is(void == typeof(unaryFun!pred(E.init))))
 {
     import std.sumtype : match;
 
@@ -1206,7 +1207,7 @@ T unwrapOrElse(alias fun, T, E)(scope const auto ref Result!(T, E) r)
 /// Maps a [Result]`!(T, E)` to a new [Result] with the same [Err] value
 /// by applying a function to a contained [Ok] value.
 auto map(alias fun, T, E)(scope const auto ref Result!(T, E) r)
-        if (is(typeof(unaryFun!fun(T.init))))
+        if (!is(void == typeof(unaryFun!fun(T.init))))
 {
     alias U = typeof(unaryFun!fun(T.init));
     alias S = Result!(U, E);
@@ -1282,7 +1283,7 @@ auto map(alias fun, T, E)(scope const auto ref Result!(T, E) r)
 /// Maps a [Result]`!(T, E)` to a new [Result] with the same [Ok] value
 /// by applying a function to a contained [Err] value.
 auto mapErr(alias fun, T, E)(scope const auto ref Result!(T, E) r)
-        if (is(typeof(unaryFun!fun(E.init))))
+        if (!is(void == typeof(unaryFun!fun(E.init))))
 {
     alias F = typeof(unaryFun!fun(E.init));
     alias S = Result!(T, F);
@@ -1340,7 +1341,7 @@ auto mapErr(alias fun, T, E)(scope const auto ref Result!(T, E) r)
 /// Returns the provided `defaultValue` (if [Err]),
 /// or applies a function to the contained value (if [Ok]).
 auto mapOr(alias fun, T, U, E)(auto ref scope const Result!(T, E) r, U defaultValue)
-        if (is(typeof(unaryFun!fun(T.init))))
+        if (!is(void == CommonType!(U, typeof(unaryFun!fun(T.init)))))
 {
     return mapOrElse!(_ => defaultValue, fun)(r);
 }
@@ -1389,7 +1390,7 @@ auto mapOr(alias fun, T, U, E)(auto ref scope const Result!(T, E) r, U defaultVa
 /// to the contained value if the result is [Ok],
 /// otherwise if [Err], returns the `.init` value of `fun`'s return type.
 auto mapOrDefault(alias fun, T, E)(auto ref scope const Result!(T, E) r)
-        if (is(typeof(unaryFun!fun(T.init))))
+        if (!is(void == typeof(unaryFun!fun(T.init))))
 {
     return mapOr!fun(r, typeof(unaryFun!fun(T.init)).init);
 }
@@ -1432,7 +1433,8 @@ auto mapOrDefault(alias fun, T, E)(auto ref scope const Result!(T, E) r)
 /// Maps a [Result]`!(T, E)` to a new value by applying fallback function `defaultFun`
 /// to a contained [Err] value, or function `fun` to a contained [Ok] value.
 auto mapOrElse(alias defaultFun, alias fun, T, E)(auto ref scope const Result!(T, E) r)
-        if (is(typeof(unaryFun!defaultFun(E.init))) && is(typeof(unaryFun!fun(T.init))))
+        if (!is(void == CommonType!(typeof(unaryFun!defaultFun(E.init)),
+            typeof(unaryFun!fun(T.init)))))
 {
     import std.sumtype : match;
 
