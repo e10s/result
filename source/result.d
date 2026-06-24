@@ -1,3 +1,19 @@
+/**
+ * This module provides `Result!(T, E)`, which imitates Rust's `Result<T, E>`
+ * type for returning, carrying and composing errors.
+ *
+ * `Result` represents the outcome of potentially unsuccessful computation
+ * and contains either `Ok!T` for success or `Err!E` for failure.
+ * Each one is used to signify both the status and the value.
+ *
+ * In addition, because `Result` has an aspect as a wrapper for `SumType`,
+ * effective error handling is possible through pattern matching.
+ *
+ * Examples:
+ * ---
+ * //
+ * ---
+ */
 module result;
 import std.functional : not;
 import std.functional : unaryFun;
@@ -30,7 +46,8 @@ private mixin template OkErrImpl(X)
     alias value this;
 }
 
-///
+/// Wrapper struct representing a successful result with a value of type `T`.
+/// Serves as the success variant in a [Result] type.
 struct Ok(T) if (!is(void == T))
 {
     mixin OkErrImpl!T;
@@ -73,7 +90,8 @@ unittest
     assert(ok4.toHash() != ok5.toHash());
 }
 
-///
+/// Wrapper struct representing an error result with a value of type `E`.
+/// Serves as the error variant in a [Result] type.
 struct Err(E) if (!is(void == E))
 {
     mixin OkErrImpl!E;
@@ -116,7 +134,8 @@ unittest
     assert(err4.toHash() != err5.toHash());
 }
 
-///
+/// Exception thrown when attempting to unwrap a [Result] with an invalid state.
+/// Raised by [expect], [expectErr], [tryUnwrap], and [tryUnwrapErr].
 class UnwrapException : Exception
 {
     ///
@@ -126,13 +145,23 @@ class UnwrapException : Exception
     }
 }
 
-/// Performs as a `std.sumtype.SumType` but has some additional features.
+/// A type that represents either a successful value [Ok]`!T` or an error [Err]`!E`.
+///
+/// This struct wraps a `std.sumtype.SumType` to provide Result type semantics similar to Rust's Result.
+/// It is designed to work together with additional helper functions to handle success and error cases.
+///
+/// The struct aliases to its internal `SumType` payload, which enables transparent access to `SumType` operations.
+///
+/// Params:
+///     T = The type of the successful value
+///     E = The type of the error value
 struct Result(T, E) if (!is(void == T) && !is(void == E))
 {
     import std.sumtype : SumType;
 
     ///
     alias Payload = SumType!(Ok!T, Err!E);
+    ///
     Payload payload;
     alias payload this;
 
@@ -142,7 +171,12 @@ struct Result(T, E) if (!is(void == T) && !is(void == E))
         payload = value;
     }
 
-    /// Supports assignment of [Result]
+    /// Assigns another [Result] to this one, preserving semantic compatibility.
+    ///
+    /// Params:
+    ///     rhs = The source [Result] to assign from
+    ///
+    /// Returns: A reference to this [Result] after assignment
     ref opAssign(R)(auto ref R rhs)
             if (isResult!R && is(typeof({ Payload.init = R.Payload.init; })))
     {
@@ -150,14 +184,24 @@ struct Result(T, E) if (!is(void == T) && !is(void == E))
         return this;
     }
 
-    /// Constructs [Result]`!(T, E)` that has [Ok]`!T` with `value`.
+    /// Creates a [Result]`!(T, E)` with a successful [Ok]`!T` _value.
+    ///
+    /// Params:
+    ///     value = The success _value to wrap
+    ///
+    /// Returns: A new [Result]`!(T, E)` containing the [Ok]`!T` _value
     @("Unique to D")
     static Result!(T, E) ok(T value)
     {
         return Result!(T, E)(Ok!T(value));
     }
 
-    /// Constructs [Result]`!(T, E)` that has [Err]`!E` with `value`.
+    /// Creates a [Result]`!(T, E)` with an error [Err]`!E` _value.
+    ///
+    /// Params:
+    ///     value = The error _value to wrap
+    ///
+    /// Returns: A new [Result]`!(T, E)` containing the [Err]`!E` _value
     @("Unique to D")
     static Result!(T, E) err(E value)
     {
@@ -330,7 +374,12 @@ unittest
 }
 /* Convenience templates end */
 
-/// Returns `true` if `r` has an [Ok] value.
+/// Checks if a [Result] contains an [Ok] value.
+///
+/// Params:
+///     r = The [Result] to check
+///
+/// Returns: true if r contains an [Ok] value, false otherwise
 bool isOk(T, E)(scope const auto ref Result!(T, E) r)
 {
     return isOkAnd!"true"(r);
@@ -365,7 +414,14 @@ bool isOk(T, E)(scope const auto ref Result!(T, E) r)
     assert(!isOk(iResultErr));
 }
 
-/// Returns `true` if `r` has an [Ok] value and its value satisfies `pred`.
+/// Checks if a [Result] contains an [Ok] value satisfying a predicate.
+///
+/// Params:
+///     r = The [Result] to check
+///     pred = The predicate to apply to the [Ok] value
+///
+/// Returns: true if r is [Ok] and its value satisfies `pred`, false otherwise
+// FIXME: add const to matching handlers
 bool isOkAnd(alias pred = "a", T, E)(scope const auto ref Result!(T, E) r)
         if (!is(void == typeof(unaryFun!pred(T.init))))
 {
@@ -417,7 +473,8 @@ bool isOkAnd(alias pred = "a", T, E)(scope const auto ref Result!(T, E) r)
     assert(!isOkAnd!isOdd(iResultErr));
 }
 
-/// Returns `true` if `this` has an `Err!E` value.
+/// Checks if a [Result] contains an [Err] value.
+/// Equivalent to `!`[isOk]`(r)`.
 alias isErr = not!isOk;
 
 ///
@@ -452,7 +509,14 @@ alias isErr = not!isOk;
     assert(!isErr(iResultOk));
 }
 
-/// Returns `true` if `r` has an [Err] value and its value satisfies `pred`.
+/// Checks if a [Result] contains an [Err] value satisfying a predicate.
+///
+/// Params:
+///     r = The [Result] to check
+///     pred = The predicate to apply to the [Err] value
+///
+/// Returns: true if r is [Err] and its value satisfies `pred`, false otherwise
+// FIXME: add const to matching handlers
 bool isErrAnd(alias pred = "a", T, E)(scope const auto ref Result!(T, E) r)
         if (!is(void == typeof(unaryFun!pred(E.init))))
 {
@@ -504,7 +568,13 @@ bool isErrAnd(alias pred = "a", T, E)(scope const auto ref Result!(T, E) r)
     assert(!isErrAnd!isNumeric(resultErr2));
 }
 
-/// Converts from [Result]`!(T, E)` to `Nullable!T`.
+/// Extracts the [Ok] value from a [Result] as a `Nullable!T`.
+///
+/// Params:
+///     r = The [Result] to extract from
+///
+/// Returns: A `Nullable!T` containing the [Ok] value, or in the _null state if [Err]
+// FIXME: add const to matching handlers
 Nullable!T ok(T, E)(scope const auto ref Result!(T, E) r)
 {
     alias N = Nullable!T;
@@ -542,7 +612,13 @@ Nullable!T ok(T, E)(scope const auto ref Result!(T, E) r)
     assert(ok(iResultErr).isNull);
 }
 
-/// Converts from [Result]`!(T, E)` to `Nullable!E`.
+/// Extracts the [Err] value from a [Result] as a `Nullable!E`.
+///
+/// Params:
+///     r = The [Result] to extract from
+///
+/// Returns: A `Nullable!E` containing the [Err] value, or in the _null state if [Ok]
+// FIXME: add const to matching handlers
 Nullable!E err(T, E)(scope const auto ref Result!(T, E) r)
 {
     alias N = Nullable!E;
@@ -580,7 +656,13 @@ Nullable!E err(T, E)(scope const auto ref Result!(T, E) r)
     assert(err(iResultErr) == Nullable!string("Nothing here"));
 }
 
-/// Returns `r2` if `r1` is [Ok], otherwise returns `Result!(U, E)` with `r1`'s [Err] value.
+/// Chains two [Result]s, returning the second if the first is [Ok].
+///
+/// Params:
+///     r1 = The first [Result] to check
+///     r2 = The [Result] to return if `r1` is [Ok]
+///
+/// Returns: r2 if r1 is [Ok], otherwise a new [Result]`!(U, E)` with r1's [Err] value
 Result!(U, E) and(T, U, E)(scope const auto ref Result!(T, E) r1, scope const auto ref Result!(U, E) r2)
 {
     return r1.andThen!(_ => r2)();
@@ -631,8 +713,17 @@ Result!(U, E) and(T, U, E)(scope const auto ref Result!(T, E) r1, scope const au
     assert(and(x4, y4) == S.ok("different result type"));
 }
 
-/// Calls `fun` with the [Ok] value if `r` is [Ok],
-/// otherwise returns a new result with `r`'s [Err] value.
+/// Applies a function to the [Ok] value of a [Result], chaining [Result]s.
+///
+/// If r is [Ok], calls `fun` with its value and returns the resulting [Result].
+/// If r is [Err], returns a new [Result] with the same [Err] value.
+/// `fun` must return [Result] with the same type `E` for [Err].
+///
+/// Params:
+///     r = The [Result] to operate on
+///     fun = The function to apply to the [Ok] value
+///
+/// Returns: The [Result] returned by `fun` if [Ok], otherwise a new [Result] with the original [Err]
 auto andThen(alias fun, T, E)(scope const auto ref Result!(T, E) r)
         if (is(E == ErrValueTypeOf!(typeof(unaryFun!fun(T.init)))))
 {
@@ -710,7 +801,13 @@ auto andThen(alias fun, T, E)(scope const auto ref Result!(T, E) r)
     assert(andThen!toInt(resultErr) == S.err("bad value"));
 }
 
-/// Returns `r2` if `result1` is [Err], otherwise returns a new result of `S` with `r1`'s [Ok] value.
+/// Chains two [Result]s, returning the first if the first is [Ok].
+///
+/// Params:
+///     r1 = The first [Result] to check
+///     r2 = The [Result] to return if `r1` is [Err]
+///
+/// Returns: r2 if r1 is [Err], otherwise a new [Result]`!(T, F)` with r1's [Ok] value
 Result!(T, F) or(T, E, F)(scope const auto ref Result!(T, E) r1, scope const auto ref Result!(T, F) r2)
 {
     return r1.orElse!(_ => r2)();
@@ -761,8 +858,17 @@ Result!(T, F) or(T, E, F)(scope const auto ref Result!(T, E) r1, scope const aut
     assert(or(x4, y4) == S.ok(2));
 }
 
-/// Calls `fun` with the [Err] value if `result` is [Err],
-/// otherwise returns a new result with `result`'s [Ok] value.
+/// Applies a function to the [Err] value of a [Result], chaining [Result]s.
+///
+/// If r is [Err], calls `fun` with its value and returns the resulting [Result].
+/// If r is [Ok], returns a new [Result] with the same [Ok] value.
+/// `fun` must return [Result] with the same type T for [Ok].
+///
+/// Params:
+///     r = The [Result] to operate on
+///     fun = The function to apply to the [Err] value
+///
+/// Returns: The [Result] returned by `fun` if [Err], otherwise a new [Result] with the original [Ok]
 auto orElse(alias fun, T, E)(scope const auto ref Result!(T, E) r)
         if (is(T == OkValueTypeOf!(typeof(unaryFun!fun(E.init)))))
 {
@@ -824,7 +930,14 @@ auto orElse(alias fun, T, E)(scope const auto ref Result!(T, E) r)
     assert(orElse!isEmpty(resultErr2) == S.err(15));
 }
 
-/// Returns the containing `Ok!T` value.
+/// Extracts the [Ok] value from a [Result].
+///
+/// The [Result] must contain an [Ok] value. Use [isOk] to check.
+///
+/// Params:
+///     r = The [Result] to _unwrap
+///
+/// Returns: The value contained in the [Ok]
 T unwrap(T, E)(scope const auto ref Result!(T, E) r)
 {
     assert(isOk(r), "Result does not have an Ok value.");
@@ -866,7 +979,14 @@ unittest
     assertThrown!AssertError(unwrap(resultErr));
 }
 
-/// Returns the contained `Err!E` value.
+/// Extracts the [Err] value from a [Result].
+///
+/// The [Result] must contain an [Err] value. Use [isErr] to check.
+///
+/// Params:
+///     r = The [Result] to unwrap
+///
+/// Returns: The value contained in the [Err]
 E unwrapErr(T, E)(scope const auto ref Result!(T, E) r)
 {
     assert(isErr(r), "Result does not have an Err value.");
@@ -908,8 +1028,18 @@ unittest
     assertThrown!AssertError(unwrapErr(resultOk));
 }
 
-/// Returns the containing `Ok!T` value.
-/// Throws `UnwrapException` with `msg` if the value is an `Err!E`.
+/// Tries to extract the [Ok] value from a [Result], with a custom error message.
+///
+/// If the [Result] is [Err], an exception is thrown with the given message.
+///
+/// Params:
+///     r = The [Result] to unwrap
+///     msg = The message to include in the exception if [Result] is [Err]
+///
+/// Returns: The value contained in the [Ok]
+///
+/// Throws: [UnwrapException] with message `msg` if the [Result] is [Err]
+// FIXME: msg should be lazy
 T expect(T, E)(scope const auto ref Result!(T, E) r, string msg)
 {
     import std.exception : enforce;
@@ -950,8 +1080,18 @@ T expect(T, E)(scope const auto ref Result!(T, E) r, string msg)
     assert(collectExceptionMsg(expect(resultErr, "foo")) == "foo");
 }
 
-/// Returns the contained `Err!E` value.
-/// Throws `UnwrapException` with `msg` if the value is an `Ok!T`.
+/// Tries to extract the [Err] value from a [Result], with a custom error message.
+///
+/// If the [Result] is [Ok], an exception is thrown with the given message.
+///
+/// Params:
+///     r = The [Result] to unwrap
+///     msg = The message to include in the exception if [Result] is [Ok]
+///
+/// Returns: The value contained in the [Err]
+///
+/// Throws: [UnwrapException] with message `msg` if the [Result] is [Ok]
+// FIXME: msg should be lazy
 E expectErr(T, E)(scope const auto ref Result!(T, E) r, string msg)
 {
     import std.exception : enforce;
@@ -993,8 +1133,16 @@ E expectErr(T, E)(scope const auto ref Result!(T, E) r, string msg)
     assert(collectExceptionMsg(expectErr(resultOk, "bar")) == "bar");
 }
 
-/// Returns the containing `Ok!T` value.
-/// Throws `UnwrapException` if the value is an `Err!E`.
+/// Tries to extract the [Ok] value from a [Result].
+///
+/// Similar to [expect], but with a default error message.
+///
+/// Params:
+///     r = The [Result] to unwrap
+///
+/// Returns: The value contained in the [Ok]
+///
+/// Throws: [UnwrapException] if the [Result] is [Err]
 @("Unique to D")
 T tryUnwrap(T, E)(scope const auto ref Result!(T, E) r)
 {
@@ -1031,8 +1179,16 @@ T tryUnwrap(T, E)(scope const auto ref Result!(T, E) r)
     assertThrown!UnwrapException(tryUnwrap(resultErr));
 }
 
-/// Returns the contained `Err!E` value.
-/// Throws `UnwrapException` if the value is an `Ok!T`.
+/// Tries to extract the [Err] value from a [Result].
+///
+/// Similar to [expectErr], but with a default error message.
+///
+/// Params:
+///     r = The [Result] to unwrap
+///
+/// Returns: The value contained in the [Err]
+///
+/// Throws: [UnwrapException] if the [Result] is [Ok]
 @("Unique to D")
 E tryUnwrapErr(T, E)(scope const auto ref Result!(T, E) r)
 {
@@ -1069,8 +1225,16 @@ E tryUnwrapErr(T, E)(scope const auto ref Result!(T, E) r)
     assertThrown!UnwrapException(tryUnwrapErr(resultOk));
 }
 
-/// Returns the contained `Ok!T` value.
-/// Or returns `defaultValue` if the contained value is an `Err!E`.
+/// Extracts the [Ok] value from a [Result], with a default value for [Err].
+///
+/// If the [Result] is [Ok], returns its value.
+/// If the [Result] is [Err], returns defaultValue.
+///
+/// Params:
+///     r = The [Result] to unwrap
+///     defaultValue = The fallback value to be used if [Err]
+///
+/// Returns: The [Ok] value or defaultValue if [Err]
 T unwrapOr(T, E)(scope const auto ref Result!(T, E) r, T defaultValue)
 {
     return unwrapOrElse!(_ => defaultValue)(r);
@@ -1104,8 +1268,15 @@ T unwrapOr(T, E)(scope const auto ref Result!(T, E) r, T defaultValue)
     assert(unwrapOr(resultErr, "456") == "456");
 }
 
-/// Returns the contained `Ok!T` value.
-/// Or returns `T.init` if the contained value is an `Err!E`.
+/// Extracts the [Ok] value from a [Result], with the default initializer for type `T` as a default value for [Err].
+///
+/// If the [Result] is [Ok], returns its value.
+/// If the [Result] is [Err], returns `T.init`.
+///
+/// Params:
+///     r = The [Result] to unwrap
+///
+/// Returns: The [Ok] value or `T.init` if [Err]
 T unwrapOrDefault(T, E)(scope const auto ref Result!(T, E) r)
 {
     return unwrapOr(r, T.init);
@@ -1150,8 +1321,18 @@ T unwrapOrDefault(T, E)(scope const auto ref Result!(T, E) r)
     assert(unwrapOrDefault(resultErr) == "");
 }
 
-/// Returns the contained `Ok!T` value.
-/// If the value is an `Err!E`, calls `fun` with the value of `Err!E` and returns the resulting `Ok!T` value.
+/// Extracts the [Ok] value from a [Result], computing a fallback from the [Err] value.
+///
+/// If the [Result] is [Ok], returns its value.
+/// If the [Result] is [Err], calls `fun` with the error value and returns the result.
+/// `fun` must return a value which can be implicitly converted to `T`.
+///
+/// Params:
+///     r = The [Result] to unwrap
+///     fun = The function to apply to the [Err] value
+///
+/// Returns: The [Ok] value or the result of calling `fun` with the [Err] value
+// FIXME: add const to matching handlers
 T unwrapOrElse(alias fun, T, E)(scope const auto ref Result!(T, E) r)
         if (is(typeof(unaryFun!fun(E.init)) : T))
 {
@@ -1206,8 +1387,18 @@ T unwrapOrElse(alias fun, T, E)(scope const auto ref Result!(T, E) r)
     assert(unwrapOrElse!fFoo(resultErr) == "Foo is 123");
 }
 
-/// Maps a [Result]`!(T, E)` to a new [Result] with the same [Err] value
-/// by applying a function to a contained [Ok] value.
+/// Transforms the [Ok] value of a [Result] using a function, keeping the [Err] unchanged.
+///
+/// If the [Result] is [Ok], applies `fun` to the value and returns a new [Result] with the transformed value.
+/// If the [Result] is [Err], returns a new [Result] with the same [Err].
+///
+/// Params:
+///     r = The [Result] to transform
+///     fun = The function to apply to the [Ok] value
+///
+/// Returns: A new [Result] with the transformed [Ok] value or the original [Err]
+// FIXME: fun's default value should be identity
+// FIXME: add const to matching handlers
 auto map(alias fun, T, E)(scope const auto ref Result!(T, E) r)
         if (!is(void == typeof(unaryFun!fun(T.init))))
 {
@@ -1282,8 +1473,18 @@ auto map(alias fun, T, E)(scope const auto ref Result!(T, E) r)
     assert(map!(to!dstring)(iResultErr) == S.err("bad"));
 }
 
-/// Maps a [Result]`!(T, E)` to a new [Result] with the same [Ok] value
-/// by applying a function to a contained [Err] value.
+/// Transforms the [Err] value of a [Result] using a function, keeping the [Ok] unchanged.
+///
+/// If the [Result] is [Err], applies `fun` to the value and returns a new [Result] with the transformed error.
+/// If the [Result] is [Ok], returns a new [Result] with the same [Ok].
+///
+/// Params:
+///     r = The [Result] to transform
+///     fun = The function to apply to the [Err] value
+///
+/// Returns: A new [Result] with the original [Ok] or the transformed [Err]
+// FIXME: fun's default value should be identity
+// FIXME: add const to matching handlers
 auto mapErr(alias fun, T, E)(scope const auto ref Result!(T, E) r)
         if (!is(void == typeof(unaryFun!fun(E.init))))
 {
@@ -1340,8 +1541,18 @@ auto mapErr(alias fun, T, E)(scope const auto ref Result!(T, E) r)
     assert(mapErr!(a => a.length)(iResultErr) == S.err(3));
 }
 
-/// Returns the provided `defaultValue` (if [Err]),
-/// or applies a function to the contained value (if [Ok]).
+/// Applies a function to [Ok], or returns a default value for [Err].
+///
+/// If the [Result] is [Ok], applies `fun` to the value and returns the result.
+/// If the [Result] is [Err], returns the default value.
+/// The return value of `fun` and defaultValue must be able to be implicitly converted to some common type.
+///
+/// Params:
+///     r = The [Result] to transform
+///     fun = The function to apply to the [Ok] value,
+///     defaultValue = The default value to return if [Err]
+///
+/// Returns: The result of applying `fun` to the [Ok], or the default value
 auto mapOr(alias fun, T, U, E)(auto ref scope const Result!(T, E) r, U defaultValue)
         if (!is(void == CommonType!(U, typeof(unaryFun!fun(T.init)))))
 {
@@ -1388,9 +1599,16 @@ auto mapOr(alias fun, T, U, E)(auto ref scope const Result!(T, E) r, U defaultVa
     assert(mapOr!isOdd(iResultErr, -1) == -1);
 }
 
-/// Maps a [Result]`!(T, E)` to a new value by applying function `fun`
-/// to the contained value if the result is [Ok],
-/// otherwise if [Err], returns the `.init` value of `fun`'s return type.
+/// Applies a function to [Ok], or returns the default `.init` value for [Err].
+///
+/// If the [Result] is [Ok], applies `fun` to the value and returns the result.
+/// If the [Result] is [Err], returns the `.init` value of `fun`'s' return type.
+///
+/// Params:
+///     r = The [Result] to transform
+///     fun = The function to apply to the [Ok] value
+///
+/// Returns: The result of applying `fun` to the [Ok], or the default `.init` value
 auto mapOrDefault(alias fun, T, E)(auto ref scope const Result!(T, E) r)
         if (!is(void == typeof(unaryFun!fun(T.init))))
 {
@@ -1432,8 +1650,19 @@ auto mapOrDefault(alias fun, T, E)(auto ref scope const Result!(T, E) r)
     assert(mapOrDefault!"a%5"(iResultErr) == 0);
 }
 
-/// Maps a [Result]`!(T, E)` to a new value by applying fallback function `defaultFun`
-/// to a contained [Err] value, or function `fun` to a contained [Ok] value.
+/// Applies fallback and transform functions to [Err] and [Ok] values respectively.
+///
+/// If the [Result] is [Ok], applies `fun` to the value and returns the result.
+/// If the [Result] is [Err], applies `defaultFun` to the error and returns the result.
+/// The return values of `defaultFun` and `fun` must be able to be implicitly converted to some common type.
+///
+/// Params:
+///     r = The [Result] to transform
+///     defaultFun = The function to apply to the [Err] value
+///     fun = The function to apply to the [Ok] value
+///
+/// Returns: The result of applying the appropriate function based on [Ok] or [Err]
+// FIXME: add const to matching handlers
 auto mapOrElse(alias defaultFun, alias fun, T, E)(auto ref scope const Result!(T, E) r)
         if (!is(void == CommonType!(typeof(unaryFun!defaultFun(E.init)),
             typeof(unaryFun!fun(T.init)))))
@@ -1490,7 +1719,14 @@ auto mapOrElse(alias defaultFun, alias fun, T, E)(auto ref scope const Result!(T
     assert(mapOrElse!(getLength, isPos)(iResultErr) == 2);
 }
 
-/// Converts from [Result]`!(Result!(T, E), E)` to [Result]`!(T, E)`
+/// Flattens a nested [Result] by one level.
+///
+/// Converts [Result]`!(Result!(T, E), E)` into [Result]`!(T, E)`.
+///
+/// Params:
+///     r = The nested [Result] to flatten
+///
+/// Returns: A flattened [Result] with the inner value or the error
 Result!(T, E) flatten(T, E)(auto ref scope const Result!(Result!(T, E), E) r)
 {
     return andThen!"a"(r);
