@@ -644,7 +644,8 @@ auto andThen(alias fun, T, E)(scope const auto ref Result!(T, E) r)
         return S.err(unwrapErr(r));
     }
 
-    return cast(S) unaryFun!fun(unwrap(r));
+    S s = unaryFun!fun(unwrap(r));
+    return s;
 }
 
 // FIXME: need to reproduce `Option`
@@ -773,7 +774,8 @@ auto orElse(alias fun, T, E)(scope const auto ref Result!(T, E) r)
         return S.ok(unwrap(r));
     }
 
-    return cast(S) unaryFun!fun(unwrapErr(r));
+    S s = unaryFun!fun(unwrapErr(r));
+    return s;
 }
 
 ///
