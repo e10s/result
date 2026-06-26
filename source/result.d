@@ -1045,8 +1045,7 @@ unittest
 /// Returns: The value contained in the [Ok]
 ///
 /// Throws: [UnwrapException] with message `msg` if the [Result] is [Err]
-// FIXME: msg should be lazy
-T expect(T, E)(scope const auto ref Result!(T, E) r, string msg)
+T expect(T, E)(scope const auto ref Result!(T, E) r, lazy string msg)
 {
     import std.exception : enforce;
 
@@ -1097,8 +1096,7 @@ T expect(T, E)(scope const auto ref Result!(T, E) r, string msg)
 /// Returns: The value contained in the [Err]
 ///
 /// Throws: [UnwrapException] with message `msg` if the [Result] is [Ok]
-// FIXME: msg should be lazy
-E expectErr(T, E)(scope const auto ref Result!(T, E) r, string msg)
+E expectErr(T, E)(scope const auto ref Result!(T, E) r,lazy string msg)
 {
     import std.exception : enforce;
 
