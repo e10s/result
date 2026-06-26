@@ -421,13 +421,15 @@ bool isOk(T, E)(scope const auto ref Result!(T, E) r)
 ///     pred = The predicate to apply to the [Ok] value
 ///
 /// Returns: true if r is [Ok] and its value satisfies `pred`, false otherwise
-// FIXME: add const to matching handlers
 bool isOkAnd(alias pred = "a", T, E)(scope const auto ref Result!(T, E) r)
         if (!is(void == typeof(unaryFun!pred(T.init))))
 {
+    alias QOk = QualifiedOkTypeOf!(typeof(r));
+    alias QErr = QualifiedErrTypeOf!(typeof(r));
+
     import std.sumtype : match;
 
-    return r.payload.match!((Ok!T t) => !!unaryFun!pred(t.value), (Err!E _) => false);
+    return r.payload.match!((QOk t) => !!unaryFun!pred(t.value), (QErr _) => false);
 }
 
 ///
@@ -516,13 +518,15 @@ alias isErr = not!isOk;
 ///     pred = The predicate to apply to the [Err] value
 ///
 /// Returns: true if r is [Err] and its value satisfies `pred`, false otherwise
-// FIXME: add const to matching handlers
 bool isErrAnd(alias pred = "a", T, E)(scope const auto ref Result!(T, E) r)
         if (!is(void == typeof(unaryFun!pred(E.init))))
 {
+    alias QOk = QualifiedOkTypeOf!(typeof(r));
+    alias QErr = QualifiedErrTypeOf!(typeof(r));
+
     import std.sumtype : match;
 
-    return r.payload.match!((Ok!T _) => false, (Err!E e) => !!unaryFun!pred(e.value));
+    return r.payload.match!((QOk _) => false, (QErr e) => !!unaryFun!pred(e.value));
 }
 
 ///
@@ -574,13 +578,14 @@ bool isErrAnd(alias pred = "a", T, E)(scope const auto ref Result!(T, E) r)
 ///     r = The [Result] to extract from
 ///
 /// Returns: A `Nullable!T` containing the [Ok] value, or in the _null state if [Err]
-// FIXME: add const to matching handlers
 Nullable!T ok(T, E)(scope const auto ref Result!(T, E) r)
 {
+    alias QOk = QualifiedOkTypeOf!(typeof(r));
+    alias QErr = QualifiedErrTypeOf!(typeof(r));
     alias N = Nullable!T;
     import std.sumtype : match;
 
-    return r.payload.match!((Ok!T t) => N(t.value), (Err!E _) => N.init);
+    return r.payload.match!((QOk t) => N(t.value), (QErr _) => N.init);
 }
 
 ///
@@ -618,13 +623,14 @@ Nullable!T ok(T, E)(scope const auto ref Result!(T, E) r)
 ///     r = The [Result] to extract from
 ///
 /// Returns: A `Nullable!E` containing the [Err] value, or in the _null state if [Ok]
-// FIXME: add const to matching handlers
 Nullable!E err(T, E)(scope const auto ref Result!(T, E) r)
 {
+    alias QOk = QualifiedOkTypeOf!(typeof(r));
+    alias QErr = QualifiedErrTypeOf!(typeof(r));
     alias N = Nullable!E;
     import std.sumtype : match;
 
-    return r.payload.match!((Ok!T _) => N.init, (Err!E e) => N(e.value));
+    return r.payload.match!((QOk _) => N.init, (QErr e) => N(e.value));
 }
 
 ///
@@ -1332,13 +1338,14 @@ T unwrapOrDefault(T, E)(scope const auto ref Result!(T, E) r)
 ///     fun = The function to apply to the [Err] value
 ///
 /// Returns: The [Ok] value or the result of calling `fun` with the [Err] value
-// FIXME: add const to matching handlers
 T unwrapOrElse(alias fun, T, E)(scope const auto ref Result!(T, E) r)
         if (is(typeof(unaryFun!fun(E.init)) : T))
 {
+    alias QOk = QualifiedOkTypeOf!(typeof(r));
+    alias QErr = QualifiedErrTypeOf!(typeof(r));
     import std.sumtype : match;
 
-    return r.payload.match!((Ok!T t) => t.value, (Err!E e) => unaryFun!fun(e.value));
+    return r.payload.match!((QOk t) => t.value, (QErr e) => unaryFun!fun(e.value));
 }
 
 ///
@@ -1398,15 +1405,16 @@ T unwrapOrElse(alias fun, T, E)(scope const auto ref Result!(T, E) r)
 ///
 /// Returns: A new [Result] with the transformed [Ok] value or the original [Err]
 // FIXME: fun's default value should be identity
-// FIXME: add const to matching handlers
 auto map(alias fun, T, E)(scope const auto ref Result!(T, E) r)
         if (!is(void == typeof(unaryFun!fun(T.init))))
 {
+    alias QOk = QualifiedOkTypeOf!(typeof(r));
+    alias QErr = QualifiedErrTypeOf!(typeof(r));
     alias U = typeof(unaryFun!fun(T.init));
     alias S = Result!(U, E);
     import std.sumtype : match;
 
-    return r.payload.match!((Ok!T t) => S.ok(unaryFun!fun(t.value)), (Err!E e) => S.err(e.value));
+    return r.payload.match!((QOk t) => S.ok(unaryFun!fun(t.value)), (QErr e) => S.err(e.value));
 }
 
 ///
@@ -1484,15 +1492,16 @@ auto map(alias fun, T, E)(scope const auto ref Result!(T, E) r)
 ///
 /// Returns: A new [Result] with the original [Ok] or the transformed [Err]
 // FIXME: fun's default value should be identity
-// FIXME: add const to matching handlers
 auto mapErr(alias fun, T, E)(scope const auto ref Result!(T, E) r)
         if (!is(void == typeof(unaryFun!fun(E.init))))
 {
+    alias QOk = QualifiedOkTypeOf!(typeof(r));
+    alias QErr = QualifiedErrTypeOf!(typeof(r));
     alias F = typeof(unaryFun!fun(E.init));
     alias S = Result!(T, F);
     import std.sumtype : match;
 
-    return r.payload.match!((Ok!T t) => S.ok(t.value), (Err!E e) => S.err(unaryFun!fun(e.value)));
+    return r.payload.match!((QOk t) => S.ok(t.value), (QErr e) => S.err(unaryFun!fun(e.value)));
 }
 
 ///
@@ -1662,15 +1671,16 @@ auto mapOrDefault(alias fun, T, E)(auto ref scope const Result!(T, E) r)
 ///     fun = The function to apply to the [Ok] value
 ///
 /// Returns: The result of applying the appropriate function based on [Ok] or [Err]
-// FIXME: add const to matching handlers
 auto mapOrElse(alias defaultFun, alias fun, T, E)(auto ref scope const Result!(T, E) r)
         if (!is(void == CommonType!(typeof(unaryFun!defaultFun(E.init)),
             typeof(unaryFun!fun(T.init)))))
 {
+    alias QOk = QualifiedOkTypeOf!(typeof(r));
+    alias QErr = QualifiedErrTypeOf!(typeof(r));
     import std.sumtype : match;
 
-    return r.payload.match!((Ok!T t) => unaryFun!fun(t.value),
-            (Err!E e) => unaryFun!defaultFun(e.value));
+    return r.payload.match!((QOk t) => unaryFun!fun(t.value),
+            (QErr e) => unaryFun!defaultFun(e.value));
 }
 
 ///
