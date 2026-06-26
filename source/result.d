@@ -1096,7 +1096,7 @@ T expect(T, E)(scope const auto ref Result!(T, E) r, lazy string msg)
 /// Returns: The value contained in the [Err]
 ///
 /// Throws: [UnwrapException] with message `msg` if the [Result] is [Ok]
-E expectErr(T, E)(scope const auto ref Result!(T, E) r,lazy string msg)
+E expectErr(T, E)(scope const auto ref Result!(T, E) r, lazy string msg)
 {
     import std.exception : enforce;
 
@@ -1402,8 +1402,7 @@ T unwrapOrElse(alias fun, T, E)(scope const auto ref Result!(T, E) r)
 ///     fun = The function to apply to the [Ok] value
 ///
 /// Returns: A new [Result] with the transformed [Ok] value or the original [Err]
-// FIXME: fun's default value should be identity
-auto map(alias fun, T, E)(scope const auto ref Result!(T, E) r)
+auto map(alias fun = "a", T, E)(scope const auto ref Result!(T, E) r)
         if (!is(void == typeof(unaryFun!fun(T.init))))
 {
     alias QOk = QualifiedOkTypeOf!(typeof(r));
@@ -1462,21 +1461,27 @@ auto map(alias fun, T, E)(scope const auto ref Result!(T, E) r)
 
     auto resultOk = R.ok(-22);
     assert(map!(to!dstring)(resultOk) == S.ok("-22"));
+    assert(map(resultOk) == R.ok(-22));
 
     const cResultOk = R.ok(-22);
     assert(map!(to!dstring)(cResultOk) == S.ok("-22"));
+    assert(map(cResultOk) == R.ok(-22));
 
     immutable iResultOk = R.ok(-22);
     assert(map!(to!dstring)(iResultOk) == S.ok("-22"));
+    assert(map(iResultOk) == R.ok(-22));
 
     auto resultErr = R.err("bad");
     assert(map!(to!dstring)(resultErr) == S.err("bad"));
+    assert(map(resultErr) == R.err("bad"));
 
     const cResultErr = R.err("bad");
     assert(map!(to!dstring)(cResultErr) == S.err("bad"));
+    assert(map(cResultErr) == R.err("bad"));
 
     immutable iResultErr = R.err("bad");
     assert(map!(to!dstring)(iResultErr) == S.err("bad"));
+    assert(map(iResultErr) == R.err("bad"));
 }
 
 /// Transforms the [Err] value of a [Result] using a function, keeping the [Ok] unchanged.
@@ -1489,8 +1494,7 @@ auto map(alias fun, T, E)(scope const auto ref Result!(T, E) r)
 ///     fun = The function to apply to the [Err] value
 ///
 /// Returns: A new [Result] with the original [Ok] or the transformed [Err]
-// FIXME: fun's default value should be identity
-auto mapErr(alias fun, T, E)(scope const auto ref Result!(T, E) r)
+auto mapErr(alias fun = "a", T, E)(scope const auto ref Result!(T, E) r)
         if (!is(void == typeof(unaryFun!fun(E.init))))
 {
     alias QOk = QualifiedOkTypeOf!(typeof(r));
@@ -1531,21 +1535,27 @@ auto mapErr(alias fun, T, E)(scope const auto ref Result!(T, E) r)
 
     auto resultOk = R.ok(-22);
     assert(mapErr!(a => a.length)(resultOk) == S.ok(-22));
+    assert(mapErr(resultOk) == R.ok(-22));
 
     const cResultOk = R.ok(-22);
     assert(mapErr!(a => a.length)(cResultOk) == S.ok(-22));
+    assert(mapErr(cResultOk) == R.ok(-22));
 
     immutable iResultOk = R.ok(-22);
     assert(mapErr!(a => a.length)(iResultOk) == S.ok(-22));
+    assert(mapErr(iResultOk) == R.ok(-22));
 
     auto resultErr = R.err("bad");
     assert(mapErr!(a => a.length)(resultErr) == S.err(3));
+    assert(mapErr(resultErr) == R.err("bad"));
 
     const cResultErr = R.err("bad");
     assert(mapErr!(a => a.length)(cResultErr) == S.err(3));
+    assert(mapErr(cResultErr) == R.err("bad"));
 
     immutable iResultErr = R.err("bad");
     assert(mapErr!(a => a.length)(iResultErr) == S.err(3));
+    assert(mapErr(iResultErr) == R.err("bad"));
 }
 
 /// Applies a function to [Ok], or returns a default value for [Err].
