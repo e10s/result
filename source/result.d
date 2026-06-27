@@ -23,7 +23,7 @@ import std.traits : CommonType;
 private mixin template OkErrImpl(X)
 {
     private X value_;
-    @property ref value() const
+    @property ref inout(X) value() inout
     {
         return value_;
     }
@@ -578,11 +578,11 @@ bool isErrAnd(alias pred = "a", T, E)(scope const auto ref Result!(T, E) r)
 ///     r = The [Result] to extract from
 ///
 /// Returns: A `Nullable!T` containing the [Ok] value, or in the _null state if [Err]
-Nullable!T ok(T, E)(scope const auto ref Result!(T, E) r)
+inout(Nullable!T) ok(T, E)(scope inout auto ref Result!(T, E) r)
 {
     alias QOk = QualifiedOkTypeOf!(typeof(r));
     alias QErr = QualifiedErrTypeOf!(typeof(r));
-    alias N = Nullable!T;
+    alias N = inout(Nullable!T);
     import std.sumtype : match;
 
     return r.payload.match!((QOk t) => N(t.value), (QErr _) => N.init);
@@ -623,11 +623,11 @@ Nullable!T ok(T, E)(scope const auto ref Result!(T, E) r)
 ///     r = The [Result] to extract from
 ///
 /// Returns: A `Nullable!E` containing the [Err] value, or in the _null state if [Ok]
-Nullable!E err(T, E)(scope const auto ref Result!(T, E) r)
+inout(Nullable!E) err(T, E)(scope inout auto ref Result!(T, E) r)
 {
     alias QOk = QualifiedOkTypeOf!(typeof(r));
     alias QErr = QualifiedErrTypeOf!(typeof(r));
-    alias N = Nullable!E;
+    alias N = inout(Nullable!E);
     import std.sumtype : match;
 
     return r.payload.match!((QOk _) => N.init, (QErr e) => N(e.value));
@@ -669,9 +669,10 @@ Nullable!E err(T, E)(scope const auto ref Result!(T, E) r)
 ///     r2 = The [Result] to return if `r1` is [Ok]
 ///
 /// Returns: r2 if r1 is [Ok], otherwise a new [Result]`!(U, E)` with r1's [Err] value
-Result!(U, E) and(T, U, E)(scope const auto ref Result!(T, E) r1, scope const auto ref Result!(U, E) r2)
+inout(Result!(U, E)) and(T, U, E)(scope inout auto ref Result!(T, E) r1,
+        scope inout auto ref Result!(U, E) r2)
 {
-    return r1.andThen!(_ => r2)();
+    return r1.andThen!((inout _) => r2)();
 }
 
 ///
@@ -730,11 +731,11 @@ Result!(U, E) and(T, U, E)(scope const auto ref Result!(T, E) r1, scope const au
 ///     fun = The function to apply to the [Ok] value
 ///
 /// Returns: The [Result] returned by `fun` if [Ok], otherwise a new [Result] with the original [Err]
-auto andThen(alias fun, T, E)(scope const auto ref Result!(T, E) r)
+auto andThen(alias fun, T, E)(scope inout auto ref Result!(T, E) r)
         if (is(E == ErrValueTypeOf!(typeof(unaryFun!fun(T.init)))))
 {
     alias U = OkValueTypeOf!(typeof(unaryFun!fun(T.init)));
-    alias S = Result!(U, E);
+    alias S = inout(Result!(U, E));
 
     if (isErr(r))
     {
@@ -814,9 +815,10 @@ auto andThen(alias fun, T, E)(scope const auto ref Result!(T, E) r)
 ///     r2 = The [Result] to return if `r1` is [Err]
 ///
 /// Returns: r2 if r1 is [Err], otherwise a new [Result]`!(T, F)` with r1's [Ok] value
-Result!(T, F) or(T, E, F)(scope const auto ref Result!(T, E) r1, scope const auto ref Result!(T, F) r2)
+inout(Result!(T, F)) or(T, E, F)(scope inout auto ref Result!(T, E) r1,
+        scope inout auto ref Result!(T, F) r2)
 {
-    return r1.orElse!(_ => r2)();
+    return r1.orElse!((inout _) => r2)();
 }
 
 ///
@@ -875,11 +877,11 @@ Result!(T, F) or(T, E, F)(scope const auto ref Result!(T, E) r1, scope const aut
 ///     fun = The function to apply to the [Err] value
 ///
 /// Returns: The [Result] returned by `fun` if [Err], otherwise a new [Result] with the original [Ok]
-auto orElse(alias fun, T, E)(scope const auto ref Result!(T, E) r)
+auto orElse(alias fun, T, E)(scope inout auto ref Result!(T, E) r)
         if (is(T == OkValueTypeOf!(typeof(unaryFun!fun(E.init)))))
 {
     alias F = ErrValueTypeOf!(typeof(unaryFun!fun(E.init)));
-    alias S = Result!(T, F);
+    alias S = inout(Result!(T, F));
 
     if (isOk(r))
     {
@@ -944,7 +946,7 @@ auto orElse(alias fun, T, E)(scope const auto ref Result!(T, E) r)
 ///     r = The [Result] to _unwrap
 ///
 /// Returns: The value contained in the [Ok]
-T unwrap(T, E)(scope const auto ref Result!(T, E) r)
+inout(T) unwrap(T, E)(scope inout auto ref Result!(T, E) r)
 {
     assert(isOk(r), "Result does not have an Ok value.");
 
@@ -993,7 +995,7 @@ unittest
 ///     r = The [Result] to unwrap
 ///
 /// Returns: The value contained in the [Err]
-E unwrapErr(T, E)(scope const auto ref Result!(T, E) r)
+inout(E) unwrapErr(T, E)(scope inout auto ref Result!(T, E) r)
 {
     assert(isErr(r), "Result does not have an Err value.");
 
@@ -1045,7 +1047,7 @@ unittest
 /// Returns: The value contained in the [Ok]
 ///
 /// Throws: [UnwrapException] with message `msg` if the [Result] is [Err]
-T expect(T, E)(scope const auto ref Result!(T, E) r, lazy string msg)
+inout(T) expect(T, E)(scope inout auto ref Result!(T, E) r, lazy string msg)
 {
     import std.exception : enforce;
 
@@ -1096,7 +1098,7 @@ T expect(T, E)(scope const auto ref Result!(T, E) r, lazy string msg)
 /// Returns: The value contained in the [Err]
 ///
 /// Throws: [UnwrapException] with message `msg` if the [Result] is [Ok]
-E expectErr(T, E)(scope const auto ref Result!(T, E) r, lazy string msg)
+inout(E) expectErr(T, E)(scope inout auto ref Result!(T, E) r, lazy string msg)
 {
     import std.exception : enforce;
 
@@ -1148,7 +1150,7 @@ E expectErr(T, E)(scope const auto ref Result!(T, E) r, lazy string msg)
 ///
 /// Throws: [UnwrapException] if the [Result] is [Err]
 @("Unique to D")
-T tryUnwrap(T, E)(scope const auto ref Result!(T, E) r)
+inout(T) tryUnwrap(T, E)(scope inout auto ref Result!(T, E) r)
 {
     return expect(r, "Result does not have an Ok value.");
 }
@@ -1194,7 +1196,7 @@ T tryUnwrap(T, E)(scope const auto ref Result!(T, E) r)
 ///
 /// Throws: [UnwrapException] if the [Result] is [Ok]
 @("Unique to D")
-E tryUnwrapErr(T, E)(scope const auto ref Result!(T, E) r)
+inout(E) tryUnwrapErr(T, E)(scope inout auto ref Result!(T, E) r)
 {
     return expectErr(r, "Result does not have an Err value.");
 }
@@ -1239,7 +1241,7 @@ E tryUnwrapErr(T, E)(scope const auto ref Result!(T, E) r)
 ///     defaultValue = The fallback value to be used if [Err]
 ///
 /// Returns: The [Ok] value or defaultValue if [Err]
-T unwrapOr(T, E)(scope const auto ref Result!(T, E) r, T defaultValue)
+inout(T) unwrapOr(T, E)(scope inout auto ref Result!(T, E) r, T defaultValue)
 {
     return unwrapOrElse!(_ => defaultValue)(r);
 }
@@ -1281,7 +1283,7 @@ T unwrapOr(T, E)(scope const auto ref Result!(T, E) r, T defaultValue)
 ///     r = The [Result] to unwrap
 ///
 /// Returns: The [Ok] value or `T.init` if [Err]
-T unwrapOrDefault(T, E)(scope const auto ref Result!(T, E) r)
+inout(T) unwrapOrDefault(T, E)(scope inout auto ref Result!(T, E) r)
 {
     return unwrapOr(r, T.init);
 }
@@ -1336,7 +1338,7 @@ T unwrapOrDefault(T, E)(scope const auto ref Result!(T, E) r)
 ///     fun = The function to apply to the [Err] value
 ///
 /// Returns: The [Ok] value or the result of calling `fun` with the [Err] value
-T unwrapOrElse(alias fun, T, E)(scope const auto ref Result!(T, E) r)
+inout(T) unwrapOrElse(alias fun, T, E)(scope inout auto ref Result!(T, E) r)
         if (is(typeof(unaryFun!fun(E.init)) : T))
 {
     alias QOk = QualifiedOkTypeOf!(typeof(r));
@@ -1402,7 +1404,7 @@ T unwrapOrElse(alias fun, T, E)(scope const auto ref Result!(T, E) r)
 ///     fun = The function to apply to the [Ok] value
 ///
 /// Returns: A new [Result] with the transformed [Ok] value or the original [Err]
-auto map(alias fun = "a", T, E)(scope const auto ref Result!(T, E) r)
+auto map(alias fun = "a", T, E)(scope inout auto ref Result!(T, E) r)
         if (!is(void == typeof(unaryFun!fun(T.init))))
 {
     alias QOk = QualifiedOkTypeOf!(typeof(r));
@@ -1494,7 +1496,7 @@ auto map(alias fun = "a", T, E)(scope const auto ref Result!(T, E) r)
 ///     fun = The function to apply to the [Err] value
 ///
 /// Returns: A new [Result] with the original [Ok] or the transformed [Err]
-auto mapErr(alias fun = "a", T, E)(scope const auto ref Result!(T, E) r)
+auto mapErr(alias fun = "a", T, E)(scope inout auto ref Result!(T, E) r)
         if (!is(void == typeof(unaryFun!fun(E.init))))
 {
     alias QOk = QualifiedOkTypeOf!(typeof(r));
@@ -1570,7 +1572,7 @@ auto mapErr(alias fun = "a", T, E)(scope const auto ref Result!(T, E) r)
 ///     defaultValue = The default value to return if [Err]
 ///
 /// Returns: The result of applying `fun` to the [Ok], or the default value
-auto mapOr(alias fun, T, U, E)(auto ref scope const Result!(T, E) r, U defaultValue)
+auto mapOr(alias fun, T, U, E)(auto ref scope inout Result!(T, E) r, U defaultValue)
         if (!is(void == CommonType!(U, typeof(unaryFun!fun(T.init)))))
 {
     return mapOrElse!(_ => defaultValue, fun)(r);
@@ -1626,7 +1628,7 @@ auto mapOr(alias fun, T, U, E)(auto ref scope const Result!(T, E) r, U defaultVa
 ///     fun = The function to apply to the [Ok] value
 ///
 /// Returns: The result of applying `fun` to the [Ok], or the default `.init` value
-auto mapOrDefault(alias fun, T, E)(auto ref scope const Result!(T, E) r)
+auto mapOrDefault(alias fun, T, E)(auto ref scope inout Result!(T, E) r)
         if (!is(void == typeof(unaryFun!fun(T.init))))
 {
     return mapOr!fun(r, typeof(unaryFun!fun(T.init)).init);
@@ -1679,7 +1681,7 @@ auto mapOrDefault(alias fun, T, E)(auto ref scope const Result!(T, E) r)
 ///     fun = The function to apply to the [Ok] value
 ///
 /// Returns: The result of applying the appropriate function based on [Ok] or [Err]
-auto mapOrElse(alias defaultFun, alias fun, T, E)(auto ref scope const Result!(T, E) r)
+auto mapOrElse(alias defaultFun, alias fun, T, E)(auto ref scope inout Result!(T, E) r)
         if (!is(void == CommonType!(typeof(unaryFun!defaultFun(E.init)),
             typeof(unaryFun!fun(T.init)))))
 {
@@ -1745,7 +1747,7 @@ auto mapOrElse(alias defaultFun, alias fun, T, E)(auto ref scope const Result!(T
 ///     r = The nested [Result] to flatten
 ///
 /// Returns: A flattened [Result] with the inner value or the error
-Result!(T, E) flatten(T, E)(auto ref scope const Result!(Result!(T, E), E) r)
+inout(Result!(T, E)) flatten(T, E)(auto ref scope inout Result!(Result!(T, E), E) r)
 {
     return andThen!"a"(r);
 }
