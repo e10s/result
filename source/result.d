@@ -382,7 +382,7 @@ unittest
 /// Returns: true if r contains an [Ok] value, false otherwise
 bool isOk(T, E)(scope const auto ref Result!(T, E) r)
 {
-    return isOkAnd!"true"(r);
+    return isOkAnd!(_ => true)(r);
 }
 
 ///
