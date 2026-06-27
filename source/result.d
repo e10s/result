@@ -11,7 +11,72 @@
  *
  * Examples:
  * ---
- * //
+import result;
+
+auto tryCatchWrapper(T)(lazy T expr)
+{
+    alias R = Result!(T, Exception);
+
+    try
+    {
+        return R.ok(expr);
+    }
+    catch (Exception e)
+    {
+        return R.err(e);
+    }
+}
+
+import std.typecons : Tuple;
+
+alias ExceptionSummary = Tuple!(string, "name", string, "msg");
+
+auto toExceptionSummary(const Exception e)
+{
+    return ExceptionSummary(typeid(e).name, e.msg);
+}
+
+void proceduralExample(SomeResult)(SomeResult result)
+{
+    import std.stdio : stderr, writefln;
+
+    if (isErr(result))
+    {
+        immutable e = unwrapErr(result);
+        stderr.writefln("%s is caught: %s", e.name, e.msg);
+        return;
+    }
+
+    writefln("Converted to %.9s", unwrap(result) * 0.2 / 3);
+}
+
+void complexExample(SomeResult)(SomeResult result)
+{
+    import std.conv : to;
+    import std.format : format;
+    import std.stdio : stderr, writeln;
+    import std.sumtype : match;
+
+    result.andThen!(t => Result!(double, ExceptionSummary).ok(t * 0.2 / 3))
+        .map!(u => format!"Converted to %.9s"(u)) // Result!(string, ExceptionSummary)
+        .mapErr!(e => format!"%s is caught: %s"(e.name, e.msg)) // Result!(string, string)
+        .match!((const(Ok!string) okObj) => writeln(okObj.value),
+                (const(Err!string) errObj) => stderr.writeln(errObj.value));
+}
+
+void main()
+{
+    import std.conv : to;
+
+    immutable r1 = tryCatchWrapper(to!int("1729")).mapErr!toExceptionSummary();
+    immutable r2 = tryCatchWrapper(to!int("number?")).mapErr!toExceptionSummary();
+
+    proceduralExample(r1);
+    proceduralExample(r2);
+
+    complexExample(r1);
+    complexExample(r2);
+}
  * ---
  */
 module result;
