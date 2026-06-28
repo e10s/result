@@ -274,70 +274,107 @@ struct Result(T, E) if (!is(void == T) && !is(void == E))
     }
 }
 
-// static wrapper of ctor
+// Factory method
 @safe @nogc nothrow unittest
 {
-    assert(Result!(int, string).ok(3) == Result!(int, string)(Ok!int(3)));
-    assert(Result!(int, string).err("3") == Result!(int, string)(Err!string("3")));
-}
+    alias R = Result!(int, string);
+    import std.sumtype : get;
 
-// Ctor
-@safe @nogc nothrow unittest
-{
-    import std.sumtype : has, get;
-
-    auto resultOk = Result!(int, string)(Ok!int(123));
-    assert(resultOk.has!(Ok!int));
-    assert(!resultOk.has!(Err!string));
+    auto resultOk = R.ok(123);
     assert(resultOk.get!(Ok!int) == Ok!int(123));
 
-    const cResultOk = Result!(int, string)(Ok!int(123));
-    assert(!cResultOk.has!(Ok!int));
-    assert(!cResultOk.has!(Err!string));
-    assert(cResultOk.has!(const(Ok!int)));
-    assert(!cResultOk.has!(const(Err!string)));
+    const cResultOk = R.ok(123);
     assert(cResultOk.get!(const(Ok!int)) == Ok!int(123));
-    immutable iResultOk = Result!(int, string)(Ok!int(123));
-    assert(!iResultOk.has!(Ok!int));
-    assert(!iResultOk.has!(Err!string));
-    assert(iResultOk.has!(immutable(Ok!int)));
-    assert(!iResultOk.has!(immutable(Err!string)));
-    assert(iResultOk.get!(immutable(Ok!int)) == Ok!int(123));
-    auto resultErr = Result!(bool, dstring)(Err!dstring("123"d));
-    assert(resultErr.has!(Err!dstring));
-    assert(!resultErr.has!(Ok!bool));
-    assert(resultErr.get!(Err!dstring) == Err!dstring("123"d));
-    const cResultErr = Result!(bool, dstring)(Err!dstring("123"d));
-    assert(!cResultErr.has!(Ok!bool));
-    assert(!cResultErr.has!(Err!dstring));
-    assert(!cResultErr.has!(const(Ok!bool)));
-    assert(cResultErr.has!(const(Err!dstring)));
-    assert(cResultErr.get!(const(Err!dstring)) == Err!dstring("123"d));
 
-    immutable iResultErr = Result!(bool, dstring)(Err!dstring("123"d));
-    assert(!iResultErr.has!(Ok!bool));
-    assert(!iResultErr.has!(Err!dstring));
-    assert(!iResultErr.has!(immutable(Ok!bool)));
-    assert(iResultErr.has!(immutable(Err!dstring)));
-    assert(iResultErr.get!(immutable(Err!dstring)) == Err!dstring("123"d));
+    immutable iResultOk = R.ok(123);
+    assert(iResultOk.get!(immutable(Ok!int)) == Ok!int(123));
+
+    auto resultErr = R.err("123");
+    assert(resultErr.get!(Err!string) == Err!string("123"));
+
+    const cResultErr = R.err("123");
+    assert(cResultErr.get!(const(Err!string)) == Err!string("123"));
+
+    immutable iResultErr = R.err("123");
+    assert(iResultErr.get!(immutable(Err!string)) == Err!string("123"));
+}
+
+// Ditto
+@safe nothrow unittest
+{
+    struct S
+    {
+    }
+
+    alias R = Result!(Exception, S*);
+
+    import std.sumtype : has;
+
+    auto resultOk = R.ok(new Exception(""));
+    assert(resultOk.has!(Ok!Exception));
+
+    const cResultOk = R.ok(new Exception(""));
+    assert(cResultOk.has!(const(Ok!Exception)));
+
+    immutable iResultOk = R.ok(new Exception(""));
+    assert(iResultOk.has!(immutable(Ok!Exception)));
+
+    auto resultErr = R.err(new S);
+    assert(resultErr.has!(Err!(S*)));
+
+    const cResultErr = R.err(new S);
+    assert(cResultErr.has!(const(Err!(S*))));
+
+    immutable iResultErr = R.err(new S);
+    assert(iResultErr.has!(immutable(Err!(S*))));
 }
 
 // opAssign
 @trusted @nogc nothrow unittest
 {
+    alias R = Result!(int, string);
+
     import std.sumtype : get;
 
-    auto result1 = Result!(int, string).err("333");
-    auto result2 = Result!(int, string).err("3");
+    auto result1 = R.err("333");
+    auto result2 = R.err("3");
 
     result2 = result1;
     assert(result2.get!(Err!string) == Err!string("333"));
-    const result3 = Result!(int, string).ok(100);
+
+    const result3 = R.ok(100);
     result2 = result3;
     assert(result2.get!(Ok!int) == Ok!int(100));
-    immutable result4 = Result!(int, string).err("1000");
+
+    immutable result4 = R.err("1000");
     result2 = result4;
     assert(result2.get!(Err!string) == Err!string("1000"));
+}
+
+// Ditto
+@trusted unittest
+{
+    struct S
+    {
+    }
+
+    alias R = Result!(Exception, S*);
+
+    import std.sumtype : get;
+
+    auto s1 = new S;
+    auto s2 = new S;
+    auto result1 = R.err(s1);
+    auto result2 = R.err(s2);
+
+    result2 = result1;
+    assert(result2.get!(Err!(S*)) == Err!(S*)(s1));
+
+    auto k1 = new Exception("!!!");
+    auto result3 = R.ok(k1);
+
+    result2 = result3;
+    assert(result2.get!(Ok!Exception) == Ok!Exception(k1));
 }
 
 /* Convenience templates begin */
@@ -350,6 +387,7 @@ unittest
     assert(isResult!(const(R)));
     assert(isResult!(immutable(R)));
     assert(isResult!(shared(R)));
+    assert(isResult!(inout(R)));
 }
 
 private template OkTypeOf(R) if (isResult!R)
@@ -363,6 +401,7 @@ unittest
     assert(is(OkTypeOf!R == Ok!int));
     assert(is(OkTypeOf!(const(R)) == Ok!int));
     assert(is(OkTypeOf!(immutable(R)) == Ok!int));
+    assert(is(OkTypeOf!(inout(R)) == Ok!int));
 }
 
 private template QualifiedOkTypeOf(R) if (isResult!R)
@@ -378,34 +417,7 @@ unittest
     assert(is(QualifiedOkTypeOf!R == Ok!int));
     assert(is(QualifiedOkTypeOf!(const(R)) == const(Ok!int)));
     assert(is(QualifiedOkTypeOf!(immutable(R)) == immutable(Ok!int)));
-}
-
-private template ErrTypeOf(R) if (isResult!R)
-{
-    alias ErrTypeOf = R.Payload.Types[1];
-}
-
-unittest
-{
-    alias R = Result!(int, string);
-    assert(is(ErrTypeOf!R == Err!string));
-    assert(is(ErrTypeOf!(const(R)) == Err!string));
-    assert(is(ErrTypeOf!(immutable(R)) == Err!string));
-}
-
-private template QualifiedErrTypeOf(R) if (isResult!R)
-{
-    import std.traits : CopyTypeQualifiers;
-
-    alias QualifiedErrTypeOf = CopyTypeQualifiers!(R, ErrTypeOf!R);
-}
-
-unittest
-{
-    alias R = Result!(int, string);
-    assert(is(QualifiedErrTypeOf!R == Err!string));
-    assert(is(QualifiedErrTypeOf!(const(R)) == const(Err!string)));
-    assert(is(QualifiedErrTypeOf!(immutable(R)) == immutable(Err!string)));
+    assert(is(QualifiedOkTypeOf!(inout(R)) == inout(Ok!int)));
 }
 
 private template OkValueTypeOf(R) if (isResult!R)
@@ -421,6 +433,37 @@ unittest
     assert(is(OkValueTypeOf!R == int));
     assert(is(OkValueTypeOf!(const(R)) == int));
     assert(is(OkValueTypeOf!(immutable(R)) == int));
+    assert(is(OkValueTypeOf!(inout(R)) == int));
+}
+
+private template ErrTypeOf(R) if (isResult!R)
+{
+    alias ErrTypeOf = R.Payload.Types[1];
+}
+
+unittest
+{
+    alias R = Result!(int, string);
+    assert(is(ErrTypeOf!R == Err!string));
+    assert(is(ErrTypeOf!(const(R)) == Err!string));
+    assert(is(ErrTypeOf!(immutable(R)) == Err!string));
+    assert(is(ErrTypeOf!(inout(R)) == Err!string));
+}
+
+private template QualifiedErrTypeOf(R) if (isResult!R)
+{
+    import std.traits : CopyTypeQualifiers;
+
+    alias QualifiedErrTypeOf = CopyTypeQualifiers!(R, ErrTypeOf!R);
+}
+
+unittest
+{
+    alias R = Result!(int, string);
+    assert(is(QualifiedErrTypeOf!R == Err!string));
+    assert(is(QualifiedErrTypeOf!(const(R)) == const(Err!string)));
+    assert(is(QualifiedErrTypeOf!(immutable(R)) == immutable(Err!string)));
+    assert(is(QualifiedErrTypeOf!(inout(R)) == inout(Err!string)));
 }
 
 private template ErrValueTypeOf(R) if (isResult!R)
@@ -436,6 +479,7 @@ unittest
     assert(is(ErrValueTypeOf!R == string));
     assert(is(ErrValueTypeOf!(const(R)) == string));
     assert(is(ErrValueTypeOf!(immutable(R)) == string));
+    assert(is(ErrValueTypeOf!(inout(R)) == string));
 }
 /* Convenience templates end */
 
