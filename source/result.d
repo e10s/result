@@ -61,7 +61,7 @@ void complexExample(SomeResult)(SomeResult result)
         .map!(u => format!"Converted to %.9s"(u)) // Result!(string, ExceptionSummary)
         .mapErr!(e => format!"%s is caught: %s"(e.name, e.msg)) // Result!(string, string)
         .match!((const(Ok!string) okObj) => writeln(okObj.value),
-                (const(Err!string) errObj) => stderr.writeln(errObj.value));
+                (const(Err!string) errObj) => stderr.writeln(errObj.error));
 }
 
 void main()
@@ -88,10 +88,6 @@ import std.traits : CommonType;
 private mixin template OkErrImpl(X)
 {
     private X value_;
-    @property ref inout(X) value() inout
-    {
-        return value_;
-    }
 
     bool opEquals(scope const X rhs) const
     {
@@ -105,10 +101,8 @@ private mixin template OkErrImpl(X)
 
     size_t toHash() const
     {
-        return hashOf(value);
+        return hashOf(value_);
     }
-
-    alias value this;
 }
 
 /// Wrapper struct representing a successful result with a value of type `T`.
@@ -116,6 +110,14 @@ private mixin template OkErrImpl(X)
 struct Ok(T) if (!is(void == T))
 {
     mixin OkErrImpl!T;
+
+    ///
+    @property ref inout(T) value() inout
+    {
+        return value_;
+    }
+
+    alias value this;
 }
 
 ///
@@ -160,13 +162,21 @@ unittest
 struct Err(E) if (!is(void == E))
 {
     mixin OkErrImpl!E;
+
+    ///
+    @property ref inout(E) error() inout
+    {
+        return value_;
+    }
+
+    alias error this;
 }
 
 ///
 unittest
 {
     assert(Err!int(314) == Err!int(314));
-    assert(Err!int(314).value == 314);
+    assert(Err!int(314).error == 314);
     assert(Err!int(314) == 314);
     assert(Err!string("Good day.") == "Good day.");
 
@@ -635,7 +645,7 @@ bool isErrAnd(alias pred = "a", T, E)(scope const auto ref Result!(T, E) r)
 
     import std.sumtype : match;
 
-    return r.payload.match!((QOk _) => false, (QErr e) => !!unaryFun!pred(e.value));
+    return r.payload.match!((QOk _) => false, (QErr e) => !!unaryFun!pred(e.error));
 }
 
 ///
@@ -739,7 +749,7 @@ inout(Nullable!E) err(T, E)(scope inout auto ref Result!(T, E) r)
     alias N = inout(Nullable!E);
     import std.sumtype : match;
 
-    return r.payload.match!((QOk _) => N.init, (QErr e) => N(e.value));
+    return r.payload.match!((QOk _) => N.init, (QErr e) => N(e.error));
 }
 
 ///
@@ -1110,7 +1120,7 @@ inout(E) unwrapErr(T, E)(scope inout auto ref Result!(T, E) r)
 
     import std.sumtype : get;
 
-    return r.payload.get!(QualifiedErrTypeOf!(typeof(r))).value;
+    return r.payload.get!(QualifiedErrTypeOf!(typeof(r))).error;
 }
 
 ///
@@ -1397,6 +1407,7 @@ inout(T) unwrapOrDefault(T, E)(scope inout auto ref Result!(T, E) r)
     return unwrapOr(r, T.init);
 }
 
+///
 @safe nothrow unittest
 {
     auto parse(string s)
@@ -1454,7 +1465,7 @@ inout(T) unwrapOrElse(alias fun, T, E)(scope inout auto ref Result!(T, E) r)
     alias QErr = QualifiedErrTypeOf!(typeof(r));
     import std.sumtype : match;
 
-    return r.payload.match!((QOk t) => t.value, (QErr e) => unaryFun!fun(e.value));
+    return r.payload.match!((QOk t) => t.value, (QErr e) => unaryFun!fun(e.error));
 }
 
 ///
@@ -1519,10 +1530,10 @@ auto map(alias fun = "a", T, E)(scope inout auto ref Result!(T, E) r)
     alias QOk = QualifiedOkTypeOf!(typeof(r));
     alias QErr = QualifiedErrTypeOf!(typeof(r));
     alias U = typeof(unaryFun!fun(T.init));
-    alias S = Result!(U, E);
+    alias S = inout(Result!(U, E));
     import std.sumtype : match;
 
-    return r.payload.match!((QOk t) => S.ok(unaryFun!fun(t.value)), (QErr e) => S.err(e.value));
+    return r.payload.match!((QOk t) => S.ok(unaryFun!fun(t.value)), (QErr e) => S.err(e.error));
 }
 
 ///
@@ -1614,7 +1625,7 @@ auto mapErr(alias fun = "a", T, E)(scope inout auto ref Result!(T, E) r)
     alias S = Result!(T, F);
     import std.sumtype : match;
 
-    return r.payload.match!((QOk t) => S.ok(t.value), (QErr e) => S.err(unaryFun!fun(e.value)));
+    return r.payload.match!((QOk t) => S.ok(t.value), (QErr e) => S.err(unaryFun!fun(e.error)));
 }
 
 ///
@@ -1799,7 +1810,7 @@ auto mapOrElse(alias defaultFun, alias fun, T, E)(auto ref scope inout Result!(T
     import std.sumtype : match;
 
     return r.payload.match!((QOk t) => unaryFun!fun(t.value),
-            (QErr e) => unaryFun!defaultFun(e.value));
+            (QErr e) => unaryFun!defaultFun(e.error));
 }
 
 ///
