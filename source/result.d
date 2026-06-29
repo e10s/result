@@ -1848,6 +1848,106 @@ auto mapOrElse(alias defaultFun, alias fun, T, E)(auto ref scope inout Result!(T
     assert(mapOrElse!(getLength, isPos)(iResultErr) == 2);
 }
 
+/// Invokes a function with the [Ok] value of a [Result] without changing the result.
+///
+/// If the [Result] contains an [Ok] value, `fun` is called with that value.
+/// The original [Result] is returned unchanged, which is useful for side effects during chaining.
+///
+/// Params:
+///     r = The [Result] to inspect
+///     fun = The function to apply to the [Ok] value
+///
+/// Returns: The original [Result]
+auto ref inout(Result!(T, E)) inspect(alias fun = "a", T, E)(scope inout auto ref Result!(T, E) r)
+        if (is(typeof(unaryFun!fun(T.init))))
+{
+    if (isOk(r))
+    {
+        unaryFun!fun(unwrap(r));
+    }
+
+    return r;
+}
+
+///
+@safe unittest
+{
+    auto parse(string s)
+    {
+        alias R = Result!(ubyte, string);
+
+        try
+        {
+            import std.conv : to;
+
+            return R.ok(to!ubyte(s));
+        }
+        catch (Exception _)
+        {
+            return R.err(s);
+        }
+    }
+
+    import std.array : appender;
+    import std.conv : writeText;
+
+    auto writer = appender!string();
+    immutable x = parse("4").inspect!(x => writer.writeText("original: ", x))
+        .map!"a^^3"
+        .expect("failed to parse number");
+    assert(x == 64);
+    assert(writer[] == "original: 4");
+}
+
+/// Invokes a function with the [Err] value of a [Result] without changing the result.
+///
+/// If the [Result] contains an [Err] value, `fun` is called with that value.
+/// The original [Result] is returned unchanged, which is useful for side effects during chaining.
+///
+/// Params:
+///     r = The [Result] to inspect
+///     fun = The function to apply to the [Err] value
+///
+/// Returns: The original [Result]
+auto ref inout(Result!(T, E)) inspectErr(alias fun = "a", T, E)(scope inout auto ref Result!(T, E) r)
+        if (is(typeof(unaryFun!fun(E.init))))
+{
+    if (isErr(r))
+    {
+        unaryFun!fun(unwrapErr(r));
+    }
+
+    return r;
+}
+
+///
+@safe nothrow unittest
+{
+    auto readToString(string path)
+    {
+        alias R = Result!(string, string);
+        try
+        {
+            import std.file : readText;
+
+            return R.ok(readText(path));
+        }
+        catch (Exception e)
+        {
+            return R.err(e.msg);
+        }
+    }
+
+    import std.array : appender;
+    import std.conv : writeText;
+
+    auto writer = appender!string();
+    auto r = inspectErr!(e => writer.writeText("failed to read file: ", e))(
+            readToString("address.txt"));
+
+    assert(isOk(r) || writer[].length > 0);
+}
+
 /// Flattens a nested [Result] by one level.
 ///
 /// Converts [Result]`!(Result!(T, E), E)` into [Result]`!(T, E)`.
