@@ -265,7 +265,6 @@ struct Result(T, E) if (!is(void == T) && !is(void == E))
     ///     value = The success _value to wrap
     ///
     /// Returns: A new [Result]`!(T, E)` containing the [Ok]`!T` _value
-    @("Unique to D")
     static Result!(T, E) ok(T value)
     {
         return Result!(T, E)(Ok!T(value));
@@ -277,7 +276,6 @@ struct Result(T, E) if (!is(void == T) && !is(void == E))
     ///     value = The error _value to wrap
     ///
     /// Returns: A new [Result]`!(T, E)` containing the [Err]`!E` _value
-    @("Unique to D")
     static Result!(T, E) err(E value)
     {
         return Result!(T, E)(Err!E(value));
@@ -493,12 +491,21 @@ unittest
 }
 /* Convenience templates end */
 
+/* For UDA begin */
+// Represents which Rust method the function corresponds to.
+struct CorrespondingTo
+{
+    string rustMethodName;
+}
+/* For UDA end */
+
 /// Checks if a [Result] contains an [Ok] value.
 ///
 /// Params:
 ///     r = The [Result] to check
 ///
 /// Returns: true if r contains an [Ok] value, false otherwise
+@CorrespondingTo("is_ok")
 bool isOk(T, E)(scope const auto ref Result!(T, E) r)
 {
     return isOkAnd!(_ => true)(r);
@@ -540,6 +547,7 @@ bool isOk(T, E)(scope const auto ref Result!(T, E) r)
 ///     pred = The predicate to apply to the [Ok] value
 ///
 /// Returns: true if r is [Ok] and its value satisfies `pred`, false otherwise
+@CorrespondingTo("is_ok_and")
 bool isOkAnd(alias pred = "a", T, E)(scope const auto ref Result!(T, E) r)
         if (!is(void == typeof(unaryFun!pred(T.init))))
 {
@@ -596,6 +604,7 @@ bool isOkAnd(alias pred = "a", T, E)(scope const auto ref Result!(T, E) r)
 
 /// Checks if a [Result] contains an [Err] value.
 /// Equivalent to `!`[isOk]`(r)`.
+@CorrespondingTo("is_err")
 alias isErr = not!isOk;
 
 ///
@@ -637,6 +646,7 @@ alias isErr = not!isOk;
 ///     pred = The predicate to apply to the [Err] value
 ///
 /// Returns: true if r is [Err] and its value satisfies `pred`, false otherwise
+@CorrespondingTo("is_err_and")
 bool isErrAnd(alias pred = "a", T, E)(scope const auto ref Result!(T, E) r)
         if (!is(void == typeof(unaryFun!pred(E.init))))
 {
@@ -697,6 +707,7 @@ bool isErrAnd(alias pred = "a", T, E)(scope const auto ref Result!(T, E) r)
 ///     r = The [Result] to extract from
 ///
 /// Returns: A `Nullable!T` containing the [Ok] value, or in the _null state if [Err]
+@CorrespondingTo("ok")
 inout(Nullable!T) ok(T, E)(scope inout auto ref Result!(T, E) r)
 {
     alias QOk = QualifiedOkTypeOf!(typeof(r));
@@ -742,6 +753,7 @@ inout(Nullable!T) ok(T, E)(scope inout auto ref Result!(T, E) r)
 ///     r = The [Result] to extract from
 ///
 /// Returns: A `Nullable!E` containing the [Err] value, or in the _null state if [Ok]
+@CorrespondingTo("err")
 inout(Nullable!E) err(T, E)(scope inout auto ref Result!(T, E) r)
 {
     alias QOk = QualifiedOkTypeOf!(typeof(r));
@@ -788,6 +800,7 @@ inout(Nullable!E) err(T, E)(scope inout auto ref Result!(T, E) r)
 ///     r2 = The [Result] to return if `r1` is [Ok]
 ///
 /// Returns: r2 if r1 is [Ok], otherwise a new [Result]`!(U, E)` with r1's [Err] value
+@CorrespondingTo("and")
 inout(Result!(U, E)) and(T, U, E)(scope inout auto ref Result!(T, E) r1,
         scope inout auto ref Result!(U, E) r2)
 {
@@ -850,6 +863,7 @@ inout(Result!(U, E)) and(T, U, E)(scope inout auto ref Result!(T, E) r1,
 ///     fun = The function to apply to the [Ok] value
 ///
 /// Returns: The [Result] returned by `fun` if [Ok], otherwise a new [Result] with the original [Err]
+@CorrespondingTo("and_then")
 auto andThen(alias fun, T, E)(scope inout auto ref Result!(T, E) r)
         if (is(E == ErrValueTypeOf!(typeof(unaryFun!fun(T.init)))))
 {
@@ -934,6 +948,7 @@ auto andThen(alias fun, T, E)(scope inout auto ref Result!(T, E) r)
 ///     r2 = The [Result] to return if `r1` is [Err]
 ///
 /// Returns: r2 if r1 is [Err], otherwise a new [Result]`!(T, F)` with r1's [Ok] value
+@CorrespondingTo("or")
 inout(Result!(T, F)) or(T, E, F)(scope inout auto ref Result!(T, E) r1,
         scope inout auto ref Result!(T, F) r2)
 {
@@ -996,6 +1011,7 @@ inout(Result!(T, F)) or(T, E, F)(scope inout auto ref Result!(T, E) r1,
 ///     fun = The function to apply to the [Err] value
 ///
 /// Returns: The [Result] returned by `fun` if [Err], otherwise a new [Result] with the original [Ok]
+@CorrespondingTo("or_else")
 auto orElse(alias fun, T, E)(scope inout auto ref Result!(T, E) r)
         if (is(T == OkValueTypeOf!(typeof(unaryFun!fun(E.init)))))
 {
@@ -1065,6 +1081,8 @@ auto orElse(alias fun, T, E)(scope inout auto ref Result!(T, E) r)
 ///     r = The [Result] to _unwrap
 ///
 /// Returns: The value contained in the [Ok]
+@CorrespondingTo("unwrap")
+@CorrespondingTo("unwrap_unchecked")
 inout(T) unwrap(T, E)(scope inout auto ref Result!(T, E) r)
 {
     assert(isOk(r), "Result does not have an Ok value.");
@@ -1114,6 +1132,8 @@ unittest
 ///     r = The [Result] to unwrap
 ///
 /// Returns: The value contained in the [Err]
+@CorrespondingTo("unwrap_err")
+@CorrespondingTo("unwrap_err_unchecked")
 inout(E) unwrapErr(T, E)(scope inout auto ref Result!(T, E) r)
 {
     assert(isErr(r), "Result does not have an Err value.");
@@ -1166,6 +1186,7 @@ unittest
 /// Returns: The value contained in the [Ok]
 ///
 /// Throws: [UnwrapException] with message `msg` if the [Result] is [Err]
+@CorrespondingTo("expect")
 inout(T) expect(T, E)(scope inout auto ref Result!(T, E) r, lazy string msg)
 {
     import std.exception : enforce;
@@ -1217,6 +1238,7 @@ inout(T) expect(T, E)(scope inout auto ref Result!(T, E) r, lazy string msg)
 /// Returns: The value contained in the [Err]
 ///
 /// Throws: [UnwrapException] with message `msg` if the [Result] is [Ok]
+@CorrespondingTo("expect_err")
 inout(E) expectErr(T, E)(scope inout auto ref Result!(T, E) r, lazy string msg)
 {
     import std.exception : enforce;
@@ -1268,7 +1290,7 @@ inout(E) expectErr(T, E)(scope inout auto ref Result!(T, E) r, lazy string msg)
 /// Returns: The value contained in the [Ok]
 ///
 /// Throws: [UnwrapException] if the [Result] is [Err]
-@("Unique to D")
+@CorrespondingTo()
 inout(T) tryUnwrap(T, E)(scope inout auto ref Result!(T, E) r)
 {
     return expect(r, "Result does not have an Ok value.");
@@ -1314,7 +1336,7 @@ inout(T) tryUnwrap(T, E)(scope inout auto ref Result!(T, E) r)
 /// Returns: The value contained in the [Err]
 ///
 /// Throws: [UnwrapException] if the [Result] is [Ok]
-@("Unique to D")
+@CorrespondingTo()
 inout(E) tryUnwrapErr(T, E)(scope inout auto ref Result!(T, E) r)
 {
     return expectErr(r, "Result does not have an Err value.");
@@ -1360,6 +1382,8 @@ inout(E) tryUnwrapErr(T, E)(scope inout auto ref Result!(T, E) r)
 ///     defaultValue = The fallback value to be used if [Err]
 ///
 /// Returns: The [Ok] value or defaultValue if [Err]
+@CorrespondingTo("unwrap_or")
+@CorrespondingTo("unwrap_or_default")
 inout(T) unwrapOr(T, E)(scope inout auto ref Result!(T, E) r, T defaultValue = T.init)
 {
     return unwrapOrElse!(_ => defaultValue)(r);
@@ -1433,6 +1457,7 @@ inout(T) unwrapOr(T, E)(scope inout auto ref Result!(T, E) r, T defaultValue = T
 ///     fun = The function to apply to the [Err] value
 ///
 /// Returns: The [Ok] value or the result of calling `fun` with the [Err] value
+@CorrespondingTo("unwrap_or_else")
 inout(T) unwrapOrElse(alias fun, T, E)(scope inout auto ref Result!(T, E) r)
         if (is(typeof(unaryFun!fun(E.init)) : T))
 {
@@ -1499,6 +1524,7 @@ inout(T) unwrapOrElse(alias fun, T, E)(scope inout auto ref Result!(T, E) r)
 ///     fun = The function to apply to the [Ok] value
 ///
 /// Returns: A new [Result] with the transformed [Ok] value or the original [Err]
+@CorrespondingTo("map")
 auto map(alias fun = "a", T, E)(scope inout auto ref Result!(T, E) r)
         if (!is(void == typeof(unaryFun!fun(T.init))))
 {
@@ -1591,6 +1617,7 @@ auto map(alias fun = "a", T, E)(scope inout auto ref Result!(T, E) r)
 ///     fun = The function to apply to the [Err] value
 ///
 /// Returns: A new [Result] with the original [Ok] or the transformed [Err]
+@CorrespondingTo("map_err")
 auto mapErr(alias fun = "a", T, E)(scope inout auto ref Result!(T, E) r)
         if (!is(void == typeof(unaryFun!fun(E.init))))
 {
@@ -1667,6 +1694,8 @@ auto mapErr(alias fun = "a", T, E)(scope inout auto ref Result!(T, E) r)
 ///     defaultValue = The default value to return if [Err]
 ///
 /// Returns: The result of applying `fun` to the [Ok], or the default value
+@CorrespondingTo("map_or")
+@CorrespondingTo("map_or_default")
 auto mapOr(alias fun, T, U = typeof(unaryFun!fun(T.init)), E)(
         auto ref scope inout Result!(T, E) r, U defaultValue = U.init)
         if (!is(void == CommonType!(U, typeof(unaryFun!fun(T.init)))))
@@ -1744,6 +1773,7 @@ auto mapOr(alias fun, T, U = typeof(unaryFun!fun(T.init)), E)(
 ///     fun = The function to apply to the [Ok] value
 ///
 /// Returns: The result of applying the appropriate function based on [Ok] or [Err]
+@CorrespondingTo("map_or_else")
 auto mapOrElse(alias defaultFun, alias fun, T, E)(auto ref scope inout Result!(T, E) r)
         if (!is(void == CommonType!(typeof(unaryFun!defaultFun(E.init)),
             typeof(unaryFun!fun(T.init)))))
@@ -1812,6 +1842,7 @@ auto mapOrElse(alias defaultFun, alias fun, T, E)(auto ref scope inout Result!(T
 ///     fun = The function to apply to the [Ok] value
 ///
 /// Returns: The original [Result]
+@CorrespondingTo("inspect")
 auto ref inout(Result!(T, E)) inspect(alias fun = "a", T, E)(scope inout auto ref Result!(T, E) r)
         if (is(typeof(unaryFun!fun(T.init))))
 {
@@ -1863,6 +1894,7 @@ auto ref inout(Result!(T, E)) inspect(alias fun = "a", T, E)(scope inout auto re
 ///     fun = The function to apply to the [Err] value
 ///
 /// Returns: The original [Result]
+@CorrespondingTo("inspect_err")
 auto ref inout(Result!(T, E)) inspectErr(alias fun = "a", T, E)(scope inout auto ref Result!(T, E) r)
         if (is(typeof(unaryFun!fun(E.init))))
 {
