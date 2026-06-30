@@ -85,39 +85,41 @@ import std.functional : unaryFun;
 import std.typecons : Nullable;
 import std.traits : CommonType;
 
-private mixin template OkErrImpl(X)
-{
-    private X value_;
-
-    bool opEquals(scope const X rhs) const
-    {
-        return value_ == rhs;
-    }
-
-    bool opEquals(scope const ref X rhs) const
-    {
-        return value_ == rhs;
-    }
-
-    size_t toHash() const
-    {
-        return hashOf(value_);
-    }
-}
-
 /// Wrapper struct representing a successful result with a value of type `T`.
 /// Serves as the success variant in a [Result] type.
 struct Ok(T) if (!is(void == T))
 {
-    mixin OkErrImpl!T;
-
+    private T value_;
     ///
     @property ref inout(T) value() inout
     {
         return value_;
     }
-
-    alias value this;
+    ///
+    bool opEquals(scope const Ok!T rhs) const
+    {
+        return value_ == rhs.value_;
+    }
+    /// Ditto
+    bool opEquals(scope const ref Ok!T rhs) const
+    {
+        return value_ == rhs.value_;
+    }
+    /// Ditto
+    bool opEquals(scope const T rhs) const
+    {
+        return value_ == rhs;
+    }
+    /// Ditto
+    bool opEquals(scope const ref T rhs) const
+    {
+        return value_ == rhs;
+    }
+    ///
+    size_t toHash() const
+    {
+        return hashOf(value_);
+    }
 }
 
 ///
@@ -161,15 +163,37 @@ unittest
 /// Serves as the error variant in a [Result] type.
 struct Err(E) if (!is(void == E))
 {
-    mixin OkErrImpl!E;
-
+    private E value_;
     ///
     @property ref inout(E) error() inout
     {
         return value_;
     }
-
-    alias error this;
+    ///
+    bool opEquals(scope const Err!E rhs) const
+    {
+        return value_ == rhs.value_;
+    }
+    /// Ditto
+    bool opEquals(scope const ref Err!E rhs) const
+    {
+        return value_ == rhs.value_;
+    }
+    /// Ditto
+    bool opEquals(scope const E rhs) const
+    {
+        return value_ == rhs;
+    }
+    /// Ditto
+    bool opEquals(scope const ref E rhs) const
+    {
+        return value_ == rhs;
+    }
+    ///
+    size_t toHash() const
+    {
+        return hashOf(value_);
+    }
 }
 
 ///
