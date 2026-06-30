@@ -1360,7 +1360,7 @@ inout(E) tryUnwrapErr(T, E)(scope inout auto ref Result!(T, E) r)
 ///     defaultValue = The fallback value to be used if [Err]
 ///
 /// Returns: The [Ok] value or defaultValue if [Err]
-inout(T) unwrapOr(T, E)(scope inout auto ref Result!(T, E) r, T defaultValue)
+inout(T) unwrapOr(T, E)(scope inout auto ref Result!(T, E) r, T defaultValue = T.init)
 {
     return unwrapOrElse!(_ => defaultValue)(r);
 }
@@ -1379,35 +1379,7 @@ inout(T) unwrapOr(T, E)(scope inout auto ref Result!(T, E) r, T defaultValue)
     assert(unwrapOr(resultErr, defaultValue) == defaultValue);
 }
 
-@safe @nogc nothrow unittest
-{
-    auto resultOk1 = Result!(int, string).ok(123);
-    assert(unwrapOr(resultOk1, 456) == 123);
-
-    alias R = Result!(string, uint);
-
-    const resultOk2 = R.ok("123");
-    assert(unwrapOr(resultOk2, "456") == "123");
-
-    auto resultErr = R.err(123);
-    assert(unwrapOr(resultErr, "456") == "456");
-}
-
-/// Extracts the [Ok] value from a [Result], with the default initializer for type `T` as a default value for [Err].
-///
-/// If the [Result] is [Ok], returns its value.
-/// If the [Result] is [Err], returns `T.init`.
-///
-/// Params:
-///     r = The [Result] to unwrap
-///
-/// Returns: The [Ok] value or `T.init` if [Err]
-inout(T) unwrapOrDefault(T, E)(scope inout auto ref Result!(T, E) r)
-{
-    return unwrapOr(r, T.init);
-}
-
-///
+/// Using default parameter
 @safe nothrow unittest
 {
     auto parse(string s)
@@ -1429,22 +1401,25 @@ inout(T) unwrapOrDefault(T, E)(scope inout auto ref Result!(T, E) r)
     immutable goodYearFromInput = "1909";
     immutable badYearFromInput = "190blarg";
 
-    assert(unwrapOrDefault(parse(goodYearFromInput)) == 1909);
-    assert(unwrapOrDefault(parse(badYearFromInput)) == 0);
+    assert(unwrapOr(parse(goodYearFromInput)) == 1909);
+    assert(unwrapOr(parse(badYearFromInput)) == 0);
 }
 
 @safe @nogc nothrow unittest
 {
     auto resultOk1 = Result!(int, string).ok(123);
-    assert(unwrapOrDefault(resultOk1) == 123);
+    assert(unwrapOr(resultOk1, 456) == 123);
+    assert(unwrapOr(resultOk1) == 123);
 
     alias R = Result!(string, uint);
 
     const resultOk2 = R.ok("123");
-    assert(unwrapOrDefault(resultOk2) == "123");
+    assert(unwrapOr(resultOk2, "456") == "123");
+    assert(unwrapOr(resultOk2) == "123");
 
     auto resultErr = R.err(123);
-    assert(unwrapOrDefault(resultErr) == "");
+    assert(unwrapOr(resultErr, "456") == "456");
+    assert(unwrapOr(resultErr) == "");
 }
 
 /// Extracts the [Ok] value from a [Result], computing a fallback from the [Err] value.
@@ -1692,7 +1667,8 @@ auto mapErr(alias fun = "a", T, E)(scope inout auto ref Result!(T, E) r)
 ///     defaultValue = The default value to return if [Err]
 ///
 /// Returns: The result of applying `fun` to the [Ok], or the default value
-auto mapOr(alias fun, T, U, E)(auto ref scope inout Result!(T, E) r, U defaultValue)
+auto mapOr(alias fun, T, U = typeof(unaryFun!fun(T.init)), E)(
+        auto ref scope inout Result!(T, E) r, U defaultValue = U.init)
         if (!is(void == CommonType!(U, typeof(unaryFun!fun(T.init)))))
 {
     return mapOrElse!(_ => defaultValue, fun)(r);
@@ -1710,6 +1686,18 @@ auto mapOr(alias fun, T, U, E)(auto ref scope inout Result!(T, E) r, U defaultVa
     assert(mapOr!"a.length"(resultErr, 42) == 42);
 }
 
+/// Using default parameter
+@safe nothrow unittest
+{
+    alias R = Result!(string, string);
+
+    auto resultOk = R.ok("foo");
+    assert(mapOr!"a.length"(resultOk) == 3);
+
+    auto resultErr = R.err("bar");
+    assert(mapOr!"a.length"(resultErr) == 0);
+}
+
 @safe nothrow unittest
 {
     bool isOdd(int x)
@@ -1721,72 +1709,27 @@ auto mapOr(alias fun, T, U, E)(auto ref scope inout Result!(T, E) r, U defaultVa
 
     auto resultOk = R.ok(33);
     assert(mapOr!isOdd(resultOk, -1) == 1);
+    assert(mapOr!"a%5"(resultOk) == 3);
 
     const cResultOk = R.ok(33);
     assert(mapOr!isOdd(cResultOk, -1) == 1);
+    assert(mapOr!"a%5"(cResultOk) == 3);
 
     immutable iResultOk = R.ok(33);
     assert(mapOr!isOdd(iResultOk, -1) == 1);
+    assert(mapOr!"a%5"(iResultOk) == 3);
 
     auto resultErr = R.err("33");
     assert(mapOr!isOdd(resultErr, -1) == -1);
+    assert(mapOr!"a%5"(resultErr) == 0);
 
     const cResultErr = R.err("33");
     assert(mapOr!isOdd(cResultErr, -1) == -1);
+    assert(mapOr!"a%5"(cResultErr) == 0);
 
     immutable iResultErr = R.err("33");
     assert(mapOr!isOdd(iResultErr, -1) == -1);
-}
-
-/// Applies a function to [Ok], or returns the default `.init` value for [Err].
-///
-/// If the [Result] is [Ok], applies `fun` to the value and returns the result.
-/// If the [Result] is [Err], returns the `.init` value of `fun`'s' return type.
-///
-/// Params:
-///     r = The [Result] to transform
-///     fun = The function to apply to the [Ok] value
-///
-/// Returns: The result of applying `fun` to the [Ok], or the default `.init` value
-auto mapOrDefault(alias fun, T, E)(auto ref scope inout Result!(T, E) r)
-        if (!is(void == typeof(unaryFun!fun(T.init))))
-{
-    return mapOr!fun(r, typeof(unaryFun!fun(T.init)).init);
-}
-
-///
-@safe nothrow unittest
-{
-    alias R = Result!(string, string);
-
-    auto resultOk = R.ok("foo");
-    assert(mapOrDefault!"a.length"(resultOk) == 3);
-
-    auto resultErr = R.err("bar");
-    assert(mapOrDefault!"a.length"(resultErr) == 0);
-}
-
-@safe nothrow unittest
-{
-    alias R = Result!(int, string);
-
-    auto resultOk = R.ok(33);
-    assert(mapOrDefault!"a%5"(resultOk) == 3);
-
-    const cResultOk = R.ok(33);
-    assert(mapOrDefault!"a%5"(cResultOk) == 3);
-
-    immutable iResultOk = R.ok(33);
-    assert(mapOrDefault!"a%5"(iResultOk) == 3);
-
-    auto resultErr = R.err("33");
-    assert(mapOrDefault!"a%5"(resultErr) == 0);
-
-    const cResultErr = R.err("33");
-    assert(mapOrDefault!"a%5"(cResultErr) == 0);
-
-    immutable iResultErr = R.err("33");
-    assert(mapOrDefault!"a%5"(iResultErr) == 0);
+    assert(mapOr!"a%5"(iResultErr) == 0);
 }
 
 /// Applies fallback and transform functions to [Err] and [Ok] values respectively.
