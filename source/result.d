@@ -265,7 +265,8 @@ struct Result(T, E) if (!is(void == T) && !is(void == E))
     alias payload this;
 
     // The constructor accepts `Ok!T` and `Err!E` values.
-    private this(PT)(auto ref PT value) if (is(PT == Ok!T) || is(PT == Err!E))
+    private this(PT)(inout auto ref PT value) inout
+            if (is(PT == Ok!T) || is(PT == Err!E))
     {
         payload = value;
     }
@@ -289,9 +290,9 @@ struct Result(T, E) if (!is(void == T) && !is(void == E))
     ///     value = The success _value to wrap
     ///
     /// Returns: A new [Result]`!(T, E)` containing the [Ok]`!T` _value
-    static Result!(T, E) ok(T value)
+    static inout(Result!(T, E)) ok(inout T value)
     {
-        return Result!(T, E)(Ok!T(value));
+        return inout(Result!(T, E))(inout(Ok!T)(value));
     }
 
     /// Creates a [Result]`!(T, E)` with an error [Err]`!E` _value.
@@ -300,9 +301,9 @@ struct Result(T, E) if (!is(void == T) && !is(void == E))
     ///     value = The error _value to wrap
     ///
     /// Returns: A new [Result]`!(T, E)` containing the [Err]`!E` _value
-    static Result!(T, E) err(E value)
+    static inout(Result!(T, E)) err(inout E value)
     {
-        return Result!(T, E)(Err!E(value));
+        return inout(Result!(T, E))(inout(Err!E)(value));
     }
 }
 
