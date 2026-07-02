@@ -748,6 +748,8 @@ inout(Nullable!T) ok(T, E)(scope inout auto ref Result!(T, E) r)
 {
     alias R = Result!(uint, string);
 
+    import std.typecons : Nullable;
+
     auto resultOk = R.ok(2);
     assert(ok(resultOk) == Nullable!uint(2));
 
@@ -793,6 +795,8 @@ inout(Nullable!E) err(T, E)(scope inout auto ref Result!(T, E) r)
 @safe nothrow unittest
 {
     alias R = Result!(uint, string);
+
+    import std.typecons : Nullable;
 
     auto resultOk = R.ok(2);
     assert(err(resultOk).isNull);
