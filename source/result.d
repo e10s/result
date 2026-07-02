@@ -1969,6 +1969,7 @@ auto ref inout(Result!(T, E)) inspectErr(alias fun = "a", T, E)(scope inout auto
 ///     r = The [Result] holding either `Nullable!T` success or an error.
 ///
 /// Returns: A `Nullable!Result!(T, E)` with the inner success value promoted out of the nullable.
+@CorrespondingTo("transpose")
 inout(Nullable!(Result!(T, E))) transpose(T, E)(scope inout auto ref Result!(Nullable!T, E) r)
 {
     alias QOk = QualifiedOkTypeOf!(typeof(r));
@@ -2048,6 +2049,7 @@ unittest
 ///     r = The nested [Result] to flatten
 ///
 /// Returns: A flattened [Result] with the inner value or the error
+@CorrespondingTo("flatten")
 inout(Result!(T, E)) flatten(T, E)(auto ref scope inout Result!(Result!(T, E), E) r)
 {
     return andThen!"a"(r);
