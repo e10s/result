@@ -1959,6 +1959,87 @@ auto ref inout(Result!(T, E)) inspectErr(alias fun = "a", T, E)(scope inout auto
     assert(isOk(r) || writer[].length > 0);
 }
 
+/// Converts a [Result] containing a nullable success value into a nullable [Result].
+///
+/// If the input is [Ok]`!(Nullable!T)`, returns a nullable [Result]`!(T, E)` containing
+/// an [Ok]`!T` with the same value when it is non-null, or the null state otherwise.
+/// If the input is [Err], returns a nullable [Result] containing that error.
+///
+/// Params:
+///     r = The [Result] holding either `Nullable!T` success or an error.
+///
+/// Returns: A `Nullable!Result!(T, E)` with the inner success value promoted out of the nullable.
+inout(Nullable!(Result!(T, E))) transpose(T, E)(scope inout auto ref Result!(Nullable!T, E) r)
+{
+    alias QOk = QualifiedOkTypeOf!(typeof(r));
+    alias QErr = QualifiedErrTypeOf!(typeof(r));
+    alias R = inout(Result!(T, E));
+    alias N = inout(Nullable!(Result!(T, E)));
+    import std.sumtype : match;
+
+    return r.payload.match!((QOk t) => t.value.isNull ? N.init
+            : N(R.ok(t.value.get)), (QErr e) => N(R.err(e.error)));
+}
+
+///
+@safe @nogc nothrow unittest
+{
+    struct SomeErr
+    {
+    }
+
+    import std.typecons : Nullable, nullable;
+
+    alias R = Result!(Nullable!int, SomeErr);
+    alias S = Result!(int, SomeErr);
+
+    auto x = R.ok(nullable(5));
+    auto y = nullable(S.ok(5));
+    assert(transpose(x) == y);
+}
+
+unittest
+{
+    alias M = Nullable!Exception;
+    alias R = Result!(M, int);
+    alias S = Result!(Exception, int);
+    alias N = Nullable!S;
+    import std.typecons : nullable;
+
+    auto resultOk = R.ok(nullable(new Exception("foo")));
+    auto nullableOk = nullable(S.ok(new Exception("foo")));
+    assert(transpose(resultOk).get.unwrap.msg == nullableOk.get.unwrap.msg);
+
+    const cResultOk = R.ok(nullable(new Exception("foo")));
+    const cNullableOk = nullable(S.ok(new Exception("foo")));
+    assert(transpose(cResultOk).get.unwrap.msg == cNullableOk.get.unwrap.msg);
+
+    immutable iResultOk = R.ok(nullable(new Exception("foo")));
+    immutable iNullableOk = nullable(S.ok(new Exception("foo")));
+    assert(transpose(iResultOk).get.unwrap.msg == iNullableOk.get.unwrap.msg);
+
+    auto resultOkNull = R.ok(M.init);
+    assert(transpose(resultOkNull).isNull);
+
+    const cResultOkNull = R.ok(M.init);
+    assert(transpose(cResultOkNull).isNull);
+
+    immutable iResultOkNull = R.ok(M.init);
+    assert(transpose(iResultOkNull).isNull);
+
+    auto resultErr = R.err(-999);
+    auto nullableErr = nullable(S.err(-999));
+    assert(transpose(resultErr) == nullableErr);
+
+    const cResultErr = R.err(-999);
+    const cNullableErr = nullable(S.err(-999));
+    assert(transpose(cResultErr) == cNullableErr);
+
+    immutable iResultErr = R.err(-999);
+    immutable iNullableErr = nullable(S.err(-999));
+    assert(transpose(iResultErr) == iNullableErr);
+}
+
 /// Flattens a nested [Result] by one level.
 ///
 /// Converts [Result]`!(Result!(T, E), E)` into [Result]`!(T, E)`.
