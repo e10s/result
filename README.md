@@ -1,2 +1,2 @@
-# d-result
+# yares
 Result type for D
