@@ -234,7 +234,7 @@ unittest
 }
 
 /// Exception thrown when attempting to unwrap a [Result] with an invalid state.
-/// Raised by [expect], [expectErr], [tryUnwrap], and [tryUnwrapErr].
+/// Raised by [tryUnwrap] and [tryUnwrapErr].
 class UnwrapException : Exception
 {
     ///
@@ -1214,7 +1214,8 @@ unittest
 
 /// Tries to extract the [Ok] value from a [Result], with a custom error message.
 ///
-/// If the [Result] is [Err], an exception is thrown with the given message.
+/// If the [Result] is [Err], an [UnwrapException] is thrown with `msg`.
+/// If `msg` is not provided, the default message is used.
 ///
 /// Params:
 ///     r = The [Result] to unwrap
@@ -1224,11 +1225,18 @@ unittest
 ///
 /// Throws: [UnwrapException] with message `msg` if the [Result] is [Err]
 @CorrespondingTo("expect")
-inout(T) expect(T, E)(scope inout auto ref Result!(T, E) r, lazy string msg)
+inout(T) tryUnwrap(T, E)(scope inout auto ref Result!(T, E) r, lazy string msg = null)
 {
     import std.exception : enforce;
 
-    enforce!UnwrapException(isOk(r), msg);
+    if (msg is null)
+    {
+        enforce!UnwrapException(isOk(r), "Result does not have an Ok value.");
+    }
+    else
+    {
+        enforce!UnwrapException(isOk(r), msg);
+    }
     return unwrap(r);
 }
 
@@ -1240,11 +1248,11 @@ inout(T) expect(T, E)(scope inout auto ref Result!(T, E) r, lazy string msg)
     alias R = Result!(uint, string);
 
     auto resultOk = R.ok(2);
-    assert(assertNotThrown!UnwrapException(expect(resultOk, "Testing expect")) == 2);
+    assert(assertNotThrown!UnwrapException(tryUnwrap(resultOk, "Testing expect")) == 2);
 
     auto resultErr = R.err("emergency failure");
-    assertThrown!UnwrapException(expect(resultErr, "Testing expect"));
-    assert(collectExceptionMsg(expect(resultErr, "Testing expect")) == "Testing expect");
+    assertThrown!UnwrapException(tryUnwrap(resultErr, "Testing expect"));
+    assert(collectExceptionMsg(tryUnwrap(resultErr, "Testing expect")) == "Testing expect");
 }
 
 @safe unittest
@@ -1252,21 +1260,25 @@ inout(T) expect(T, E)(scope inout auto ref Result!(T, E) r, lazy string msg)
     import std.exception : assertThrown, assertNotThrown, collectExceptionMsg;
 
     auto resultOk1 = Result!(int, string).ok(123);
-    assert(assertNotThrown!UnwrapException(expect(resultOk1, "foo")) == 123);
+    assert(assertNotThrown!UnwrapException(tryUnwrap(resultOk1, "foo")) == 123);
+    assert(assertNotThrown!UnwrapException(tryUnwrap(resultOk1)) == 123);
 
     alias R = Result!(string, uint);
 
     auto resultOk2 = R.ok("123");
-    assert(assertNotThrown!UnwrapException(expect(resultOk2, "foo")) == "123");
+    assert(assertNotThrown!UnwrapException(tryUnwrap(resultOk2, "foo")) == "123");
+    assert(assertNotThrown!UnwrapException(tryUnwrap(resultOk2)) == "123");
 
     auto resultErr = R.err(123);
-    assertThrown!UnwrapException(expect(resultErr, "foo"));
-    assert(collectExceptionMsg(expect(resultErr, "foo")) == "foo");
+    assertThrown!UnwrapException(tryUnwrap(resultErr, "foo"));
+    assert(collectExceptionMsg(tryUnwrap(resultErr, "foo")) == "foo");
+    assertThrown!UnwrapException(tryUnwrap(resultErr));
 }
 
 /// Tries to extract the [Err] value from a [Result], with a custom error message.
 ///
-/// If the [Result] is [Ok], an exception is thrown with the given message.
+/// If the [Result] is [Ok], an [UnwrapException] is thrown with `msg`.
+/// If `msg` is not provided, the default message is used.
 ///
 /// Params:
 ///     r = The [Result] to unwrap
@@ -1276,11 +1288,19 @@ inout(T) expect(T, E)(scope inout auto ref Result!(T, E) r, lazy string msg)
 ///
 /// Throws: [UnwrapException] with message `msg` if the [Result] is [Ok]
 @CorrespondingTo("expect_err")
-inout(E) expectErr(T, E)(scope inout auto ref Result!(T, E) r, lazy string msg)
+inout(E) tryUnwrapErr(T, E)(scope inout auto ref Result!(T, E) r, lazy string msg = null)
 {
     import std.exception : enforce;
 
-    enforce!UnwrapException(isErr(r), msg);
+    if (msg is null)
+    {
+        enforce!UnwrapException(isErr(r), "Result does not have an Err value.");
+    }
+    else
+    {
+        enforce!UnwrapException(isErr(r), msg);
+    }
+
     return unwrapErr(r);
 }
 
@@ -1292,12 +1312,13 @@ inout(E) expectErr(T, E)(scope inout auto ref Result!(T, E) r, lazy string msg)
     alias R = Result!(uint, string);
 
     auto resultOk = R.ok(2);
-    assertThrown!UnwrapException(expectErr(resultOk, "Testing expectErr"));
-    assert(collectExceptionMsg(expectErr(resultOk, "Testing expectErr")) == "Testing expectErr");
+    assertThrown!UnwrapException(tryUnwrapErr(resultOk, "Testing tryUnwrapErr"));
+    assert(collectExceptionMsg(tryUnwrapErr(resultOk,
+            "Testing tryUnwrapErr")) == "Testing tryUnwrapErr");
 
     auto resultErr = R.err("emergency failure");
-    assert(assertNotThrown!UnwrapException(expectErr(resultErr,
-            "Testing expectErr")) == "emergency failure");
+    assert(assertNotThrown!UnwrapException(tryUnwrapErr(resultErr,
+            "Testing tryUnwrapErr")) == "emergency failure");
 }
 
 @safe unittest
@@ -1305,107 +1326,18 @@ inout(E) expectErr(T, E)(scope inout auto ref Result!(T, E) r, lazy string msg)
     import std.exception : assertThrown, assertNotThrown, collectExceptionMsg;
 
     auto resultErr1 = Result!(int, string).err("123");
-    assert(assertNotThrown!UnwrapException(expectErr(resultErr1, "bar")) == "123");
-
-    alias R = Result!(string, uint);
-
-    auto resultErr2 = R.err(123);
-    assert(assertNotThrown!UnwrapException(expectErr(resultErr2, "bar")) == 123);
-
-    auto resultOk = R.ok("123");
-    assertThrown!UnwrapException(expectErr(resultOk, "bar"));
-    assert(collectExceptionMsg(expectErr(resultOk, "bar")) == "bar");
-}
-
-/// Tries to extract the [Ok] value from a [Result].
-///
-/// Similar to [expect], but with a default error message.
-///
-/// Params:
-///     r = The [Result] to unwrap
-///
-/// Returns: The value contained in the [Ok]
-///
-/// Throws: [UnwrapException] if the [Result] is [Err]
-@CorrespondingTo()
-inout(T) tryUnwrap(T, E)(scope inout auto ref Result!(T, E) r)
-{
-    return expect(r, "Result does not have an Ok value.");
-}
-
-///
-@safe unittest
-{
-    import std.exception : assertThrown, assertNotThrown;
-
-    alias R = Result!(uint, string);
-
-    auto resultOk = R.ok(2);
-    assert(assertNotThrown!UnwrapException(tryUnwrap(resultOk)) == 2);
-
-    auto resultErr = R.err("emergency failure");
-    assertThrown!UnwrapException(tryUnwrap(resultErr));
-}
-
-@safe unittest
-{
-    import std.exception : assertThrown, assertNotThrown;
-
-    auto resultOk1 = Result!(int, string).ok(123);
-    assert(assertNotThrown!UnwrapException(tryUnwrap(resultOk1)) == 123);
-
-    alias R = Result!(string, uint);
-
-    auto resultOk2 = R.ok("123");
-    assert(assertNotThrown!UnwrapException(tryUnwrap(resultOk2)) == "123");
-
-    auto resultErr = R.err(123);
-    assertThrown!UnwrapException(tryUnwrap(resultErr));
-}
-
-/// Tries to extract the [Err] value from a [Result].
-///
-/// Similar to [expectErr], but with a default error message.
-///
-/// Params:
-///     r = The [Result] to unwrap
-///
-/// Returns: The value contained in the [Err]
-///
-/// Throws: [UnwrapException] if the [Result] is [Ok]
-@CorrespondingTo()
-inout(E) tryUnwrapErr(T, E)(scope inout auto ref Result!(T, E) r)
-{
-    return expectErr(r, "Result does not have an Err value.");
-}
-
-///
-@safe unittest
-{
-    import std.exception : assertThrown, assertNotThrown;
-
-    alias R = Result!(uint, string);
-
-    auto resultOk = R.ok(2);
-    assertThrown!UnwrapException(tryUnwrapErr(resultOk));
-
-    auto resultErr = R.err("emergency failure");
-    assert(assertNotThrown!UnwrapException(tryUnwrapErr(resultErr)) == "emergency failure");
-}
-
-@safe unittest
-{
-    import std.exception : assertThrown, assertNotThrown;
-
-    auto resultErr1 = Result!(int, string).err("123");
+    assert(assertNotThrown!UnwrapException(tryUnwrapErr(resultErr1, "bar")) == "123");
     assert(assertNotThrown!UnwrapException(tryUnwrapErr(resultErr1)) == "123");
 
     alias R = Result!(string, uint);
 
     auto resultErr2 = R.err(123);
+    assert(assertNotThrown!UnwrapException(tryUnwrapErr(resultErr2, "bar")) == 123);
     assert(assertNotThrown!UnwrapException(tryUnwrapErr(resultErr2)) == 123);
 
     auto resultOk = R.ok("123");
+    assertThrown!UnwrapException(tryUnwrapErr(resultOk, "bar"));
+    assert(collectExceptionMsg(tryUnwrapErr(resultOk, "bar")) == "bar");
     assertThrown!UnwrapException(tryUnwrapErr(resultOk));
 }
 
@@ -1916,7 +1848,7 @@ auto ref inout(Result!(T, E)) inspect(alias fun = "a", T, E)(scope inout auto re
     auto writer = appender!string();
     immutable x = parse("4").inspect!(x => writer.writeText("original: ", x))
         .map!"a^^3"
-        .expect("failed to parse number");
+        .tryUnwrap("failed to parse number");
     assert(x == 64);
     assert(writer[] == "original: 4");
 }
