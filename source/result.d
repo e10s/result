@@ -258,17 +258,23 @@ struct Result(T, E) if (!is(void == T) && !is(void == E))
 {
     import std.sumtype : SumType;
 
+    private SumType!(Ok!T, Err!E) payload_;
+
+    /// Returns the internal `SumType` payload used by this [Result].
     ///
-    alias Payload = SumType!(Ok!T, Err!E);
-    ///
-    Payload payload;
-    alias payload this;
+    /// Returns: The underlying `SumType` object storing either an [Ok]`!T` or an [Err]`!E`
+    @property inout(SumType!(Ok!T, Err!E)) sumType() inout
+    {
+        return payload_;
+    }
+
+    alias sumType this;
 
     // The constructor accepts `Ok!T` and `Err!E` values.
     private this(PT)(inout auto ref PT value) inout
             if (is(PT == Ok!T) || is(PT == Err!E))
     {
-        payload = value;
+        payload_ = value;
     }
 
     /// Assigns another [Result] to this one, preserving semantic compatibility.
@@ -277,10 +283,12 @@ struct Result(T, E) if (!is(void == T) && !is(void == E))
     ///     rhs = The source [Result] to assign from
     ///
     /// Returns: A reference to this [Result] after assignment
-    ref opAssign(R)(auto ref R rhs)
-            if (isResult!R && is(typeof({ Payload.init = R.Payload.init; })))
+    ref opAssign(this Self, R)(auto ref R rhs)
+            if (isResult!R && is(typeof({
+                    typeof(Self.sumType).init = typeof(R.sumType).init;
+                })))
     {
-        payload = rhs.payload;
+        payload_ = rhs.payload_;
         return this;
     }
 
@@ -425,7 +433,7 @@ unittest
 
 private template OkTypeOf(R) if (isResult!R)
 {
-    alias OkTypeOf = R.Payload.Types[0];
+    alias OkTypeOf = typeof(R.sumType).Types[0];
 }
 
 unittest
@@ -471,7 +479,7 @@ unittest
 
 private template ErrTypeOf(R) if (isResult!R)
 {
-    alias ErrTypeOf = R.Payload.Types[1];
+    alias ErrTypeOf = typeof(R.sumType).Types[1];
 }
 
 unittest
@@ -581,7 +589,7 @@ bool isOkAnd(alias pred = "a", T, E)(scope const auto ref Result!(T, E) r)
 
     import std.sumtype : match;
 
-    return r.payload.match!((QOk t) => !!unaryFun!pred(t.value), (QErr _) => false);
+    return r.payload_.match!((QOk t) => !!unaryFun!pred(t.value), (QErr _) => false);
 }
 
 ///
@@ -680,7 +688,7 @@ bool isErrAnd(alias pred = "a", T, E)(scope const auto ref Result!(T, E) r)
 
     import std.sumtype : match;
 
-    return r.payload.match!((QOk _) => false, (QErr e) => !!unaryFun!pred(e.error));
+    return r.payload_.match!((QOk _) => false, (QErr e) => !!unaryFun!pred(e.error));
 }
 
 ///
@@ -740,7 +748,7 @@ inout(Nullable!T) ok(T, E)(scope inout auto ref Result!(T, E) r)
     alias N = inout(Nullable!T);
     import std.sumtype : match;
 
-    return r.payload.match!((QOk t) => N(t.value), (QErr _) => N.init);
+    return r.payload_.match!((QOk t) => N(t.value), (QErr _) => N.init);
 }
 
 ///
@@ -788,7 +796,7 @@ inout(Nullable!E) err(T, E)(scope inout auto ref Result!(T, E) r)
     alias N = inout(Nullable!E);
     import std.sumtype : match;
 
-    return r.payload.match!((QOk _) => N.init, (QErr e) => N(e.error));
+    return r.payload_.match!((QOk _) => N.init, (QErr e) => N(e.error));
 }
 
 ///
@@ -1118,7 +1126,7 @@ inout(T) unwrap(T, E)(scope inout auto ref Result!(T, E) r)
 
     import std.sumtype : get;
 
-    return r.payload.get!(QualifiedOkTypeOf!(typeof(r))).value;
+    return r.payload_.get!(QualifiedOkTypeOf!(typeof(r))).value;
 }
 
 ///
@@ -1169,7 +1177,7 @@ inout(E) unwrapErr(T, E)(scope inout auto ref Result!(T, E) r)
 
     import std.sumtype : get;
 
-    return r.payload.get!(QualifiedErrTypeOf!(typeof(r))).error;
+    return r.payload_.get!(QualifiedErrTypeOf!(typeof(r))).error;
 }
 
 ///
@@ -1494,7 +1502,7 @@ inout(T) unwrapOrElse(alias fun, T, E)(scope inout auto ref Result!(T, E) r)
     alias QErr = QualifiedErrTypeOf!(typeof(r));
     import std.sumtype : match;
 
-    return r.payload.match!((QOk t) => t.value, (QErr e) => unaryFun!fun(e.error));
+    return r.payload_.match!((QOk t) => t.value, (QErr e) => unaryFun!fun(e.error));
 }
 
 ///
@@ -1563,7 +1571,7 @@ auto map(alias fun = "a", T, E)(scope inout auto ref Result!(T, E) r)
     alias S = inout(Result!(U, E));
     import std.sumtype : match;
 
-    return r.payload.match!((QOk t) => S.ok(unaryFun!fun(t.value)), (QErr e) => S.err(e.error));
+    return r.payload_.match!((QOk t) => S.ok(unaryFun!fun(t.value)), (QErr e) => S.err(e.error));
 }
 
 ///
@@ -1656,7 +1664,7 @@ auto mapErr(alias fun = "a", T, E)(scope inout auto ref Result!(T, E) r)
     alias S = Result!(T, F);
     import std.sumtype : match;
 
-    return r.payload.match!((QOk t) => S.ok(t.value), (QErr e) => S.err(unaryFun!fun(e.error)));
+    return r.payload_.match!((QOk t) => S.ok(t.value), (QErr e) => S.err(unaryFun!fun(e.error)));
 }
 
 ///
@@ -1811,7 +1819,7 @@ auto mapOrElse(alias defaultFun, alias fun, T, E)(auto ref scope inout Result!(T
     alias QErr = QualifiedErrTypeOf!(typeof(r));
     import std.sumtype : match;
 
-    return r.payload.match!((QOk t) => unaryFun!fun(t.value),
+    return r.payload_.match!((QOk t) => unaryFun!fun(t.value),
             (QErr e) => unaryFun!defaultFun(e.error));
 }
 
@@ -1982,7 +1990,7 @@ inout(Nullable!(Result!(T, E))) transpose(T, E)(scope inout auto ref Result!(Nul
     alias N = inout(Nullable!(Result!(T, E)));
     import std.sumtype : match;
 
-    return r.payload.match!((QOk t) => t.value.isNull ? N.init
+    return r.payload_.match!((QOk t) => t.value.isNull ? N.init
             : N(R.ok(t.value.get)), (QErr e) => N(R.err(e.error)));
 }
 
