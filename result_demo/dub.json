@@ -1,0 +1,13 @@
+{
+    "description": "Result Demo.",
+    "license": "MIT",
+    "authors": ["Kazuya Takahashi"],
+    "copyright": "Copyright © 2026, Kazuya Takahashi",
+    "name": "result_demo",
+    "dependencies": {
+        "yares": {
+            "path": "../"
+        }
+    },
+    "targetType": "executable"
+}
