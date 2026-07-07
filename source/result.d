@@ -83,7 +83,7 @@ module result;
 import std.functional : not;
 import std.functional : unaryFun;
 import std.typecons : Nullable;
-import std.traits : CommonType;
+import std.traits : CommonType, Unqual;
 
 /// Wrapper struct representing a successful result with a value of type `T`.
 /// Serves as the success variant in a [Result] type.
@@ -298,7 +298,7 @@ struct Result(T, E) if (!is(void == T) && !is(void == E))
     ///     value = The success _value to wrap
     ///
     /// Returns: A new [Result]`!(T, E)` containing the [Ok]`!T` _value
-    static inout(Result!(T, E)) ok(inout T value)
+    static inout(Result!(T, E)) ok(inout(T) value)
     {
         return inout(Result!(T, E))(inout(Ok!T)(value));
     }
@@ -309,7 +309,7 @@ struct Result(T, E) if (!is(void == T) && !is(void == E))
     ///     value = The error _value to wrap
     ///
     /// Returns: A new [Result]`!(T, E)` containing the [Err]`!E` _value
-    static inout(Result!(T, E)) err(inout E value)
+    static inout(Result!(T, E)) err(inout(E) value)
     {
         return inout(Result!(T, E))(inout(Err!E)(value));
     }
@@ -522,6 +522,7 @@ unittest
     assert(is(ErrValueTypeOf!(immutable(R)) == string));
     assert(is(ErrValueTypeOf!(inout(R)) == string));
 }
+
 /* Convenience templates end */
 
 /* For UDA begin */
@@ -539,9 +540,11 @@ struct CorrespondingTo
 ///
 /// Returns: true if r contains an [Ok] value, false otherwise
 @CorrespondingTo("is_ok")
-bool isOk(T, E)(scope const auto ref Result!(T, E) r)
+bool isOk(T, E)(scope inout auto ref Result!(T, E) r)
 {
-    return isOkAnd!(_ => true)(r);
+    import std.sumtype : has;
+
+    return r.payload_.has!(inout(Ok!T));
 }
 
 ///
@@ -581,15 +584,10 @@ bool isOk(T, E)(scope const auto ref Result!(T, E) r)
 ///
 /// Returns: true if r is [Ok] and its value satisfies `pred`, false otherwise
 @CorrespondingTo("is_ok_and")
-bool isOkAnd(alias pred = "a", T, E)(scope const auto ref Result!(T, E) r)
-        if (!is(void == typeof(unaryFun!pred(T.init))))
+bool isOkAnd(alias pred = "a", T, E)(scope inout auto ref Result!(T, E) r)
+        if (!is(void == typeof(unaryFun!pred(inout(T).init))))
 {
-    alias QOk = QualifiedOkTypeOf!(typeof(r));
-    alias QErr = QualifiedErrTypeOf!(typeof(r));
-
-    import std.sumtype : match;
-
-    return r.payload_.match!((QOk t) => !!unaryFun!pred(t.value), (QErr _) => false);
+    return isOk(r) && !!unaryFun!pred(unwrap(r));
 }
 
 ///
@@ -680,15 +678,10 @@ alias isErr = not!isOk;
 ///
 /// Returns: true if r is [Err] and its value satisfies `pred`, false otherwise
 @CorrespondingTo("is_err_and")
-bool isErrAnd(alias pred = "a", T, E)(scope const auto ref Result!(T, E) r)
-        if (!is(void == typeof(unaryFun!pred(E.init))))
+bool isErrAnd(alias pred = "a", T, E)(scope inout auto ref Result!(T, E) r)
+        if (!is(void == typeof(unaryFun!pred(inout(E).init))))
 {
-    alias QOk = QualifiedOkTypeOf!(typeof(r));
-    alias QErr = QualifiedErrTypeOf!(typeof(r));
-
-    import std.sumtype : match;
-
-    return r.payload_.match!((QOk _) => false, (QErr e) => !!unaryFun!pred(e.error));
+    return isErr(r) && !!unaryFun!pred(unwrapErr(r));
 }
 
 ///
@@ -743,12 +736,8 @@ bool isErrAnd(alias pred = "a", T, E)(scope const auto ref Result!(T, E) r)
 @CorrespondingTo("ok")
 inout(Nullable!T) ok(T, E)(scope inout auto ref Result!(T, E) r)
 {
-    alias QOk = QualifiedOkTypeOf!(typeof(r));
-    alias QErr = QualifiedErrTypeOf!(typeof(r));
-    alias N = inout(Nullable!T);
-    import std.sumtype : match;
-
-    return r.payload_.match!((QOk t) => N(t.value), (QErr _) => N.init);
+    alias N = typeof(return);
+    return isErr(r) ? N.init : N(unwrap(r));
 }
 
 ///
@@ -791,12 +780,8 @@ inout(Nullable!T) ok(T, E)(scope inout auto ref Result!(T, E) r)
 @CorrespondingTo("err")
 inout(Nullable!E) err(T, E)(scope inout auto ref Result!(T, E) r)
 {
-    alias QOk = QualifiedOkTypeOf!(typeof(r));
-    alias QErr = QualifiedErrTypeOf!(typeof(r));
-    alias N = inout(Nullable!E);
-    import std.sumtype : match;
-
-    return r.payload_.match!((QOk _) => N.init, (QErr e) => N(e.error));
+    alias N = typeof(return);
+    return isOk(r) ? N.init : N(unwrapErr(r));
 }
 
 ///
@@ -841,7 +826,7 @@ inout(Nullable!E) err(T, E)(scope inout auto ref Result!(T, E) r)
 inout(Result!(U, E)) and(T, U, E)(scope inout auto ref Result!(T, E) r1,
         scope inout auto ref Result!(U, E) r2)
 {
-    return r1.andThen!((inout _) => r2)();
+    return isOk(r1) ? r2 : Result!(U, E).err(unwrapErr(r1));
 }
 
 ///
@@ -902,18 +887,10 @@ inout(Result!(U, E)) and(T, U, E)(scope inout auto ref Result!(T, E) r1,
 /// Returns: The [Result] returned by `fun` if [Ok], otherwise a new [Result] with the original [Err]
 @CorrespondingTo("and_then")
 auto andThen(alias fun, T, E)(scope inout auto ref Result!(T, E) r)
-        if (is(E == ErrValueTypeOf!(typeof(unaryFun!fun(T.init)))))
+        if (is(E == ErrValueTypeOf!(typeof(unaryFun!fun(inout(T).init)))))
 {
-    alias U = OkValueTypeOf!(typeof(unaryFun!fun(T.init)));
-    alias S = inout(Result!(U, E));
-
-    if (isErr(r))
-    {
-        return S.err(unwrapErr(r));
-    }
-
-    S s = unaryFun!fun(unwrap(r));
-    return s;
+    alias U = OkValueTypeOf!(typeof(unaryFun!fun(inout(T).init)));
+    return isOk(r) ? unaryFun!fun(unwrap(r)) : Result!(U, E).err(unwrapErr(r));
 }
 
 // FIXME: need to reproduce `Option`
@@ -989,7 +966,7 @@ auto andThen(alias fun, T, E)(scope inout auto ref Result!(T, E) r)
 inout(Result!(T, F)) or(T, E, F)(scope inout auto ref Result!(T, E) r1,
         scope inout auto ref Result!(T, F) r2)
 {
-    return r1.orElse!((inout _) => r2)();
+    return isErr(r1) ? r2 : Result!(T, F).ok(unwrap(r1));
 }
 
 ///
@@ -1050,18 +1027,10 @@ inout(Result!(T, F)) or(T, E, F)(scope inout auto ref Result!(T, E) r1,
 /// Returns: The [Result] returned by `fun` if [Err], otherwise a new [Result] with the original [Ok]
 @CorrespondingTo("or_else")
 auto orElse(alias fun, T, E)(scope inout auto ref Result!(T, E) r)
-        if (is(T == OkValueTypeOf!(typeof(unaryFun!fun(E.init)))))
+        if (is(T == OkValueTypeOf!(typeof(unaryFun!fun(inout(E).init)))))
 {
-    alias F = ErrValueTypeOf!(typeof(unaryFun!fun(E.init)));
-    alias S = inout(Result!(T, F));
-
-    if (isOk(r))
-    {
-        return S.ok(unwrap(r));
-    }
-
-    S s = unaryFun!fun(unwrapErr(r));
-    return s;
+    alias F = ErrValueTypeOf!(typeof(unaryFun!fun(inout(E).init)));
+    return isErr(r) ? unaryFun!fun(unwrapErr(r)) : Result!(T, F).ok(unwrap(r));
 }
 
 ///
@@ -1126,7 +1095,7 @@ inout(T) unwrap(T, E)(scope inout auto ref Result!(T, E) r)
 
     import std.sumtype : get;
 
-    return r.payload_.get!(QualifiedOkTypeOf!(typeof(r))).value;
+    return r.payload_.get!(inout(Ok!T)).value;
 }
 
 ///
@@ -1177,7 +1146,7 @@ inout(E) unwrapErr(T, E)(scope inout auto ref Result!(T, E) r)
 
     import std.sumtype : get;
 
-    return r.payload_.get!(QualifiedErrTypeOf!(typeof(r))).error;
+    return r.payload_.get!(inout(Err!E)).error;
 }
 
 ///
@@ -1300,7 +1269,6 @@ inout(E) tryUnwrapErr(T, E)(scope inout auto ref Result!(T, E) r, lazy string ms
     {
         enforce!UnwrapException(isErr(r), msg);
     }
-
     return unwrapErr(r);
 }
 
@@ -1353,9 +1321,9 @@ inout(E) tryUnwrapErr(T, E)(scope inout auto ref Result!(T, E) r, lazy string ms
 /// Returns: The [Ok] value or defaultValue if [Err]
 @CorrespondingTo("unwrap_or")
 @CorrespondingTo("unwrap_or_default")
-inout(T) unwrapOr(T, E)(scope inout auto ref Result!(T, E) r, T defaultValue = T.init)
+inout(T) unwrapOr(T, E)(scope inout auto ref Result!(T, E) r, inout T defaultValue = inout(T).init)
 {
-    return unwrapOrElse!(_ => defaultValue)(r);
+    return isOk(r) ? unwrap(r) : defaultValue;
 }
 
 ///
@@ -1419,7 +1387,7 @@ inout(T) unwrapOr(T, E)(scope inout auto ref Result!(T, E) r, T defaultValue = T
 ///
 /// If the [Result] is [Ok], returns its value.
 /// If the [Result] is [Err], calls `fun` with the error value and returns the result.
-/// `fun` must return a value which can be implicitly converted to `T`.
+/// `fun` must return a value of the same type as `T` after removing qualifiers.
 ///
 /// Params:
 ///     r = The [Result] to unwrap
@@ -1428,13 +1396,9 @@ inout(T) unwrapOr(T, E)(scope inout auto ref Result!(T, E) r, T defaultValue = T
 /// Returns: The [Ok] value or the result of calling `fun` with the [Err] value
 @CorrespondingTo("unwrap_or_else")
 inout(T) unwrapOrElse(alias fun, T, E)(scope inout auto ref Result!(T, E) r)
-        if (is(typeof(unaryFun!fun(E.init)) : T))
+        if (is(T == Unqual!(typeof(unaryFun!fun(inout(E).init)))))
 {
-    alias QOk = QualifiedOkTypeOf!(typeof(r));
-    alias QErr = QualifiedErrTypeOf!(typeof(r));
-    import std.sumtype : match;
-
-    return r.payload_.match!((QOk t) => t.value, (QErr e) => unaryFun!fun(e.error));
+    return isOk(r) ? unwrap(r) : unaryFun!fun(unwrapErr(r));
 }
 
 ///
@@ -1495,15 +1459,11 @@ inout(T) unwrapOrElse(alias fun, T, E)(scope inout auto ref Result!(T, E) r)
 /// Returns: A new [Result] with the transformed [Ok] value or the original [Err]
 @CorrespondingTo("map")
 auto map(alias fun = "a", T, E)(scope inout auto ref Result!(T, E) r)
-        if (!is(void == typeof(unaryFun!fun(T.init))))
+        if (!is(void == typeof(unaryFun!fun(inout(T).init))))
 {
-    alias QOk = QualifiedOkTypeOf!(typeof(r));
-    alias QErr = QualifiedErrTypeOf!(typeof(r));
-    alias U = typeof(unaryFun!fun(T.init));
-    alias S = inout(Result!(U, E));
-    import std.sumtype : match;
-
-    return r.payload_.match!((QOk t) => S.ok(unaryFun!fun(t.value)), (QErr e) => S.err(e.error));
+    alias U = Unqual!(typeof(unaryFun!fun(inout(T).init)));
+    alias S = Result!(U, E);
+    return isOk(r) ? S.ok(unaryFun!fun(unwrap(r))) : S.err(unwrapErr(r));
 }
 
 ///
@@ -1588,15 +1548,11 @@ auto map(alias fun = "a", T, E)(scope inout auto ref Result!(T, E) r)
 /// Returns: A new [Result] with the original [Ok] or the transformed [Err]
 @CorrespondingTo("map_err")
 auto mapErr(alias fun = "a", T, E)(scope inout auto ref Result!(T, E) r)
-        if (!is(void == typeof(unaryFun!fun(E.init))))
+        if (!is(void == typeof(unaryFun!fun(inout(E).init))))
 {
-    alias QOk = QualifiedOkTypeOf!(typeof(r));
-    alias QErr = QualifiedErrTypeOf!(typeof(r));
-    alias F = typeof(unaryFun!fun(E.init));
+    alias F = Unqual!(typeof(unaryFun!fun(inout(E).init)));
     alias S = Result!(T, F);
-    import std.sumtype : match;
-
-    return r.payload_.match!((QOk t) => S.ok(t.value), (QErr e) => S.err(unaryFun!fun(e.error)));
+    return isErr(r) ? S.err(unaryFun!fun(unwrapErr(r))) : S.ok(unwrap(r));
 }
 
 ///
@@ -1651,6 +1607,36 @@ auto mapErr(alias fun = "a", T, E)(scope inout auto ref Result!(T, E) r)
     assert(mapErr(iResultErr) == R.err("bad"));
 }
 
+unittest
+{
+    alias R = Result!(int*, int);
+
+    auto resultOk = R.ok(null);
+    assert(mapErr!" a + 4"(resultOk) == R.ok(null));
+    assert(mapErr!(a => a + 4)(resultOk) == R.ok(null));
+    assert(mapErr(resultOk) == R.ok(null));
+
+    const cResultOk = R.ok(null);
+    assert(mapErr!(a => a + 4)(cResultOk) == R.ok(null));
+    assert(mapErr(cResultOk) == R.ok(null));
+
+    immutable iResultOk = R.ok(null);
+    assert(mapErr!(a => a + 4)(iResultOk) == R.ok(null));
+    assert(mapErr(iResultOk) == R.ok(null));
+
+    auto resultErr = R.err(9);
+    assert(mapErr!(a => a + 4)(resultErr) == R.err(13));
+    assert(mapErr(resultErr) == R.err(9));
+
+    const cResultErr = R.err(9);
+    assert(mapErr!(a => a + 4)(cResultErr) == R.err(13));
+    assert(mapErr(cResultErr) == R.err(9));
+
+    immutable iResultErr = R.err(9);
+    assert(mapErr!(a => a + 4)(iResultErr) == R.err(13));
+    assert(mapErr(iResultErr) == R.err(9));
+}
+
 /// Applies a function to [Ok], or returns a default value for [Err].
 ///
 /// If the [Result] is [Ok], applies `fun` to the value and returns the result.
@@ -1665,11 +1651,11 @@ auto mapErr(alias fun = "a", T, E)(scope inout auto ref Result!(T, E) r)
 /// Returns: The result of applying `fun` to the [Ok], or the default value
 @CorrespondingTo("map_or")
 @CorrespondingTo("map_or_default")
-auto mapOr(alias fun, T, U = typeof(unaryFun!fun(T.init)), E)(
-        auto ref scope inout Result!(T, E) r, U defaultValue = U.init)
-        if (!is(void == CommonType!(U, typeof(unaryFun!fun(T.init)))))
+auto mapOr(alias fun, T, U = typeof(unaryFun!fun(inout(T).init)), E)(
+        scope inout auto ref Result!(T, E) r, inout U defaultValue = inout(U).init)
+        if (!is(void == CommonType!(inout(U), typeof(unaryFun!fun(inout(T).init)))))
 {
-    return mapOrElse!(_ => defaultValue, fun)(r);
+    return isOk(r) ? unaryFun!fun(unwrap(r)) : defaultValue;
 }
 
 ///
@@ -1743,16 +1729,11 @@ auto mapOr(alias fun, T, U = typeof(unaryFun!fun(T.init)), E)(
 ///
 /// Returns: The result of applying the appropriate function based on [Ok] or [Err]
 @CorrespondingTo("map_or_else")
-auto mapOrElse(alias defaultFun, alias fun, T, E)(auto ref scope inout Result!(T, E) r)
-        if (!is(void == CommonType!(typeof(unaryFun!defaultFun(E.init)),
-            typeof(unaryFun!fun(T.init)))))
+auto mapOrElse(alias defaultFun, alias fun, T, E)(scope inout auto ref Result!(T, E) r)
+        if (!is(void == CommonType!(typeof(unaryFun!defaultFun(inout(E)
+            .init)), typeof(unaryFun!fun(inout(T).init)))))
 {
-    alias QOk = QualifiedOkTypeOf!(typeof(r));
-    alias QErr = QualifiedErrTypeOf!(typeof(r));
-    import std.sumtype : match;
-
-    return r.payload_.match!((QOk t) => unaryFun!fun(t.value),
-            (QErr e) => unaryFun!defaultFun(e.error));
+    return isOk(r) ? unaryFun!fun(unwrap(r)) : unaryFun!defaultFun(unwrapErr(r));
 }
 
 ///
@@ -1812,14 +1793,13 @@ auto mapOrElse(alias defaultFun, alias fun, T, E)(auto ref scope inout Result!(T
 ///
 /// Returns: The original [Result]
 @CorrespondingTo("inspect")
-auto ref inout(Result!(T, E)) inspect(alias fun = "a", T, E)(scope inout auto ref Result!(T, E) r)
-        if (is(typeof(unaryFun!fun(T.init))))
+auto ref inout(Result!(T, E)) inspect(alias fun, T, E)(scope inout auto ref Result!(T, E) r)
+        if (is(typeof(unaryFun!fun(inout(T).init))))
 {
     if (isOk(r))
     {
         unaryFun!fun(unwrap(r));
     }
-
     return r;
 }
 
@@ -1864,14 +1844,13 @@ auto ref inout(Result!(T, E)) inspect(alias fun = "a", T, E)(scope inout auto re
 ///
 /// Returns: The original [Result]
 @CorrespondingTo("inspect_err")
-auto ref inout(Result!(T, E)) inspectErr(alias fun = "a", T, E)(scope inout auto ref Result!(T, E) r)
-        if (is(typeof(unaryFun!fun(E.init))))
+auto ref inout(Result!(T, E)) inspectErr(alias fun, T, E)(scope inout auto ref Result!(T, E) r)
+        if (is(typeof(unaryFun!fun(inout(E).init))))
 {
     if (isErr(r))
     {
         unaryFun!fun(unwrapErr(r));
     }
-
     return r;
 }
 
@@ -1916,14 +1895,14 @@ auto ref inout(Result!(T, E)) inspectErr(alias fun = "a", T, E)(scope inout auto
 @CorrespondingTo("transpose")
 inout(Nullable!(Result!(T, E))) transpose(T, E)(scope inout auto ref Result!(Nullable!T, E) r)
 {
-    alias QOk = QualifiedOkTypeOf!(typeof(r));
-    alias QErr = QualifiedErrTypeOf!(typeof(r));
-    alias R = inout(Result!(T, E));
-    alias N = inout(Nullable!(Result!(T, E)));
-    import std.sumtype : match;
-
-    return r.payload_.match!((QOk t) => t.value.isNull ? N.init
-            : N(R.ok(t.value.get)), (QErr e) => N(R.err(e.error)));
+    alias R = Result!(T, E);
+    alias N = inout(Nullable!R);
+    if (isErr(r))
+    {
+        return N(R.err(unwrapErr(r)));
+    }
+    inout t = unwrap(r);
+    return t.isNull ? N.init : N(R.ok(t.get));
 }
 
 ///
@@ -1994,9 +1973,9 @@ unittest
 ///
 /// Returns: A flattened [Result] with the inner value or the error
 @CorrespondingTo("flatten")
-inout(Result!(T, E)) flatten(T, E)(auto ref scope inout Result!(Result!(T, E), E) r)
+inout(Result!(T, E)) flatten(T, E)(scope inout auto ref Result!(Result!(T, E), E) r)
 {
-    return andThen!"a"(r);
+    return isOk(r) ? unwrap(r) : Result!(T, E).err(unwrapErr(r));
 }
 
 ///
