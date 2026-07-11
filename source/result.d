@@ -258,15 +258,8 @@ struct Result(T, E) if (!is(void == T) && !is(void == E))
 {
     import std.sumtype : SumType;
 
-    private SumType!(Ok!T, Err!E) payload_;
-
-    /// Returns the internal `SumType` payload used by this [Result].
     ///
-    /// Returns: The underlying `SumType` object storing either an [Ok]`!T` or an [Err]`!E`
-    @property inout(SumType!(Ok!T, Err!E)) sumType() inout
-    {
-        return payload_;
-    }
+    SumType!(Ok!T, Err!E) sumType;
 
     alias sumType this;
 
@@ -274,7 +267,7 @@ struct Result(T, E) if (!is(void == T) && !is(void == E))
     private this(PT)(inout auto ref PT value) inout
             if (is(PT == Ok!T) || is(PT == Err!E))
     {
-        payload_ = value;
+        sumType = value;
     }
 
     /// Assigns another [Result] to this one, preserving semantic compatibility.
@@ -288,7 +281,7 @@ struct Result(T, E) if (!is(void == T) && !is(void == E))
                     typeof(Self.sumType).init = typeof(R.sumType).init;
                 })))
     {
-        payload_ = rhs.payload_;
+        sumType = rhs.sumType;
         return this;
     }
 
@@ -544,7 +537,7 @@ bool isOk(T, E)(scope inout auto ref Result!(T, E) r)
 {
     import std.sumtype : has;
 
-    return r.payload_.has!(inout(Ok!T));
+    return r.sumType.has!(inout(Ok!T));
 }
 
 ///
@@ -1095,7 +1088,7 @@ inout(T) unwrap(T, E)(scope inout auto ref Result!(T, E) r)
 
     import std.sumtype : get;
 
-    return r.payload_.get!(inout(Ok!T)).value;
+    return r.sumType.get!(inout(Ok!T)).value;
 }
 
 ///
@@ -1146,7 +1139,7 @@ inout(E) unwrapErr(T, E)(scope inout auto ref Result!(T, E) r)
 
     import std.sumtype : get;
 
-    return r.payload_.get!(inout(Err!E)).error;
+    return r.sumType.get!(inout(Err!E)).error;
 }
 
 ///
