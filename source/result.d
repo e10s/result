@@ -291,9 +291,20 @@ struct Result(T, E) if (!is(void == T) && !is(void == E))
     ///     value = The success _value to wrap
     ///
     /// Returns: A new [Result]`!(T, E)` containing the [Ok]`!T` _value
-    static inout(Result!(T, E)) ok(inout(T) value)
+    static auto ok(inout(T) value)
     {
-        return inout(Result!(T, E))(inout(Ok!T)(value));
+
+        static if (is(inout(T) == T))
+        {
+            alias R = Result!(T, E);
+            alias OkT = Ok!T;
+        }
+        else
+        {
+            alias R = inout(Result!(T, E));
+            alias OkT = inout(Ok!T);
+        }
+        return R(OkT(value));
     }
 
     /// Creates a [Result]`!(T, E)` with an error [Err]`!E` _value.
@@ -302,9 +313,19 @@ struct Result(T, E) if (!is(void == T) && !is(void == E))
     ///     value = The error _value to wrap
     ///
     /// Returns: A new [Result]`!(T, E)` containing the [Err]`!E` _value
-    static inout(Result!(T, E)) err(inout(E) value)
+    static auto err(inout(E) value)
     {
-        return inout(Result!(T, E))(inout(Err!E)(value));
+        static if (is(inout(E) == E))
+        {
+            alias R = Result!(T, E);
+            alias ErrE = Err!E;
+        }
+        else
+        {
+            alias R = inout(Result!(T, E));
+            alias ErrE = inout(Err!E);
+        }
+        return R(ErrE(value));
     }
 }
 
@@ -361,6 +382,38 @@ struct Result(T, E) if (!is(void == T) && !is(void == E))
 
     immutable iResultErr = R.err(new S);
     assert(iResultErr.has!(immutable(Err!(S*))));
+}
+
+// Ditto
+@safe nothrow unittest
+{
+    struct S
+    {
+    }
+
+    alias T = const(Exception);
+    alias E = immutable(S*);
+    alias R = Result!(T, E);
+
+    import std.sumtype : get, has;
+
+    auto resultOk = R.ok(new Exception(""));
+    assert(resultOk.has!(Ok!T));
+
+    auto cResultOk = R.ok(new const(Exception)(""));
+    assert(cResultOk.has!(const(Ok!T)));
+
+    auto iResultOk = R.ok(new immutable(Exception)(""));
+    assert(iResultOk.has!(immutable(Ok!T)));
+
+    auto resultErr = R.err(new S);
+    assert(resultErr.has!(Err!E));
+
+    auto cResultErr = R.err(new const(S));
+    assert(cResultErr.has!(Err!E));
+
+    auto iResultErr = R.err(new immutable(S));
+    assert(iResultErr.has!(Err!E));
 }
 
 // opAssign
