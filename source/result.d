@@ -1433,7 +1433,7 @@ inout(T) unwrapOr(T, E)(scope inout auto ref Result!(T, E) r, inout T defaultVal
 ///
 /// If the [Result] is [Ok], returns its value.
 /// If the [Result] is [Err], calls `fun` with the error value and returns the result.
-/// `fun` must return a value of the same type as `T` after removing qualifiers.
+/// The return value of `fun` and the [Ok] value must be able to be implicitly converted to some common type.
 ///
 /// Params:
 ///     r = The [Result] to unwrap
@@ -1441,8 +1441,8 @@ inout(T) unwrapOr(T, E)(scope inout auto ref Result!(T, E) r, inout T defaultVal
 ///
 /// Returns: The [Ok] value or the result of calling `fun` with the [Err] value
 @CorrespondingTo("unwrap_or_else")
-inout(T) unwrapOrElse(alias fun, T, E)(scope inout auto ref Result!(T, E) r)
-        if (is(T == Unqual!(typeof(unaryFun!fun(inout(E).init)))))
+auto unwrapOrElse(alias fun, T, E)(scope inout auto ref Result!(T, E) r)
+        if (!is(void == CommonType!(inout(T), typeof(unaryFun!fun(inout(E).init)))))
 {
     return isOk(r) ? unwrap(r) : unaryFun!fun(unwrapErr(r));
 }
@@ -1468,7 +1468,7 @@ inout(T) unwrapOrElse(alias fun, T, E)(scope inout auto ref Result!(T, E) r)
 
     auto f999(string s)
     {
-        return 999;
+        return immutable(ulong)(999);
     }
 
     auto fFoo(uint n)
