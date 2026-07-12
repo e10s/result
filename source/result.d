@@ -264,8 +264,8 @@ struct Result(T, E) if (!is(void == T) && !is(void == E))
     alias sumType this;
 
     // The constructor accepts `Ok!T` and `Err!E` values.
-    private this(PT)(inout auto ref PT value) inout
-            if (is(PT == Ok!T) || is(PT == Err!E))
+    private this(SumTypePayload)(inout auto ref SumTypePayload value) inout
+            if (is(SumTypePayload == Ok!T) || is(SumTypePayload == Err!E))
     {
         sumType = value;
     }
