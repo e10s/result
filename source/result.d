@@ -270,21 +270,6 @@ struct Result(T, E) if (!is(void == T) && !is(void == E))
         sumType = value;
     }
 
-    /// Assigns another [Result] to this one, preserving semantic compatibility.
-    ///
-    /// Params:
-    ///     rhs = The source [Result] to assign from
-    ///
-    /// Returns: A reference to this [Result] after assignment
-    ref opAssign(this Self, R)(auto ref R rhs)
-            if (isResult!R && is(typeof({
-                    typeof(Self.sumType).init = typeof(R.sumType).init;
-                })))
-    {
-        sumType = rhs.sumType;
-        return this;
-    }
-
     /// Creates a [Result]`!(T, E)` with a successful [Ok]`!T` _value.
     ///
     /// Params:
@@ -416,7 +401,7 @@ struct Result(T, E) if (!is(void == T) && !is(void == E))
     assert(iResultErr.has!(Err!E));
 }
 
-// opAssign
+// Assignment
 @trusted @nogc nothrow unittest
 {
     alias R = Result!(int, string);
