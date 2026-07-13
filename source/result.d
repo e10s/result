@@ -89,36 +89,32 @@ import std.traits : CommonType, Unqual;
 /// Serves as the success variant in a [Result] type.
 struct Ok(T) if (!is(void == T))
 {
-    private T value_;
     ///
-    @property ref inout(T) value() inout
-    {
-        return value_;
-    }
+    T value;
     ///
     bool opEquals(scope const Ok!T rhs) const
     {
-        return value_ == rhs.value_;
+        return value == rhs.value;
     }
     /// Ditto
     bool opEquals(scope const ref Ok!T rhs) const
     {
-        return value_ == rhs.value_;
+        return value == rhs.value;
     }
     /// Ditto
     bool opEquals(scope const T rhs) const
     {
-        return value_ == rhs;
+        return value == rhs;
     }
     /// Ditto
     bool opEquals(scope const ref T rhs) const
     {
-        return value_ == rhs;
+        return value == value;
     }
     ///
     size_t toHash() const
     {
-        return hashOf(value_);
+        return hashOf(value);
     }
 }
 
@@ -163,36 +159,32 @@ unittest
 /// Serves as the error variant in a [Result] type.
 struct Err(E) if (!is(void == E))
 {
-    private E value_;
     ///
-    @property ref inout(E) error() inout
-    {
-        return value_;
-    }
+    E error;
     ///
     bool opEquals(scope const Err!E rhs) const
     {
-        return value_ == rhs.value_;
+        return error == rhs.error;
     }
     /// Ditto
     bool opEquals(scope const ref Err!E rhs) const
     {
-        return value_ == rhs.value_;
+        return error == rhs.error;
     }
     /// Ditto
     bool opEquals(scope const E rhs) const
     {
-        return value_ == rhs;
+        return error == rhs;
     }
     /// Ditto
     bool opEquals(scope const ref E rhs) const
     {
-        return value_ == rhs;
+        return error == rhs;
     }
     ///
     size_t toHash() const
     {
-        return hashOf(value_);
+        return hashOf(error);
     }
 }
 
