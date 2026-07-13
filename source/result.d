@@ -1676,9 +1676,8 @@ unittest
 /// Returns: The result of applying `fun` to the [Ok], or the default value
 @CorrespondingTo("map_or")
 @CorrespondingTo("map_or_default")
-auto mapOr(alias fun, T, U = typeof(unaryFun!fun(inout(T).init)), E)(
-        scope auto ref inout(Result!(T, E)) r, inout(U) defaultValue = inout(U).init)
-        if (!is(void == CommonType!(inout(U), typeof(unaryFun!fun(inout(T).init)))))
+auto mapOr(alias fun, T, U, E)(scope auto ref inout(Result!(T, E)) r,
+        U defaultValue = typeof(unaryFun!fun(inout(T).init)).init)
 {
     return isOk(r) ? unaryFun!fun(unwrap(r)) : defaultValue;
 }
