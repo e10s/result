@@ -1112,7 +1112,7 @@ auto orElse(alias fun, T, E)(scope inout auto ref Result!(T, E) r)
 /// Returns: The value contained in the [Ok]
 @CorrespondingTo("unwrap")
 @CorrespondingTo("unwrap_unchecked")
-inout(T) unwrap(T, E)(scope inout auto ref Result!(T, E) r)
+auto ref inout(T) unwrap(T, E)(scope return auto ref inout(Result!(T, E)) r)
 {
     assert(isOk(r), "Result does not have an Ok value.");
 
@@ -1163,7 +1163,7 @@ unittest
 /// Returns: The value contained in the [Err]
 @CorrespondingTo("unwrap_err")
 @CorrespondingTo("unwrap_err_unchecked")
-inout(E) unwrapErr(T, E)(scope inout auto ref Result!(T, E) r)
+auto ref inout(E) unwrapErr(T, E)(scope return auto ref inout(Result!(T, E)) r)
 {
     assert(isErr(r), "Result does not have an Err value.");
 
@@ -1217,7 +1217,7 @@ unittest
 ///
 /// Throws: [UnwrapException] with message `msg` if the [Result] is [Err]
 @CorrespondingTo("expect")
-inout(T) tryUnwrap(T, E)(scope inout auto ref Result!(T, E) r, lazy string msg = null)
+auto ref inout(T) tryUnwrap(T, E)(scope return auto ref inout(Result!(T, E)) r, lazy string msg = null)
 {
     import std.exception : enforce;
 
@@ -1280,7 +1280,8 @@ inout(T) tryUnwrap(T, E)(scope inout auto ref Result!(T, E) r, lazy string msg =
 ///
 /// Throws: [UnwrapException] with message `msg` if the [Result] is [Ok]
 @CorrespondingTo("expect_err")
-inout(E) tryUnwrapErr(T, E)(scope inout auto ref Result!(T, E) r, lazy string msg = null)
+auto ref inout(E) tryUnwrapErr(T, E)(scope return auto ref inout(Result!(T, E)) r,
+        lazy string msg = null)
 {
     import std.exception : enforce;
 
