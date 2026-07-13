@@ -1337,6 +1337,7 @@ auto ref inout(E) tryUnwrapErr(T, E)(scope return auto ref inout(Result!(T, E)) 
 ///
 /// If the [Result] is [Ok], returns its value.
 /// If the [Result] is [Err], returns defaultValue.
+/// The Ok value and defaultValue must be able to be implicitly converted to some common type.
 ///
 /// Params:
 ///     r = The [Result] to unwrap
@@ -1345,7 +1346,7 @@ auto ref inout(E) tryUnwrapErr(T, E)(scope return auto ref inout(Result!(T, E)) 
 /// Returns: The [Ok] value or defaultValue if [Err]
 @CorrespondingTo("unwrap_or")
 @CorrespondingTo("unwrap_or_default")
-inout(T) unwrapOr(T, E)(scope inout auto ref Result!(T, E) r, inout T defaultValue = inout(T).init)
+auto unwrapOr(T, U, E)(scope auto ref inout(Result!(T, E)) r, U defaultValue = inout(T).init)
 {
     return isOk(r) ? unwrap(r) : defaultValue;
 }
