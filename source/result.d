@@ -256,7 +256,7 @@ struct Result(T, E) if (!is(void == T) && !is(void == E))
     alias sumType this;
 
     // The constructor accepts `Ok!T` and `Err!E` values.
-    private this(SumTypePayload)(inout auto ref SumTypePayload value) inout
+    private this(SumTypePayload)(auto ref inout(SumTypePayload) value) inout
             if (is(SumTypePayload == Ok!T) || is(SumTypePayload == Err!E))
     {
         sumType = value;
@@ -563,7 +563,7 @@ struct CorrespondingTo
 ///
 /// Returns: true if r contains an [Ok] value, false otherwise
 @CorrespondingTo("is_ok")
-bool isOk(T, E)(scope inout auto ref Result!(T, E) r)
+bool isOk(T, E)(scope auto ref inout(Result!(T, E)) r)
 {
     import std.sumtype : has;
 
@@ -607,7 +607,7 @@ bool isOk(T, E)(scope inout auto ref Result!(T, E) r)
 ///
 /// Returns: true if r is [Ok] and its value satisfies `pred`, false otherwise
 @CorrespondingTo("is_ok_and")
-bool isOkAnd(alias pred = "a", T, E)(scope inout auto ref Result!(T, E) r)
+bool isOkAnd(alias pred = "a", T, E)(scope auto ref inout(Result!(T, E)) r)
         if (!is(void == typeof(unaryFun!pred(inout(T).init))))
 {
     return isOk(r) && !!unaryFun!pred(unwrap(r));
@@ -701,7 +701,7 @@ alias isErr = not!isOk;
 ///
 /// Returns: true if r is [Err] and its value satisfies `pred`, false otherwise
 @CorrespondingTo("is_err_and")
-bool isErrAnd(alias pred = "a", T, E)(scope inout auto ref Result!(T, E) r)
+bool isErrAnd(alias pred = "a", T, E)(scope auto ref inout(Result!(T, E)) r)
         if (!is(void == typeof(unaryFun!pred(inout(E).init))))
 {
     return isErr(r) && !!unaryFun!pred(unwrapErr(r));
@@ -757,7 +757,7 @@ bool isErrAnd(alias pred = "a", T, E)(scope inout auto ref Result!(T, E) r)
 ///
 /// Returns: A `Nullable!T` containing the [Ok] value, or in the _null state if [Err]
 @CorrespondingTo("ok")
-inout(Nullable!T) ok(T, E)(scope inout auto ref Result!(T, E) r)
+inout(Nullable!T) ok(T, E)(scope auto ref inout(Result!(T, E)) r)
 {
     alias N = typeof(return);
     return isErr(r) ? N.init : N(unwrap(r));
@@ -801,7 +801,7 @@ inout(Nullable!T) ok(T, E)(scope inout auto ref Result!(T, E) r)
 ///
 /// Returns: A `Nullable!E` containing the [Err] value, or in the _null state if [Ok]
 @CorrespondingTo("err")
-inout(Nullable!E) err(T, E)(scope inout auto ref Result!(T, E) r)
+inout(Nullable!E) err(T, E)(scope auto ref inout(Result!(T, E)) r)
 {
     alias N = typeof(return);
     return isOk(r) ? N.init : N(unwrapErr(r));
@@ -846,8 +846,8 @@ inout(Nullable!E) err(T, E)(scope inout auto ref Result!(T, E) r)
 ///
 /// Returns: r2 if r1 is [Ok], otherwise a new [Result]`!(U, E)` with r1's [Err] value
 @CorrespondingTo("and")
-inout(Result!(U, E)) and(T, U, E)(scope inout auto ref Result!(T, E) r1,
-        scope inout auto ref Result!(U, E) r2)
+inout(Result!(U, E)) and(T, U, E)(scope auto ref inout(Result!(T, E)) r1,
+        scope auto ref inout(Result!(U, E)) r2)
 {
     return isOk(r1) ? r2 : Result!(U, E).err(unwrapErr(r1));
 }
@@ -909,7 +909,7 @@ inout(Result!(U, E)) and(T, U, E)(scope inout auto ref Result!(T, E) r1,
 ///
 /// Returns: The [Result] returned by `fun` if [Ok], otherwise a new [Result] with the original [Err]
 @CorrespondingTo("and_then")
-auto andThen(alias fun, T, E)(scope inout auto ref Result!(T, E) r)
+auto andThen(alias fun, T, E)(scope auto ref inout(Result!(T, E)) r)
         if (is(E == ErrValueTypeOf!(typeof(unaryFun!fun(inout(T).init)))))
 {
     alias U = OkValueTypeOf!(typeof(unaryFun!fun(inout(T).init)));
@@ -986,8 +986,8 @@ auto andThen(alias fun, T, E)(scope inout auto ref Result!(T, E) r)
 ///
 /// Returns: r2 if r1 is [Err], otherwise a new [Result]`!(T, F)` with r1's [Ok] value
 @CorrespondingTo("or")
-inout(Result!(T, F)) or(T, E, F)(scope inout auto ref Result!(T, E) r1,
-        scope inout auto ref Result!(T, F) r2)
+inout(Result!(T, F)) or(T, E, F)(scope auto ref inout(Result!(T, E)) r1,
+        scope auto ref inout(Result!(T, F)) r2)
 {
     return isErr(r1) ? r2 : Result!(T, F).ok(unwrap(r1));
 }
@@ -1049,7 +1049,7 @@ inout(Result!(T, F)) or(T, E, F)(scope inout auto ref Result!(T, E) r1,
 ///
 /// Returns: The [Result] returned by `fun` if [Err], otherwise a new [Result] with the original [Ok]
 @CorrespondingTo("or_else")
-auto orElse(alias fun, T, E)(scope inout auto ref Result!(T, E) r)
+auto orElse(alias fun, T, E)(scope auto ref inout(Result!(T, E)) r)
         if (is(T == OkValueTypeOf!(typeof(unaryFun!fun(inout(E).init)))))
 {
     alias F = ErrValueTypeOf!(typeof(unaryFun!fun(inout(E).init)));
@@ -1420,7 +1420,7 @@ auto unwrapOr(T, U, E)(scope auto ref inout(Result!(T, E)) r, U defaultValue = i
 ///
 /// Returns: The [Ok] value or the result of calling `fun` with the [Err] value
 @CorrespondingTo("unwrap_or_else")
-auto unwrapOrElse(alias fun, T, E)(scope inout auto ref Result!(T, E) r)
+auto unwrapOrElse(alias fun, T, E)(scope auto ref inout(Result!(T, E)) r)
         if (!is(void == CommonType!(inout(T), typeof(unaryFun!fun(inout(E).init)))))
 {
     return isOk(r) ? unwrap(r) : unaryFun!fun(unwrapErr(r));
@@ -1483,7 +1483,7 @@ auto unwrapOrElse(alias fun, T, E)(scope inout auto ref Result!(T, E) r)
 ///
 /// Returns: A new [Result] with the transformed [Ok] value or the original [Err]
 @CorrespondingTo("map")
-auto map(alias fun = "a", T, E)(scope inout auto ref Result!(T, E) r)
+auto map(alias fun = "a", T, E)(scope auto ref inout(Result!(T, E)) r)
         if (!is(void == typeof(unaryFun!fun(inout(T).init))))
 {
     alias U = Unqual!(typeof(unaryFun!fun(inout(T).init)));
@@ -1572,7 +1572,7 @@ auto map(alias fun = "a", T, E)(scope inout auto ref Result!(T, E) r)
 ///
 /// Returns: A new [Result] with the original [Ok] or the transformed [Err]
 @CorrespondingTo("map_err")
-auto mapErr(alias fun = "a", T, E)(scope inout auto ref Result!(T, E) r)
+auto mapErr(alias fun = "a", T, E)(scope auto ref inout(Result!(T, E)) r)
         if (!is(void == typeof(unaryFun!fun(inout(E).init))))
 {
     alias F = Unqual!(typeof(unaryFun!fun(inout(E).init)));
@@ -1677,7 +1677,7 @@ unittest
 @CorrespondingTo("map_or")
 @CorrespondingTo("map_or_default")
 auto mapOr(alias fun, T, U = typeof(unaryFun!fun(inout(T).init)), E)(
-        scope inout auto ref Result!(T, E) r, inout U defaultValue = inout(U).init)
+        scope auto ref inout(Result!(T, E)) r, inout(U) defaultValue = inout(U).init)
         if (!is(void == CommonType!(inout(U), typeof(unaryFun!fun(inout(T).init)))))
 {
     return isOk(r) ? unaryFun!fun(unwrap(r)) : defaultValue;
@@ -1754,7 +1754,7 @@ auto mapOr(alias fun, T, U = typeof(unaryFun!fun(inout(T).init)), E)(
 ///
 /// Returns: The result of applying the appropriate function based on [Ok] or [Err]
 @CorrespondingTo("map_or_else")
-auto mapOrElse(alias defaultFun, alias fun, T, E)(scope inout auto ref Result!(T, E) r)
+auto mapOrElse(alias defaultFun, alias fun, T, E)(scope auto ref inout(Result!(T, E)) r)
         if (!is(void == CommonType!(typeof(unaryFun!defaultFun(inout(E)
             .init)), typeof(unaryFun!fun(inout(T).init)))))
 {
@@ -1818,7 +1818,7 @@ auto mapOrElse(alias defaultFun, alias fun, T, E)(scope inout auto ref Result!(T
 ///
 /// Returns: The original [Result]
 @CorrespondingTo("inspect")
-auto ref inout(Result!(T, E)) inspect(alias fun, T, E)(scope inout auto ref Result!(T, E) r)
+auto ref inout(Result!(T, E)) inspect(alias fun, T, E)(scope auto ref inout(Result!(T, E)) r)
         if (is(typeof(unaryFun!fun(inout(T).init))))
 {
     if (isOk(r))
@@ -1869,7 +1869,7 @@ auto ref inout(Result!(T, E)) inspect(alias fun, T, E)(scope inout auto ref Resu
 ///
 /// Returns: The original [Result]
 @CorrespondingTo("inspect_err")
-auto ref inout(Result!(T, E)) inspectErr(alias fun, T, E)(scope inout auto ref Result!(T, E) r)
+auto ref inout(Result!(T, E)) inspectErr(alias fun, T, E)(scope auto ref inout(Result!(T, E)) r)
         if (is(typeof(unaryFun!fun(inout(E).init))))
 {
     if (isErr(r))
@@ -1918,7 +1918,7 @@ auto ref inout(Result!(T, E)) inspectErr(alias fun, T, E)(scope inout auto ref R
 ///
 /// Returns: A `Nullable!Result!(T, E)` with the inner success value promoted out of the nullable.
 @CorrespondingTo("transpose")
-inout(Nullable!(Result!(T, E))) transpose(T, E)(scope inout auto ref Result!(Nullable!T, E) r)
+inout(Nullable!(Result!(T, E))) transpose(T, E)(scope auto ref inout(Result!(Nullable!T, E)) r)
 {
     alias R = Result!(T, E);
     alias N = inout(Nullable!R);
@@ -1998,7 +1998,7 @@ unittest
 ///
 /// Returns: A flattened [Result] with the inner value or the error
 @CorrespondingTo("flatten")
-inout(Result!(T, E)) flatten(T, E)(scope inout auto ref Result!(Result!(T, E), E) r)
+inout(Result!(T, E)) flatten(T, E)(scope auto ref inout(Result!(Result!(T, E), E)) r)
 {
     return isOk(r) ? unwrap(r) : Result!(T, E).err(unwrapErr(r));
 }
