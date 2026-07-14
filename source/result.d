@@ -8,78 +8,124 @@
  *
  * In addition, because `Result` has an aspect as a wrapper for `SumType`,
  * effective error handling is possible through pattern matching.
- *
- * Examples:
- * ---
-import result;
-
-auto tryCatchWrapper(T)(lazy T expr)
-{
-    alias R = Result!(T, Exception);
-
-    try
-    {
-        return R.ok(expr);
-    }
-    catch (Exception e)
-    {
-        return R.err(e);
-    }
-}
-
-import std.typecons : Tuple;
-
-alias ExceptionSummary = Tuple!(string, "name", string, "msg");
-
-auto toExceptionSummary(const Exception e)
-{
-    return ExceptionSummary(typeid(e).name, e.msg);
-}
-
-void proceduralExample(SomeResult)(SomeResult result)
-{
-    import std.stdio : stderr, writefln;
-
-    if (isErr(result))
-    {
-        immutable e = unwrapErr(result);
-        stderr.writefln("%s is caught: %s", e.name, e.msg);
-        return;
-    }
-
-    writefln("Converted to %.9s", unwrap(result) * 0.2 / 3);
-}
-
-void complexExample(SomeResult)(SomeResult result)
-{
-    import std.conv : to;
-    import std.format : format;
-    import std.stdio : stderr, writeln;
-    import std.sumtype : match;
-
-    result.andThen!(t => Result!(double, ExceptionSummary).ok(t * 0.2 / 3))
-        .map!(u => format!"Converted to %.9s"(u)) // Result!(string, ExceptionSummary)
-        .mapErr!(e => format!"%s is caught: %s"(e.name, e.msg)) // Result!(string, string)
-        .match!((const(Ok!string) okObj) => writeln(okObj.value),
-                (const(Err!string) errObj) => stderr.writeln(errObj.error));
-}
-
-void main()
-{
-    import std.conv : to;
-
-    immutable r1 = tryCatchWrapper(to!int("1729")).mapErr!toExceptionSummary();
-    immutable r2 = tryCatchWrapper(to!int("number?")).mapErr!toExceptionSummary();
-
-    proceduralExample(r1);
-    proceduralExample(r2);
-
-    complexExample(r1);
-    complexExample(r2);
-}
- * ---
  */
 module result;
+
+///
+unittest
+{
+    import std.conv : ConvException, to;
+    import std.format : format;
+    import std.stdio : stderr, writefln, writeln;
+    import std.sumtype : match;
+
+    // Parse text into a positive integer, returning a Result that captures either
+    // the parsed value or a user-friendly error message.
+    auto parsePositiveInt(string text)
+    {
+        alias R = Result!(int, string);
+
+        try
+        {
+            auto value = to!int(text);
+            if (value <= 0)
+            {
+                return R.err("Value must be a positive integer");
+            }
+            return R.ok(value);
+        }
+        catch (ConvException e)
+        {
+            return R.err("Invalid input: " ~ e.msg);
+        }
+    }
+
+    // Perform division and return a Result that reports division-by-zero errors.
+    auto divide(int numerator, int denominator)
+    {
+        alias R = Result!(double, string);
+
+        if (denominator == 0)
+        {
+            return R.err("Division by zero");
+        }
+        return R.ok(cast(double) numerator / denominator);
+    }
+
+    // Convert a lazy expression into a Result value by catching any thrown exception.
+    auto convertExceptionToResult(T)(lazy T expr)
+    {
+        alias R = Result!(T, Exception);
+
+        try
+        {
+            return R.ok(expr);
+        }
+        catch (Exception e)
+        {
+            return R.err(e);
+        }
+    }
+
+    // A simple demo showing success and failure handling in a procedural style.
+    void showBasicFlow()
+    {
+        // Result!(int, string), success
+        immutable parseResult = parsePositiveInt("42");
+
+        if (isErr(parseResult))
+        {
+            stderr.writeln("Error: ", unwrapErr(parseResult));
+            return;
+        }
+
+        // Result!(double, string), success
+        immutable divideResult = divide(unwrap(parseResult), 7);
+
+        if (isErr(divideResult))
+        {
+            stderr.writeln("Error: ", unwrapErr(divideResult));
+            return;
+        }
+
+        immutable formattedString = format!"%.2f"(unwrap(divideResult));
+        writeln("Success: ", formattedString);
+    }
+
+    // A composition example that demonstrates chaining and explicit branching.
+    void showCompositionExample()
+    {
+        //    Result!(int, string), failure
+        // -> Result!(double, string), failure
+        // -> Result!(string, string), failure
+        // -> SumType!(Ok!string, Err!string), containing Err!string
+        parsePositiveInt("0").andThen!(value => divide(value, 3))
+            .map!(d => format!"%.2f"(d))
+            .sumType // Explicit conversion to SumType
+            .match!((Ok!string okObj) => writeln("Success: ", okObj.value),
+                    (Err!string errObj) => stderr.writeln("Failure: ", errObj.error));
+    }
+
+    // A demo that converts a thrown exception into a Result and handles it.
+    void showExceptionInterop()
+    {
+        //    Result!(int, Exception), failure
+        // -> Result!(double, Exception), failure
+        immutable result = convertExceptionToResult(to!int("not an int")).map!(value => value * 2.0);
+
+        assert(is(typeof(result) == immutable(Result!(double, Exception))));
+
+        // Implicit conversion to SumType
+        result.match!((Ok!double okObj) => writefln("Converted value: %.2f",
+                okObj.value), (const Err!Exception errObj) => stderr.writeln("Caught exception: ",
+                errObj.error.msg));
+    }
+
+    showBasicFlow(); // Success: ...
+    showCompositionExample(); // Failure: ...
+    showExceptionInterop(); // Caught exception: ...
+}
+
 import std.functional : not;
 import std.functional : unaryFun;
 import std.typecons : Nullable;

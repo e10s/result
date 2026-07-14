@@ -111,7 +111,7 @@ void main()
     writeln("=== yares demo ===");
     writeln();
 
-    showBasicFlow(); // Success: ~~
-    showCompositionExample(); // Failure: ~~
-    showExceptionInterop(); // Caught exception: ~~
+    showBasicFlow(); // Success: ...
+    showCompositionExample(); // Failure: ...
+    showExceptionInterop(); // Caught exception: ...
 }
