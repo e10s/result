@@ -38,3 +38,7 @@ docs/
 dub.selections.json
 
 # End of https://www.toptal.com/developers/gitignore/api/d
+
+# adrdox
+skeleton.html
+generated-docs/
