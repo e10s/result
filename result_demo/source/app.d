@@ -83,11 +83,11 @@ void showCompositionExample()
     //    Result!(int, string), failure
     // -> Result!(double, string), failure
     // -> Result!(string, string), failure
-    // -> SumType!(Ok!string, Err!string), containing Err!string
+    // -> SumType!(string, Err!string), containing Err!string
     parsePositiveInt("0").andThen!(value => divide(value, 3))
         .map!(d => format!"%.2f"(d))
         .sumType // Explicit conversion to SumType
-        .match!((Ok!string okObj) => writeln("Success: ", okObj.value),
+        .match!((string okValue) => writeln("Success: ", okValue),
                 (Err!string errObj) => stderr.writeln("Failure: ", errObj.error));
 }
 
@@ -101,9 +101,8 @@ void showExceptionInterop()
     assert(is(typeof(result) == immutable(Result!(double, Exception))));
 
     // Implicit conversion to SumType
-    result.match!((Ok!double okObj) => writefln("Converted value: %.2f",
-            okObj.value), (const Err!Exception errObj) => stderr.writeln("Caught exception: ",
-            errObj.error.msg));
+    result.match!((double okValue) => writefln("Converted value: %.2f", okValue),
+            (const Err!Exception errObj) => stderr.writeln("Caught exception: ", errObj.error.msg));
 }
 
 void main()

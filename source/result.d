@@ -3,7 +3,7 @@
  * type for returning, carrying and composing errors.
  *
  * `Result` represents the outcome of potentially unsuccessful computation
- * and contains either `Ok!T` for success or `Err!E` for failure.
+ * and contains either `T` for success or `Err!E` for failure.
  * Each one is used to signify both the status and the value.
  *
  * In addition, because `Result` has an aspect as a wrapper for `SumType`,
@@ -98,11 +98,11 @@ unittest
         //    Result!(int, string), failure
         // -> Result!(double, string), failure
         // -> Result!(string, string), failure
-        // -> SumType!(Ok!string, Err!string), containing Err!string
+        // -> SumType!(string, Err!string), containing Err!string
         parsePositiveInt("0").andThen!(value => divide(value, 3))
             .map!(d => format!"%.2f"(d))
             .sumType // Explicit conversion to SumType
-            .match!((Ok!string okObj) => writeln("Success: ", okObj.value),
+            .match!((string okValue) => writeln("Success: ", okValue),
                     (Err!string errObj) => stderr.writeln("Failure: ", errObj.error));
     }
 
@@ -116,9 +116,9 @@ unittest
         assert(is(typeof(result) == immutable(Result!(double, Exception))));
 
         // Implicit conversion to SumType
-        result.match!((Ok!double okObj) => writefln("Converted value: %.2f",
-                okObj.value), (const Err!Exception errObj) => stderr.writeln("Caught exception: ",
-                errObj.error.msg));
+        result.match!((double okValue) => writefln("Converted value: %.2f", okValue),
+                (const Err!Exception errObj) => stderr.writeln("Caught exception: ",
+                    errObj.error.msg));
     }
 
     showBasicFlow(); // Success: ...
@@ -130,76 +130,6 @@ import std.functional : not;
 import std.functional : unaryFun;
 import std.typecons : Nullable;
 import std.traits : CommonType, Unqual;
-
-/// Wrapper struct representing a successful result with a value of type `T`.
-/// Serves as the success variant in a [Result] type.
-struct Ok(T) if (!is(void == T))
-{
-    ///
-    T value;
-    ///
-    bool opEquals(scope const Ok!T rhs) const
-    {
-        return value == rhs.value;
-    }
-    /// Ditto
-    bool opEquals(scope const ref Ok!T rhs) const
-    {
-        return value == rhs.value;
-    }
-    /// Ditto
-    bool opEquals(scope const T rhs) const
-    {
-        return value == rhs;
-    }
-    /// Ditto
-    bool opEquals(scope const ref T rhs) const
-    {
-        return value == value;
-    }
-    ///
-    size_t toHash() const
-    {
-        return hashOf(value);
-    }
-}
-
-///
-unittest
-{
-    assert(Ok!int(314) == Ok!int(314));
-    assert(Ok!int(314).value == 314);
-    assert(Ok!int(314) == 314);
-    assert(Ok!string("Good day.") == "Good day.");
-
-    class K
-    {
-    }
-
-    assert(Ok!K(new K) != Ok!K(new K));
-}
-
-unittest
-{
-    auto ok1 = Ok!int(314);
-    auto ok2 = Ok!int(314);
-    auto ok3 = Ok!int(315);
-
-    assert(ok1 == ok2);
-    assert(ok2 != ok3);
-    assert(ok1.toHash() == ok2.toHash());
-    assert(ok1.toHash() != ok3.toHash());
-
-    class K
-    {
-    }
-
-    auto ok4 = Ok!K(new K);
-    auto ok5 = Ok!K(new K);
-
-    assert(ok4 != ok5);
-    assert(ok4.toHash() != ok5.toHash());
-}
 
 /// Wrapper struct representing an error result with a value of type `E`.
 /// Serves as the error variant in a [Result] type.
@@ -282,9 +212,9 @@ class UnwrapException : Exception
     }
 }
 
-/// A type that represents either a successful value [Ok]`!T` or an error [Err]`!E`.
+/// A type that represents either a successful value `T` or an error [Err]`!E`.
 ///
-/// This struct wraps a `std.sumtype.SumType` to provide Result type semantics similar to Rust's Result.
+/// This struct wraps a `std.sumtype.SumType` to provide `Result` type semantics similar to Rust's `Result`.
 /// It is designed to work together with additional helper functions to handle success and error cases.
 ///
 /// The struct aliases to its internal `SumType` payload, which enables transparent access to `SumType` operations.
@@ -292,42 +222,39 @@ class UnwrapException : Exception
 /// Params:
 ///     T = The type of the successful value
 ///     E = The type of the error value
-struct Result(T, E) if (!is(void == T) && !is(void == E))
+struct Result(T, E) if (!is(void == T) && !is(T : Err!(E), E) && !is(void == E))
 {
     import std.sumtype : SumType;
 
     ///
-    SumType!(Ok!T, Err!E) sumType;
+    SumType!(T, Err!E) sumType;
 
     alias sumType this;
 
-    // The constructor accepts `Ok!T` and `Err!E` values.
+    // The constructor accepts `T` and `Err!E` values.
     private this(SumTypePayload)(auto ref inout(SumTypePayload) value) inout
-            if (is(SumTypePayload == Ok!T) || is(SumTypePayload == Err!E))
+            if (is(SumTypePayload == T) || is(SumTypePayload == Err!E))
     {
         sumType = value;
     }
 
-    /// Creates a [Result]`!(T, E)` with a successful [Ok]`!T` _value.
+    /// Creates a [Result]`!(T, E)` with a successful `T` _value.
     ///
     /// Params:
     ///     value = The success _value to wrap
     ///
-    /// Returns: A new [Result]`!(T, E)` containing the [Ok]`!T` _value
+    /// Returns: A new [Result]`!(T, E)` containing the `T` _value
     static auto ok(inout(T) value)
     {
-
         static if (is(inout(T) == T))
         {
             alias R = Result!(T, E);
-            alias OkT = Ok!T;
         }
         else
         {
             alias R = inout(Result!(T, E));
-            alias OkT = inout(Ok!T);
         }
-        return R(OkT(value));
+        return R(value);
     }
 
     /// Creates a [Result]`!(T, E)` with an error [Err]`!E` _value.
@@ -359,13 +286,13 @@ struct Result(T, E) if (!is(void == T) && !is(void == E))
     import std.sumtype : get;
 
     auto resultOk = R.ok(123);
-    assert(resultOk.get!(Ok!int) == Ok!int(123));
+    assert(resultOk.get!int == 123);
 
     const cResultOk = R.ok(123);
-    assert(cResultOk.get!(const(Ok!int)) == Ok!int(123));
+    assert(cResultOk.get!(const(int)) == 123);
 
     immutable iResultOk = R.ok(123);
-    assert(iResultOk.get!(immutable(Ok!int)) == Ok!int(123));
+    assert(iResultOk.get!(immutable(int)) == 123);
 
     auto resultErr = R.err("123");
     assert(resultErr.get!(Err!string) == Err!string("123"));
@@ -389,13 +316,13 @@ struct Result(T, E) if (!is(void == T) && !is(void == E))
     import std.sumtype : has;
 
     auto resultOk = R.ok(new Exception(""));
-    assert(resultOk.has!(Ok!Exception));
+    assert(resultOk.has!Exception);
 
     const cResultOk = R.ok(new Exception(""));
-    assert(cResultOk.has!(const(Ok!Exception)));
+    assert(cResultOk.has!(const(Exception)));
 
     immutable iResultOk = R.ok(new Exception(""));
-    assert(iResultOk.has!(immutable(Ok!Exception)));
+    assert(iResultOk.has!(immutable(Exception)));
 
     auto resultErr = R.err(new S);
     assert(resultErr.has!(Err!(S*)));
@@ -421,13 +348,13 @@ struct Result(T, E) if (!is(void == T) && !is(void == E))
     import std.sumtype : get, has;
 
     auto resultOk = R.ok(new Exception(""));
-    assert(resultOk.has!(Ok!T));
+    assert(resultOk.has!T);
 
     auto cResultOk = R.ok(new const(Exception)(""));
-    assert(cResultOk.has!(const(Ok!T)));
+    assert(cResultOk.has!(const(T)));
 
     auto iResultOk = R.ok(new immutable(Exception)(""));
-    assert(iResultOk.has!(immutable(Ok!T)));
+    assert(iResultOk.has!(immutable(T)));
 
     auto resultErr = R.err(new S);
     assert(resultErr.has!(Err!E));
@@ -454,7 +381,7 @@ struct Result(T, E) if (!is(void == T) && !is(void == E))
 
     const result3 = R.ok(100);
     result2 = result3;
-    assert(result2.get!(Ok!int) == Ok!int(100));
+    assert(result2.get!int == 100);
 
     immutable result4 = R.err("1000");
     result2 = result4;
@@ -484,7 +411,7 @@ struct Result(T, E) if (!is(void == T) && !is(void == E))
     auto result3 = R.ok(k1);
 
     result2 = result3;
-    assert(result2.get!(Ok!Exception) == Ok!Exception(k1));
+    assert(result2.get!Exception == k1);
 }
 
 /* Convenience templates begin */
@@ -500,41 +427,9 @@ unittest
     assert(isResult!(inout(R)));
 }
 
-private template OkTypeOf(R) if (isResult!R)
-{
-    alias OkTypeOf = typeof(R.sumType).Types[0];
-}
-
-unittest
-{
-    alias R = Result!(int, string);
-    assert(is(OkTypeOf!R == Ok!int));
-    assert(is(OkTypeOf!(const(R)) == Ok!int));
-    assert(is(OkTypeOf!(immutable(R)) == Ok!int));
-    assert(is(OkTypeOf!(inout(R)) == Ok!int));
-}
-
-private template QualifiedOkTypeOf(R) if (isResult!R)
-{
-    import std.traits : CopyTypeQualifiers;
-
-    alias QualifiedOkTypeOf = CopyTypeQualifiers!(R, OkTypeOf!R);
-}
-
-unittest
-{
-    alias R = Result!(int, string);
-    assert(is(QualifiedOkTypeOf!R == Ok!int));
-    assert(is(QualifiedOkTypeOf!(const(R)) == const(Ok!int)));
-    assert(is(QualifiedOkTypeOf!(immutable(R)) == immutable(Ok!int)));
-    assert(is(QualifiedOkTypeOf!(inout(R)) == inout(Ok!int)));
-}
-
 private template OkValueTypeOf(R) if (isResult!R)
 {
-    import std.traits : TemplateArgsOf;
-
-    alias OkValueTypeOf = TemplateArgsOf!(OkTypeOf!R)[0];
+    alias OkValueTypeOf = typeof(R.sumType).Types[0];
 }
 
 unittest
@@ -602,18 +497,18 @@ struct CorrespondingTo
 }
 /* For UDA end */
 
-/// Checks if a [Result] contains an [Ok] value.
+/// Checks if a [Result] contains a `T` value.
 ///
 /// Params:
 ///     r = The [Result] to check
 ///
-/// Returns: true if r contains an [Ok] value, false otherwise
+/// Returns: `true` if `r` contains a `T` value, `false` otherwise
 @CorrespondingTo("is_ok")
 bool isOk(T, E)(scope auto ref inout(Result!(T, E)) r)
 {
     import std.sumtype : has;
 
-    return r.sumType.has!(inout(Ok!T));
+    return r.sumType.has!(inout(T));
 }
 
 ///
@@ -645,13 +540,13 @@ bool isOk(T, E)(scope auto ref inout(Result!(T, E)) r)
     assert(!isOk(iResultErr));
 }
 
-/// Checks if a [Result] contains an [Ok] value satisfying a predicate.
+/// Checks if a [Result] contains a `T` value satisfying a predicate.
 ///
 /// Params:
 ///     r = The [Result] to check
-///     pred = The predicate to apply to the [Ok] value
+///     pred = The predicate to apply to the `T` value
 ///
-/// Returns: true if r is [Ok] and its value satisfies `pred`, false otherwise
+/// Returns: `true` if `r` is `T` and its value satisfies `pred`, `false` otherwise
 @CorrespondingTo("is_ok_and")
 bool isOkAnd(alias pred = "a", T, E)(scope auto ref inout(Result!(T, E)) r)
         if (!is(void == typeof(unaryFun!pred(inout(T).init))))
@@ -745,7 +640,7 @@ alias isErr = not!isOk;
 ///     r = The [Result] to check
 ///     pred = The predicate to apply to the [Err] value
 ///
-/// Returns: true if r is [Err] and its value satisfies `pred`, false otherwise
+/// Returns: `true` if `r` is [Err] and its value satisfies `pred`, `false` otherwise
 @CorrespondingTo("is_err_and")
 bool isErrAnd(alias pred = "a", T, E)(scope auto ref inout(Result!(T, E)) r)
         if (!is(void == typeof(unaryFun!pred(inout(E).init))))
@@ -796,12 +691,12 @@ bool isErrAnd(alias pred = "a", T, E)(scope auto ref inout(Result!(T, E)) r)
     assert(!isErrAnd!isNumeric(resultErr2));
 }
 
-/// Extracts the [Ok] value from a [Result] as a `Nullable!T`.
+/// Extracts the `T` value from a [Result] as a `Nullable!T`.
 ///
 /// Params:
 ///     r = The [Result] to extract from
 ///
-/// Returns: A `Nullable!T` containing the [Ok] value, or in the _null state if [Err]
+/// Returns: A `Nullable!T` containing the `T` value, or in the null state if [Err]
 @CorrespondingTo("ok")
 inout(Nullable!T) ok(T, E)(scope auto ref inout(Result!(T, E)) r)
 {
@@ -845,7 +740,7 @@ inout(Nullable!T) ok(T, E)(scope auto ref inout(Result!(T, E)) r)
 /// Params:
 ///     r = The [Result] to extract from
 ///
-/// Returns: A `Nullable!E` containing the [Err] value, or in the _null state if [Ok]
+/// Returns: A `Nullable!E` containing the [Err] value, or in the null state if `T`
 @CorrespondingTo("err")
 inout(Nullable!E) err(T, E)(scope auto ref inout(Result!(T, E)) r)
 {
@@ -884,13 +779,13 @@ inout(Nullable!E) err(T, E)(scope auto ref inout(Result!(T, E)) r)
     assert(err(iResultErr) == Nullable!string("Nothing here"));
 }
 
-/// Chains two [Result]s, returning the second if the first is [Ok].
+/// Chains two [Result]s, returning the second if the first has `T`.
 ///
 /// Params:
 ///     r1 = The first [Result] to check
-///     r2 = The [Result] to return if `r1` is [Ok]
+///     r2 = The [Result] to return if `r1` has `T`
 ///
-/// Returns: r2 if r1 is [Ok], otherwise a new [Result]`!(U, E)` with r1's [Err] value
+/// Returns: `r2` if `r1` has `T`, otherwise a new [Result]`!(U, E)` with `r1`'s [Err] value
 @CorrespondingTo("and")
 inout(Result!(U, E)) and(T, U, E)(scope auto ref inout(Result!(T, E)) r1,
         scope auto ref inout(Result!(U, E)) r2)
@@ -943,17 +838,17 @@ inout(Result!(U, E)) and(T, U, E)(scope auto ref inout(Result!(T, E)) r1,
     assert(and(x4, y4) == S.ok("different result type"));
 }
 
-/// Applies a function to the [Ok] value of a [Result], chaining [Result]s.
+/// Applies a function to the `T` value of a [Result], chaining [Result]s.
 ///
-/// If r is [Ok], calls `fun` with its value and returns the resulting [Result].
-/// If r is [Err], returns a new [Result] with the same [Err] value.
+/// If `r` has `T`, calls `fun` with its value and returns the resulting [Result].
+/// If `r` is [Err], returns a new [Result] with the same [Err] value.
 /// `fun` must return [Result] with the same type `E` for [Err].
 ///
 /// Params:
 ///     r = The [Result] to operate on
-///     fun = The function to apply to the [Ok] value
+///     fun = The function to apply to the `T` value
 ///
-/// Returns: The [Result] returned by `fun` if [Ok], otherwise a new [Result] with the original [Err]
+/// Returns: The [Result] returned by `fun` if `T`, otherwise a new [Result] with the original [Err]
 @CorrespondingTo("and_then")
 auto andThen(alias fun, T, E)(scope auto ref inout(Result!(T, E)) r)
         if (is(E == ErrValueTypeOf!(typeof(unaryFun!fun(inout(T).init)))))
@@ -1024,13 +919,13 @@ auto andThen(alias fun, T, E)(scope auto ref inout(Result!(T, E)) r)
     assert(andThen!toInt(resultErr) == S.err("bad value"));
 }
 
-/// Chains two [Result]s, returning the first if the first is [Ok].
+/// Chains two [Result]s, returning the first if the first has `T`.
 ///
 /// Params:
 ///     r1 = The first [Result] to check
 ///     r2 = The [Result] to return if `r1` is [Err]
 ///
-/// Returns: r2 if r1 is [Err], otherwise a new [Result]`!(T, F)` with r1's [Ok] value
+/// Returns: `r2` if `r1` is [Err], otherwise a new [Result]`!(T, F)` with `r1`'s `T` value
 @CorrespondingTo("or")
 inout(Result!(T, F)) or(T, E, F)(scope auto ref inout(Result!(T, E)) r1,
         scope auto ref inout(Result!(T, F)) r2)
@@ -1085,15 +980,15 @@ inout(Result!(T, F)) or(T, E, F)(scope auto ref inout(Result!(T, E)) r1,
 
 /// Applies a function to the [Err] value of a [Result], chaining [Result]s.
 ///
-/// If r is [Err], calls `fun` with its value and returns the resulting [Result].
-/// If r is [Ok], returns a new [Result] with the same [Ok] value.
-/// `fun` must return [Result] with the same type T for [Ok].
+/// If `r` is [Err], calls `fun` with its value and returns the resulting [Result].
+/// If `r` has `T`, returns a new [Result] with the same `T` value.
+/// `fun` must return [Result] with `T`.
 ///
 /// Params:
 ///     r = The [Result] to operate on
 ///     fun = The function to apply to the [Err] value
 ///
-/// Returns: The [Result] returned by `fun` if [Err], otherwise a new [Result] with the original [Ok]
+/// Returns: The [Result] returned by `fun` if [Err], otherwise a new [Result] with the original `T` value
 @CorrespondingTo("or_else")
 auto orElse(alias fun, T, E)(scope auto ref inout(Result!(T, E)) r)
         if (is(T == OkValueTypeOf!(typeof(unaryFun!fun(inout(E).init)))))
@@ -1148,14 +1043,14 @@ auto orElse(alias fun, T, E)(scope auto ref inout(Result!(T, E)) r)
     assert(orElse!isEmpty(resultErr2) == S.err(15));
 }
 
-/// Extracts the [Ok] value from a [Result].
+/// Extracts the `T` value from a [Result].
 ///
-/// The [Result] must contain an [Ok] value. Use [isOk] to check.
+/// The [Result] must contain a `T` value. Use [isOk] to check.
 ///
 /// Params:
-///     r = The [Result] to _unwrap
+///     r = The [Result] to unwrap
 ///
-/// Returns: The value contained in the [Ok]
+/// Returns: The `T` value
 @CorrespondingTo("unwrap")
 @CorrespondingTo("unwrap_unchecked")
 auto ref inout(T) unwrap(T, E)(scope return auto ref inout(Result!(T, E)) r)
@@ -1164,7 +1059,7 @@ auto ref inout(T) unwrap(T, E)(scope return auto ref inout(Result!(T, E)) r)
 
     import std.sumtype : get;
 
-    return r.sumType.get!(inout(Ok!T)).value;
+    return r.sumType.get!(inout(T));
 }
 
 ///
@@ -1250,7 +1145,7 @@ unittest
     assertThrown!AssertError(unwrapErr(resultOk));
 }
 
-/// Tries to extract the [Ok] value from a [Result], with a custom error message.
+/// Tries to extract the `T` value from a [Result], with a custom error message.
 ///
 /// If the [Result] is [Err], an [UnwrapException] is thrown with `msg`.
 /// If `msg` is not provided, the default message is used.
@@ -1259,7 +1154,7 @@ unittest
 ///     r = The [Result] to unwrap
 ///     msg = The message to include in the exception if [Result] is [Err]
 ///
-/// Returns: The value contained in the [Ok]
+/// Returns: The `T` value
 ///
 /// Throws: [UnwrapException] with message `msg` if the [Result] is [Err]
 @CorrespondingTo("expect")
@@ -1315,16 +1210,16 @@ auto ref inout(T) tryUnwrap(T, E)(scope return auto ref inout(Result!(T, E)) r, 
 
 /// Tries to extract the [Err] value from a [Result], with a custom error message.
 ///
-/// If the [Result] is [Ok], an [UnwrapException] is thrown with `msg`.
+/// If the [Result] has `T`, an [UnwrapException] is thrown with `msg`.
 /// If `msg` is not provided, the default message is used.
 ///
 /// Params:
 ///     r = The [Result] to unwrap
-///     msg = The message to include in the exception if [Result] is [Ok]
+///     msg = The message to include in the exception if [Result] has `T`
 ///
 /// Returns: The value contained in the [Err]
 ///
-/// Throws: [UnwrapException] with message `msg` if the [Result] is [Ok]
+/// Throws: [UnwrapException] with message `msg` if the [Result] has `T`
 @CorrespondingTo("expect_err")
 auto ref inout(E) tryUnwrapErr(T, E)(scope return auto ref inout(Result!(T, E)) r,
         lazy string msg = null)
@@ -1379,17 +1274,17 @@ auto ref inout(E) tryUnwrapErr(T, E)(scope return auto ref inout(Result!(T, E)) 
     assertThrown!UnwrapException(tryUnwrapErr(resultOk));
 }
 
-/// Extracts the [Ok] value from a [Result], with a default value for [Err].
+/// Extracts the `T` value from a [Result], with a default value for [Err].
 ///
-/// If the [Result] is [Ok], returns its value.
+/// If the [Result] has `T`, returns its value.
 /// If the [Result] is [Err], returns defaultValue.
-/// The Ok value and defaultValue must be able to be implicitly converted to some common type.
+/// The `T` value and defaultValue must be able to be implicitly converted to some common type.
 ///
 /// Params:
 ///     r = The [Result] to unwrap
 ///     defaultValue = The fallback value to be used if [Err]
 ///
-/// Returns: The [Ok] value or defaultValue if [Err]
+/// Returns: The `T` value or `defaultValue` if [Err]
 @CorrespondingTo("unwrap_or")
 @CorrespondingTo("unwrap_or_default")
 auto unwrapOr(T, U, E)(scope auto ref inout(Result!(T, E)) r, U defaultValue = inout(T).init)
@@ -1454,17 +1349,17 @@ auto unwrapOr(T, U, E)(scope auto ref inout(Result!(T, E)) r, U defaultValue = i
     assert(unwrapOr(resultErr) == "");
 }
 
-/// Extracts the [Ok] value from a [Result], computing a fallback from the [Err] value.
+/// Extracts the `T` value from a [Result], computing a fallback from the [Err] value.
 ///
-/// If the [Result] is [Ok], returns its value.
+/// If the [Result] has `T`, returns its value.
 /// If the [Result] is [Err], calls `fun` with the error value and returns the result.
-/// The return value of `fun` and the [Ok] value must be able to be implicitly converted to some common type.
+/// The return value of `fun` and the `T` value must be able to be implicitly converted to some common type.
 ///
 /// Params:
 ///     r = The [Result] to unwrap
 ///     fun = The function to apply to the [Err] value
 ///
-/// Returns: The [Ok] value or the result of calling `fun` with the [Err] value
+/// Returns: The `T` value or the result of calling `fun` with the [Err] value
 @CorrespondingTo("unwrap_or_else")
 auto unwrapOrElse(alias fun, T, E)(scope auto ref inout(Result!(T, E)) r)
         if (!is(void == CommonType!(inout(T), typeof(unaryFun!fun(inout(E).init)))))
@@ -1518,16 +1413,16 @@ auto unwrapOrElse(alias fun, T, E)(scope auto ref inout(Result!(T, E)) r)
     assert(unwrapOrElse!fFoo(resultErr) == "Foo is 123");
 }
 
-/// Transforms the [Ok] value of a [Result] using a function, keeping the [Err] unchanged.
+/// Transforms the `T` value of a [Result] using a function, keeping the [Err] unchanged.
 ///
-/// If the [Result] is [Ok], applies `fun` to the value and returns a new [Result] with the transformed value.
+/// If the [Result] has `T`, applies `fun` to the value and returns a new [Result] with the transformed value.
 /// If the [Result] is [Err], returns a new [Result] with the same [Err].
 ///
 /// Params:
 ///     r = The [Result] to transform
-///     fun = The function to apply to the [Ok] value
+///     fun = The function to apply to the `T` value
 ///
-/// Returns: A new [Result] with the transformed [Ok] value or the original [Err]
+/// Returns: A new [Result] with the transformed `T` value or the original [Err]
 @CorrespondingTo("map")
 auto map(alias fun = "a", T, E)(scope auto ref inout(Result!(T, E)) r)
         if (!is(void == typeof(unaryFun!fun(inout(T).init))))
@@ -1607,16 +1502,16 @@ auto map(alias fun = "a", T, E)(scope auto ref inout(Result!(T, E)) r)
     assert(map(iResultErr) == R.err("bad"));
 }
 
-/// Transforms the [Err] value of a [Result] using a function, keeping the [Ok] unchanged.
+/// Transforms the [Err] value of a [Result] using a function, keeping the `T` value unchanged.
 ///
 /// If the [Result] is [Err], applies `fun` to the value and returns a new [Result] with the transformed error.
-/// If the [Result] is [Ok], returns a new [Result] with the same [Ok].
+/// If the [Result] has `T`, returns a new [Result] with the same `T` value.
 ///
 /// Params:
 ///     r = The [Result] to transform
 ///     fun = The function to apply to the [Err] value
 ///
-/// Returns: A new [Result] with the original [Ok] or the transformed [Err]
+/// Returns: A new [Result] with the original `T` value or the transformed [Err]
 @CorrespondingTo("map_err")
 auto mapErr(alias fun = "a", T, E)(scope auto ref inout(Result!(T, E)) r)
         if (!is(void == typeof(unaryFun!fun(inout(E).init))))
@@ -1678,7 +1573,7 @@ auto mapErr(alias fun = "a", T, E)(scope auto ref inout(Result!(T, E)) r)
     assert(mapErr(iResultErr) == R.err("bad"));
 }
 
-unittest
+@safe unittest
 {
     alias R = Result!(int*, int);
 
@@ -1708,18 +1603,18 @@ unittest
     assert(mapErr(iResultErr) == R.err(9));
 }
 
-/// Applies a function to [Ok], or returns a default value for [Err].
+/// Applies a function to the `T` value, or returns a default value for [Err].
 ///
-/// If the [Result] is [Ok], applies `fun` to the value and returns the result.
+/// If the [Result] has `T`, applies `fun` to the value and returns the result.
 /// If the [Result] is [Err], returns the default value.
-/// The return value of `fun` and defaultValue must be able to be implicitly converted to some common type.
+/// The return value of `fun` and `defaultValue` must be able to be implicitly converted to some common type.
 ///
 /// Params:
 ///     r = The [Result] to transform
-///     fun = The function to apply to the [Ok] value,
+///     fun = The function to apply to the `T` value,
 ///     defaultValue = The default value to return if [Err]
 ///
-/// Returns: The result of applying `fun` to the [Ok], or the default value
+/// Returns: The result of applying `fun` to the `T` value, or `defaultValue`
 @CorrespondingTo("map_or")
 @CorrespondingTo("map_or_default")
 auto mapOr(alias fun, T, U, E)(scope auto ref inout(Result!(T, E)) r,
@@ -1786,18 +1681,18 @@ auto mapOr(alias fun, T, U, E)(scope auto ref inout(Result!(T, E)) r,
     assert(mapOr!"a%5"(iResultErr) == 0);
 }
 
-/// Applies fallback and transform functions to [Err] and [Ok] values respectively.
+/// Applies fallback and transform functions to [Err] and `T` values respectively.
 ///
-/// If the [Result] is [Ok], applies `fun` to the value and returns the result.
+/// If the [Result] has `T`, applies `fun` to the value and returns the result.
 /// If the [Result] is [Err], applies `defaultFun` to the error and returns the result.
 /// The return values of `defaultFun` and `fun` must be able to be implicitly converted to some common type.
 ///
 /// Params:
 ///     r = The [Result] to transform
 ///     defaultFun = The function to apply to the [Err] value
-///     fun = The function to apply to the [Ok] value
+///     fun = The function to apply to the `T` value
 ///
-/// Returns: The result of applying the appropriate function based on [Ok] or [Err]
+/// Returns: The result of applying the appropriate function based on `T` or [Err]
 @CorrespondingTo("map_or_else")
 auto mapOrElse(alias defaultFun, alias fun, T, E)(scope auto ref inout(Result!(T, E)) r)
         if (!is(void == CommonType!(typeof(unaryFun!defaultFun(inout(E)
@@ -1852,14 +1747,14 @@ auto mapOrElse(alias defaultFun, alias fun, T, E)(scope auto ref inout(Result!(T
     assert(mapOrElse!(getLength, isPos)(iResultErr) == 2);
 }
 
-/// Invokes a function with the [Ok] value of a [Result] without changing the result.
+/// Invokes a function with the `T` value of a [Result] without changing the result.
 ///
-/// If the [Result] contains an [Ok] value, `fun` is called with that value.
+/// If the [Result] contains a `T` value, `fun` is called with that value.
 /// The original [Result] is returned unchanged, which is useful for side effects during chaining.
 ///
 /// Params:
 ///     r = The [Result] to inspect
-///     fun = The function to apply to the [Ok] value
+///     fun = The function to apply to the `T` value
 ///
 /// Returns: The original [Result]
 @CorrespondingTo("inspect")
@@ -1954,8 +1849,8 @@ auto ref inout(Result!(T, E)) inspectErr(alias fun, T, E)(scope auto ref inout(R
 
 /// Converts a [Result] containing a nullable success value into a nullable [Result].
 ///
-/// If the input is [Ok]`!(Nullable!T)`, returns a nullable [Result]`!(T, E)` containing
-/// an [Ok]`!T` with the same value when it is non-null, or the null state otherwise.
+/// If the input is `Nullable!T`, returns a nullable [Result]`!(T, E)` containing
+/// the same `T` value when it is non-null, or the null state otherwise.
 /// If the input is [Err], returns a nullable [Result] containing that error.
 ///
 /// Params:
