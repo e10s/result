@@ -415,6 +415,179 @@ struct Result(T, E)
     assert(result2.get!Exception == k1);
 }
 
+/// A type that represents either the successful state or an error `E`.
+///
+/// This struct wraps a `std.typecons.Nullable` to provide `Result` type semantics similar to Rust's `Result`
+/// or C++'s `std::expected`.
+/// It is designed to work together with additional helper functions to handle success and error cases.
+///
+/// The struct aliases to its internal `Nullable` payload, which enables transparent access to `Nullable` operations.
+///
+/// Params:
+///     T = `void` or type-quialified `void`
+///     E = The type of the error value
+struct Result(T : void, E) if (!is(T : Err!(E), E) && !is(void == Unqual!E))
+{
+
+    ///
+    Nullable!E nullablePayload;
+
+    alias nullablePayload this;
+
+    // The constructor accepts `E` values.
+    private this(inout(E) error) inout
+    {
+        nullablePayload = error;
+    }
+    // Ditto
+    private this(ref inout(E) error) inout
+    {
+        nullablePayload = error;
+    }
+
+    /// Creates a [Result]`!(T, E)` with the successful state.
+    ///
+    /// Returns: A new [Result]`!(T, E)` containing the successful state
+    static Result!(T, E) ok()
+    {
+        return Result!(T, E)();
+    }
+
+    /// Creates a [Result]`!(T, E)` with an _error `E` value.
+    ///
+    /// Params:
+    ///     error = The _error value to wrap
+    ///
+    /// Returns: A new [Result]`!(T, E)` containing the `E` value
+    static auto err(inout(E) error)
+    {
+        static if (is(inout(E) == E))
+        {
+            alias R = Result!(T, E);
+        }
+        else
+        {
+            alias R = inout(Result!(T, E));
+        }
+        return R(error);
+    }
+}
+
+// Factory method
+@safe @nogc nothrow unittest
+{
+    alias R = Result!(void, string);
+
+    auto resultOk = R.ok();
+    assert(resultOk.isNull);
+
+    const cResultOk = R.ok();
+    assert(cResultOk.isNull);
+
+    immutable iResultOk = R.ok();
+    assert(iResultOk.isNull);
+
+    auto resultErr = R.err("123");
+    assert(resultErr.get == "123");
+
+    const cResultErr = R.err("123");
+    assert(cResultErr.get == "123");
+
+    immutable iResultErr = R.err("123");
+    assert(iResultErr.get == "123");
+}
+// Ditto
+@safe nothrow unittest
+{
+    struct S
+    {
+    }
+
+    alias R = Result!(void, S*);
+
+    auto resultOk = R.ok();
+    assert(resultOk.isNull);
+
+    const cResultOk = R.ok();
+    assert(cResultOk.isNull);
+
+    immutable iResultOk = R.ok();
+    assert(iResultOk.isNull);
+
+    auto resultErr = R.err(new S);
+    assert(is(typeof(resultErr.get()) == S*));
+
+    const cResultErr = R.err(new S);
+    assert(is(typeof(cResultErr.get()) == const(S*)));
+
+    immutable iResultErr = R.err(new S);
+    assert(is(typeof(iResultErr.get()) == immutable(S*)));
+}
+
+// Ditto
+@safe nothrow unittest
+{
+    struct S
+    {
+    }
+
+    alias T = const(void);
+    alias E = immutable(S*);
+    alias R = Result!(T, E);
+
+    auto resultErr = R.err(new S);
+    assert(is(typeof(resultErr.get()) == E));
+
+    auto cResultErr = R.err(new const(S));
+    assert(is(typeof(cResultErr.get()) == E));
+
+    auto iResultErr = R.err(new immutable(S));
+    assert(is(typeof(iResultErr.get()) == E));
+}
+
+// Assignment
+@trusted @nogc nothrow unittest
+{
+    alias R = Result!(void, string);
+
+    auto result1 = R.err("333");
+    auto result2 = R.err("3");
+
+    result2 = result1;
+    assert(result2.get == "333");
+
+    const result3 = R.ok();
+    result2 = result3;
+    assert(result2.isNull);
+
+    immutable result4 = R.err("1000");
+    result2 = result4;
+    assert(result2.get == "1000");
+}
+
+// Ditto
+@trusted unittest
+{
+    struct S
+    {
+    }
+
+    alias R = Result!(void, S*);
+
+    auto s1 = new S;
+    auto s2 = new S;
+    auto result1 = R.err(s1);
+    auto result2 = R.err(s2);
+
+    result2 = result1;
+    assert(result2.get  == s1);
+
+    auto result3 = R.ok();
+
+    result2 = result3;
+    assert(result2.isNull);
+}
+
 /* Convenience templates begin */
 private enum bool isResult(R) = is(R : Result!(T, E), T, E);
 
