@@ -133,7 +133,7 @@ import std.traits : CommonType, Unqual;
 
 /// Wrapper struct representing an error result with a value of type `E`.
 /// Serves as the error variant in a [Result] type.
-struct Err(E) if (!is(void == E))
+struct Err(E) if (!is(void == Unqual!E))
 {
     ///
     E error;
@@ -222,7 +222,8 @@ class UnwrapException : Exception
 /// Params:
 ///     T = The type of the successful value
 ///     E = The type of the error value
-struct Result(T, E) if (!is(void == T) && !is(T : Err!(E), E) && !is(void == E))
+struct Result(T, E)
+        if (!is(void == Unqual!T) && !is(T : Err!(E), E) && !is(void == Unqual!E))
 {
     import std.sumtype : SumType;
 
