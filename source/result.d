@@ -580,7 +580,7 @@ struct Result(T : void, E) if (!is(T : Err!(E), E) && !is(void == Unqual!E))
     auto result2 = R.err(s2);
 
     result2 = result1;
-    assert(result2.get  == s1);
+    assert(result2.get == s1);
 
     auto result3 = R.ok();
 
@@ -601,10 +601,25 @@ unittest
     assert(isResult!(inout(R)));
 }
 
-private template OkValueTypeOf(R) if (isResult!R)
+private enum bool isResultVoidT(R) = is(R : Result!(T, E), T:
+            void, E);
+unittest
 {
-    alias OkValueTypeOf = typeof(R.sumType).Types[0];
+    alias R = Result!(int, string);
+    assert(!isResultVoidT!R);
+    assert(!isResultVoidT!(const(R)));
+    assert(!isResultVoidT!(immutable(R)));
+    assert(!isResultVoidT!(shared(R)));
+    assert(!isResultVoidT!(inout(R)));
+
+    assert(isResultVoidT!(Result!(void, string)));
+    assert(isResultVoidT!(Result!(const(void), string)));
+    assert(isResultVoidT!(Result!(immutable(void), string)));
+    assert(isResultVoidT!(Result!(shared(void), string)));
+    assert(isResultVoidT!(Result!(inout(void), string)));
 }
+
+private alias OkValueTypeOf(R : Result!(T, E), T, E) = T;
 
 unittest
 {
@@ -615,7 +630,17 @@ unittest
     assert(is(OkValueTypeOf!(inout(R)) == int));
 }
 
-private template ErrTypeOf(R) if (isResult!R)
+unittest
+{
+    alias R = Result!(const(void), string);
+
+    assert(is(OkValueTypeOf!R == const(void)));
+    assert(is(OkValueTypeOf!(const(R)) == const(void)));
+    assert(is(OkValueTypeOf!(immutable(R)) == const(void)));
+    assert(is(OkValueTypeOf!(inout(R)) == const(void)));
+}
+
+private template ErrTypeOf(R) if (isResult!R && !isResultVoidT!R)
 {
     alias ErrTypeOf = typeof(R.sumType).Types[1];
 }
@@ -629,7 +654,7 @@ unittest
     assert(is(ErrTypeOf!(inout(R)) == Err!string));
 }
 
-private template QualifiedErrTypeOf(R) if (isResult!R)
+private template QualifiedErrTypeOf(R) if (isResult!R && !isResultVoidT!R)
 {
     import std.traits : CopyTypeQualifiers;
 
@@ -645,12 +670,7 @@ unittest
     assert(is(QualifiedErrTypeOf!(inout(R)) == inout(Err!string)));
 }
 
-private template ErrValueTypeOf(R) if (isResult!R)
-{
-    import std.traits : TemplateArgsOf;
-
-    alias ErrValueTypeOf = TemplateArgsOf!(ErrTypeOf!R)[0];
-}
+private alias ErrValueTypeOf(R : Result!(T, E), T, E) = E;
 
 unittest
 {
