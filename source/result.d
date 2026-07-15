@@ -776,7 +776,7 @@ bool isOk(T, E)(scope auto ref inout(Result!(T, E)) r)
 /// Returns: `true` if `r` has a `T` value and it satisfies `pred`, `false` otherwise
 @CorrespondingTo("is_ok_and")
 bool isOkAnd(alias pred = "a", T, E)(scope auto ref inout(Result!(T, E)) r)
-        if (!is(void == typeof(unaryFun!pred(inout(T).init))))
+        if (!is(T : void) && !is(void == typeof(unaryFun!pred(inout(T).init))))
 {
     return isOk(r) && !!unaryFun!pred(unwrap(r));
 }
