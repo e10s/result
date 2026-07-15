@@ -1,13 +1,10 @@
 /**
- * This module provides `Result!(T, E)`, which imitates Rust's `Result<T, E>`
- * type for returning, carrying and composing errors.
+ * This module provides `Result!(T, E)`, which imitates Rust's `Result<T, E>` type
+ * and C++'s `expected<T, E>` type for returning, carrying and composing errors.
  *
  * `Result` represents the outcome of potentially unsuccessful computation
- * and contains either `T` for success or `Err!E` for failure.
+ * and contains either `T` for success or `E` for failure.
  * Each one is used to signify both the status and the value.
- *
- * In addition, because `Result` has an aspect as a wrapper for `SumType`,
- * effective error handling is possible through pattern matching.
  */
 module result;
 
@@ -212,7 +209,7 @@ class UnwrapException : Exception
     }
 }
 
-/// A type that represents either a successful value `T` or an error [Err]`!E`.
+/// A type that represents either a successful value `T` or an error `E`.
 ///
 /// This struct wraps a `std.sumtype.SumType` to provide `Result` type semantics similar to Rust's `Result`.
 /// It is designed to work together with additional helper functions to handle success and error cases.
@@ -740,7 +737,7 @@ bool isOk(T, E)(scope auto ref inout(Result!(T, E)) r)
 ///     r = The [Result] to check
 ///     pred = The predicate to apply to the `T` value
 ///
-/// Returns: `true` if `r` is `T` and its value satisfies `pred`, `false` otherwise
+/// Returns: `true` if `r` has a `T` value and it satisfies `pred`, `false` otherwise
 @CorrespondingTo("is_ok_and")
 bool isOkAnd(alias pred = "a", T, E)(scope auto ref inout(Result!(T, E)) r)
         if (!is(void == typeof(unaryFun!pred(inout(T).init))))
@@ -791,7 +788,7 @@ bool isOkAnd(alias pred = "a", T, E)(scope auto ref inout(Result!(T, E)) r)
     assert(!isOkAnd!isOdd(iResultErr));
 }
 
-/// Checks if a [Result] contains an [Err] value.
+/// Checks if a [Result] contains an error.
 /// Equivalent to `!`[isOk]`(r)`.
 @CorrespondingTo("is_err")
 alias isErr = not!isOk;
@@ -828,13 +825,13 @@ alias isErr = not!isOk;
     assert(!isErr(iResultOk));
 }
 
-/// Checks if a [Result] contains an [Err] value satisfying a predicate.
+/// Checks if a [Result] contains an error satisfying a predicate.
 ///
 /// Params:
 ///     r = The [Result] to check
-///     pred = The predicate to apply to the [Err] value
+///     pred = The predicate to apply to the `E` value
 ///
-/// Returns: `true` if `r` is [Err] and its value satisfies `pred`, `false` otherwise
+/// Returns: `true` if `r` has an error and it satisfies `pred`, `false` otherwise
 @CorrespondingTo("is_err_and")
 bool isErrAnd(alias pred = "a", T, E)(scope auto ref inout(Result!(T, E)) r)
         if (!is(void == typeof(unaryFun!pred(inout(E).init))))
@@ -1543,17 +1540,17 @@ auto unwrapOr(T, U, E)(scope auto ref inout(Result!(T, E)) r, U defaultValue = i
     assert(unwrapOr(resultErr) == "");
 }
 
-/// Extracts the `T` value from a [Result], computing a fallback from the [Err] value.
+/// Extracts the `T` value from a [Result], computing a fallback from the `E` value.
 ///
-/// If the [Result] has `T`, returns its value.
-/// If the [Result] is [Err], calls `fun` with the error value and returns the result.
+/// If the [Result] has a `T`, returns the value.
+/// If the [Result] has an `E`, calls `fun` with the value and returns the result.
 /// The return value of `fun` and the `T` value must be able to be implicitly converted to some common type.
 ///
 /// Params:
 ///     r = The [Result] to unwrap
-///     fun = The function to apply to the [Err] value
+///     fun = The function to apply to the `E` value
 ///
-/// Returns: The `T` value or the result of calling `fun` with the [Err] value
+/// Returns: The contained `T` value or the result of calling `fun` with the `E` value
 @CorrespondingTo("unwrap_or_else")
 auto unwrapOrElse(alias fun, T, E)(scope auto ref inout(Result!(T, E)) r)
         if (!is(void == CommonType!(inout(T), typeof(unaryFun!fun(inout(E).init)))))
@@ -1875,18 +1872,18 @@ auto mapOr(alias fun, T, U, E)(scope auto ref inout(Result!(T, E)) r,
     assert(mapOr!"a%5"(iResultErr) == 0);
 }
 
-/// Applies fallback and transform functions to [Err] and `T` values respectively.
+/// Applies fallback and transform functions to `E` and `T` values respectively.
 ///
-/// If the [Result] has `T`, applies `fun` to the value and returns the result.
-/// If the [Result] is [Err], applies `defaultFun` to the error and returns the result.
+/// If the [Result] has a `T`, applies `fun` to the value and returns the result.
+/// If the [Result] has an `E`, applies `defaultFun` to the value and returns the result.
 /// The return values of `defaultFun` and `fun` must be able to be implicitly converted to some common type.
 ///
 /// Params:
 ///     r = The [Result] to transform
-///     defaultFun = The function to apply to the [Err] value
+///     defaultFun = The function to apply to the `E` value
 ///     fun = The function to apply to the `T` value
 ///
-/// Returns: The result of applying the appropriate function based on `T` or [Err]
+/// Returns: The result of applying the appropriate function based on `T` or `E`
 @CorrespondingTo("map_or_else")
 auto mapOrElse(alias defaultFun, alias fun, T, E)(scope auto ref inout(Result!(T, E)) r)
         if (!is(void == CommonType!(typeof(unaryFun!defaultFun(inout(E)
@@ -1992,14 +1989,14 @@ auto ref inout(Result!(T, E)) inspect(alias fun, T, E)(scope auto ref inout(Resu
     assert(writer[] == "original: 4");
 }
 
-/// Invokes a function with the [Err] value of a [Result] without changing the result.
+/// Invokes a function with the `E` value of a [Result] without changing the result.
 ///
-/// If the [Result] contains an [Err] value, `fun` is called with that value.
-/// The original [Result] is returned unchanged, which is useful for side effects during chaining.
+/// If the [Result] contains an `E` value, `fun` is called with the value.
+/// The original [Result] is returned unchanged, which is useful for peeking the value during chaining.
 ///
 /// Params:
 ///     r = The [Result] to inspect
-///     fun = The function to apply to the [Err] value
+///     fun = The function to apply to the `E` value
 ///
 /// Returns: The original [Result]
 @CorrespondingTo("inspect_err")
@@ -2041,16 +2038,16 @@ auto ref inout(Result!(T, E)) inspectErr(alias fun, T, E)(scope auto ref inout(R
     assert(isOk(r) || writer[].length > 0);
 }
 
-/// Converts a [Result] containing a nullable success value into a nullable [Result].
+/// Converts a [Result] that can hold a nullable `T` value into a nullable [Result].
 ///
-/// If the input is `Nullable!T`, returns a nullable [Result]`!(T, E)` containing
+/// If the [Result] has a `Nullable!T`, returns a nullable [Result]`!(T, E)` containing
 /// the same `T` value when it is non-null, or the null state otherwise.
-/// If the input is [Err], returns a nullable [Result] containing that error.
+/// If the [Result] has an `E`, returns a nullable [Result] containing the value.
 ///
 /// Params:
-///     r = The [Result] holding either `Nullable!T` success or an error.
+///     r = The [Result] containing either a `Nullable!T` or an `E`.
 ///
-/// Returns: A `Nullable!Result!(T, E)` with the inner success value promoted out of the nullable.
+/// Returns: A `Nullable!Result!(T, E)` with the `T` value obtained from the `Nullable!T` or the `E` value.
 @CorrespondingTo("transpose")
 inout(Nullable!(Result!(T, E))) transpose(T, E)(scope auto ref inout(Result!(Nullable!T, E)) r)
 {
@@ -2126,11 +2123,13 @@ unittest
 /// Flattens a nested [Result] by one level.
 ///
 /// Converts [Result]`!(Result!(T, E), E)` into [Result]`!(T, E)`.
+/// If the outer [Result] has an inner [Result]`!(T, E)`, returns it.
+/// If the outer [Result] has an `E`, returns a new [Result]`!(T, E)` with the value.
 ///
 /// Params:
 ///     r = The nested [Result] to flatten
 ///
-/// Returns: A flattened [Result] with the inner value or the error
+/// Returns: A flattened [Result] with the inner [Result] or the `E` value
 @CorrespondingTo("flatten")
 inout(Result!(T, E)) flatten(T, E)(scope auto ref inout(Result!(Result!(T, E), E)) r)
 {
