@@ -923,9 +923,9 @@ bool isErrAnd(alias pred = "a", T, E)(scope auto ref inout(Result!(T, E)) r)
 /// Params:
 ///     r = The [Result] to extract from
 ///
-/// Returns: A `Nullable!T` containing the `T` value, or in the null state if [Err]
+/// Returns: A `Nullable!T` containing the `T` value, or in the null state if an `E`
 @CorrespondingTo("ok")
-inout(Nullable!T) ok(T, E)(scope auto ref inout(Result!(T, E)) r)
+inout(Nullable!T) ok(T, E)(scope auto ref inout(Result!(T, E)) r) if (!is(T : void))
 {
     alias N = typeof(return);
     return isErr(r) ? N.init : N(unwrap(r));
