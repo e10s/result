@@ -688,18 +688,25 @@ struct CorrespondingTo
 }
 /* For UDA end */
 
-/// Checks if a [Result] contains a `T` value.
+/// Checks if a [Result] contains a successful state.
 ///
 /// Params:
 ///     r = The [Result] to check
 ///
-/// Returns: `true` if `r` contains a `T` value, `false` otherwise
+/// Returns: `true` if `r` contains a successful state, `false` otherwise
 @CorrespondingTo("is_ok")
 bool isOk(T, E)(scope auto ref inout(Result!(T, E)) r)
 {
-    import std.sumtype : has;
+    static if (is(T : void))
+    {
+        return r.nullablePayload.isNull;
+    }
+    else
+    {
+        import std.sumtype : has;
 
-    return r.sumType.has!(inout(T));
+        return r.sumType.has!(inout(T));
+    }
 }
 
 ///
@@ -714,6 +721,18 @@ bool isOk(T, E)(scope auto ref inout(Result!(T, E)) r)
     assert(!isOk(resultErr));
 }
 
+///
+@safe @nogc nothrow unittest
+{
+    alias R = Result!(void, string);
+
+    auto resultOk = R.ok();
+    assert(isOk(resultOk));
+
+    auto resultErr = R.err("Some error message");
+    assert(!isOk(resultErr));
+}
+
 @safe @nogc nothrow unittest
 {
     alias R = Result!(int, string);
@@ -722,6 +741,23 @@ bool isOk(T, E)(scope auto ref inout(Result!(T, E)) r)
     assert(isOk(cResultOk));
 
     immutable iResultOk = R.ok(123);
+    assert(isOk(iResultOk));
+
+    const cResultErr = R.err("123");
+    assert(!isOk(cResultErr));
+
+    immutable iResultErr = R.err("123");
+    assert(!isOk(iResultErr));
+}
+
+@safe @nogc nothrow unittest
+{
+    alias R = Result!(immutable(void), string);
+
+    const cResultOk = R.ok();
+    assert(isOk(cResultOk));
+
+    immutable iResultOk = R.ok();
     assert(isOk(iResultOk));
 
     const cResultErr = R.err("123");
