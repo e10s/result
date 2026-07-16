@@ -98,7 +98,7 @@ unittest
         // -> SumType!(string, Err!string), containing Err!string
         parsePositiveInt("0").andThen!(value => divide(value, 3))
             .map!(d => format!"%.2f"(d))
-            .sumType // Explicit conversion to SumType
+            .payload // Explicit conversion to SumType
             .match!((string okValue) => writeln("Success: ", okValue),
                     (Err!string errObj) => stderr.writeln("Failure: ", errObj.error));
     }
@@ -211,72 +211,164 @@ class UnwrapException : Exception
 
 /// A type that represents either a successful value `T` or an error `E`.
 ///
-/// This struct wraps a `std.sumtype.SumType` to provide `Result` type semantics similar to Rust's `Result`.
+/// This struct wraps a `std.sumtype.SumType` or a `std.typecons.Nullable`, for non-`void` and `void` `T`, respectively,
+/// to provide `Result` type similar to Rust's `Result` or C++'s `expected`.
 /// It is designed to work together with additional helper functions to handle success and error cases.
 ///
-/// The struct aliases to its internal `SumType` payload, which enables transparent access to `SumType` operations.
+/// The struct provides transparent access to more primitive operations by using `alias` to its internal
+/// `SumType` or `Nullable` `payload`.
 ///
 /// Params:
-///     T = The type of the successful value
+///     T = The type of the successful value, or `void` for just representing the successful state
 ///     E = The type of the error value
-struct Result(T, E)
-        if (!is(void == Unqual!T) && !is(T : Err!(E), E) && !is(void == Unqual!E))
+/// See_Also:
+///     [std.sumtype](https://dlang.org/phobos/std_sumtype.html)
+///     [std.typecons.Nullable](https://dlang.org/phobos/std_typecons.html#Nullable)
+struct Result(T, E) if (!is(T : Err!(E), E) && !is(E : void))
 {
-    import std.sumtype : SumType;
-
-    ///
-    SumType!(T, Err!E) sumType;
-
-    alias sumType this;
-
-    // The constructor accepts `T` and `Err!E` values.
-    private this(SumTypePayload)(auto ref inout(SumTypePayload) value) inout
-            if (is(SumTypePayload == T) || is(SumTypePayload == Err!E))
+    static if (is(T : void))
     {
-        sumType = value;
+        /// The payload to switch states and contain values.
+        Nullable!E payload;
+
+        // The constructor accepts `E` values.
+        private this(inout(E) error) inout
+        {
+            payload = error;
+        }
+        // Ditto
+        private this(ref inout(E) error) inout
+        {
+            payload = error;
+        }
+
+        /// Creates a [Result]`!(T, E)` with the successful state.
+        ///
+        /// Returns: A new [Result]`!(T, E)` containing the successful state
+        static Result!(T, E) ok()
+        {
+            return Result!(T, E)();
+        }
+
+        version (D_Ddoc)
+        {
+            ///
+            unittest
+            {
+                auto r = Result!(void, string).ok();
+                assert(is(typeof(r) == Result!(void, string)));
+            }
+        }
+    }
+    else
+    {
+        import std.sumtype : SumType;
+
+        /// The payload to switch states and contain values.
+        SumType!(T, Err!E) payload;
+
+        // The constructor accepts `T` and `Err!E` values.
+        private this(SumTypePayload)(auto ref inout(SumTypePayload) value) inout
+                if (is(SumTypePayload == T) || is(SumTypePayload == Err!E))
+        {
+            payload = value;
+        }
+
+        /// Creates a [Result]`!(T, E)` with a successful `T` _value.
+        ///
+        /// Params:
+        ///     value = The success _value to wrap
+        ///
+        /// Returns: A new [Result]`!(T, E)` containing the `T` _value
+        static auto ok(inout(T) value)
+        {
+            static if (is(inout(T) == T))
+            {
+                alias R = Result!(T, E);
+            }
+            else
+            {
+                alias R = inout(Result!(T, E));
+            }
+            return R(value);
+        }
+
+        version (D_Ddoc)
+        {
+            ///
+            unittest
+            {
+                auto r = Result!(int, string).ok(100);
+                assert(is(typeof(r) == Result!(int, string)));
+
+                auto immutableR = Result!(int, string).ok(immutable(int)(200));
+                auto constR = Result!(int, string).ok(const(int)(300));
+
+                // The obtained Results are automatically qualified according to the arguments
+                assert(is(typeof(immutableR) == immutable(Result!(int, string))));
+                assert(is(typeof(constR) == const(Result!(int, string))));
+            }
+        }
     }
 
-    /// Creates a [Result]`!(T, E)` with a successful `T` _value.
-    ///
-    /// Params:
-    ///     value = The success _value to wrap
-    ///
-    /// Returns: A new [Result]`!(T, E)` containing the `T` _value
-    static auto ok(inout(T) value)
-    {
-        static if (is(inout(T) == T))
-        {
-            alias R = Result!(T, E);
-        }
-        else
-        {
-            alias R = inout(Result!(T, E));
-        }
-        return R(value);
-    }
+    alias payload this;
 
-    /// Creates a [Result]`!(T, E)` with an error [Err]`!E` _value.
+    /// Creates a [Result]`!(T, E)` with an _error `E` value.
     ///
     /// Params:
-    ///     value = The error _value to wrap
+    ///     error = The _error value to wrap
     ///
-    /// Returns: A new [Result]`!(T, E)` containing the [Err]`!E` _value
-    static auto err(inout(E) value)
+    /// Returns: A new [Result]`!(T, E)` containing the `E` value
+    static auto err(inout(E) error)
     {
         static if (is(inout(E) == E))
         {
             alias R = Result!(T, E);
-            alias ErrE = Err!E;
         }
         else
         {
             alias R = inout(Result!(T, E));
-            alias ErrE = inout(Err!E);
         }
-        return R(ErrE(value));
+
+        static if (is(T : void))
+        {
+            return R(error);
+        }
+        else
+        {
+            static if (is(inout(E) == E))
+            {
+                alias ErrE = Err!E;
+            }
+            else
+            {
+                alias ErrE = inout(Err!E);
+            }
+            return R(ErrE(error));
+        }
+    }
+
+    version (D_Ddoc)
+    {
+        ///
+        unittest
+        {
+            auto r1 = Result!(int, string).err("BAD");
+            assert(is(typeof(r1) == Result!(int, string)));
+            auto r2 = Result!(void, string).err("BAD");
+            assert(is(typeof(r2) == Result!(void, string)));
+
+            auto immutableR = Result!(int, string).err(cast(immutable) "Immutable BAD");
+            auto constR = Result!(void, string).err(cast(const) "Const BAD");
+
+            // The obtained Results are automatically qualified according to the arguments
+            assert(is(typeof(immutableR) == immutable(Result!(int, string))));
+            assert(is(typeof(constR) == const(Result!(void, string))));
+        }
     }
 }
 
+/* Tests for non-void T begin */
 // Factory method
 @safe @nogc nothrow unittest
 {
@@ -411,65 +503,9 @@ struct Result(T, E)
     result2 = result3;
     assert(result2.get!Exception == k1);
 }
+/* Tests for non-void T end */
 
-/// A type that represents either the successful state or an error `E`.
-///
-/// This struct wraps a `std.typecons.Nullable` to provide `Result` type semantics similar to Rust's `Result`
-/// or C++'s `std::expected`.
-/// It is designed to work together with additional helper functions to handle success and error cases.
-///
-/// The struct aliases to its internal `Nullable` payload, which enables transparent access to `Nullable` operations.
-///
-/// Params:
-///     T = `void` or type-quialified `void`
-///     E = The type of the error value
-struct Result(T : void, E) if (!is(T : Err!(E), E) && !is(void == Unqual!E))
-{
-
-    ///
-    Nullable!E nullablePayload;
-
-    alias nullablePayload this;
-
-    // The constructor accepts `E` values.
-    private this(inout(E) error) inout
-    {
-        nullablePayload = error;
-    }
-    // Ditto
-    private this(ref inout(E) error) inout
-    {
-        nullablePayload = error;
-    }
-
-    /// Creates a [Result]`!(T, E)` with the successful state.
-    ///
-    /// Returns: A new [Result]`!(T, E)` containing the successful state
-    static Result!(T, E) ok()
-    {
-        return Result!(T, E)();
-    }
-
-    /// Creates a [Result]`!(T, E)` with an _error `E` value.
-    ///
-    /// Params:
-    ///     error = The _error value to wrap
-    ///
-    /// Returns: A new [Result]`!(T, E)` containing the `E` value
-    static auto err(inout(E) error)
-    {
-        static if (is(inout(E) == E))
-        {
-            alias R = Result!(T, E);
-        }
-        else
-        {
-            alias R = inout(Result!(T, E));
-        }
-        return R(error);
-    }
-}
-
+/* Tests for void T begin */
 // Factory method
 @safe @nogc nothrow unittest
 {
@@ -584,6 +620,7 @@ struct Result(T : void, E) if (!is(T : Err!(E), E) && !is(void == Unqual!E))
     result2 = result3;
     assert(result2.isNull);
 }
+/* Tests for void T end */
 
 /* Convenience templates begin */
 private enum bool isResult(R) = is(R : Result!(T, E), T, E);
@@ -639,7 +676,7 @@ unittest
 
 private template ErrTypeOf(R) if (isResult!R && !isResultVoidT!R)
 {
-    alias ErrTypeOf = typeof(R.sumType).Types[1];
+    alias ErrTypeOf = typeof(R.payload).Types[1];
 }
 
 unittest
@@ -699,13 +736,13 @@ bool isOk(T, E)(scope auto ref inout(Result!(T, E)) r)
 {
     static if (is(T : void))
     {
-        return r.nullablePayload.isNull;
+        return r.payload.isNull;
     }
     else
     {
         import std.sumtype : has;
 
-        return r.sumType.has!(inout(T));
+        return r.payload.has!(inout(T));
     }
 }
 
@@ -973,7 +1010,7 @@ inout(Nullable!E) err(T, E)(scope auto ref inout(Result!(T, E)) r)
 {
     static if (is(T : void))
     {
-        return r.nullablePayload;
+        return r.payload;
     }
     else
     {
@@ -1432,7 +1469,7 @@ auto ref inout(T) unwrap(T, E)(scope return auto ref inout(Result!(T, E)) r)
     {
         import std.sumtype : get;
 
-        return r.sumType.get!(inout(T));
+        return r.payload.get!(inout(T));
     }
 }
 
@@ -1499,13 +1536,13 @@ auto ref inout(E) unwrapErr(T, E)(scope return auto ref inout(Result!(T, E)) r)
 
     static if (is(T : void))
     {
-        return r.nullablePayload.get();
+        return r.payload.get();
     }
     else
     {
         import std.sumtype : get;
 
-        return r.sumType.get!(inout(Err!E)).error;
+        return r.payload.get!(inout(Err!E)).error;
     }
 }
 

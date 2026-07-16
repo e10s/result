@@ -86,7 +86,7 @@ void showCompositionExample()
     // -> SumType!(string, Err!string), containing Err!string
     parsePositiveInt("0").andThen!(value => divide(value, 3))
         .map!(d => format!"%.2f"(d))
-        .sumType // Explicit conversion to SumType
+        .payload // Explicit conversion to SumType
         .match!((string okValue) => writeln("Success: ", okValue),
                 (Err!string errObj) => stderr.writeln("Failure: ", errObj.error));
 }
