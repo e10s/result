@@ -1914,19 +1914,19 @@ auto unwrapOrElse(alias fun, T, E)(scope auto ref inout(Result!(T, E)) r)
     assert(unwrapOrElse!fFoo(resultErr) == "Foo is 123");
 }
 
-/// Transforms the `T` value of a [Result] using a function, keeping the [Err] unchanged.
+/// Transforms the `T` value of a [Result] using a function, keeping the `E` value unchanged.
 ///
-/// If the [Result] has `T`, applies `fun` to the value and returns a new [Result] with the transformed value.
-/// If the [Result] is [Err], returns a new [Result] with the same [Err].
+/// If the [Result] has a `T`, applies `fun` to the value and returns a new [Result] with the transformed value.
+/// If the [Result] has an `E`, returns a new [Result] with the same `E` value.
 ///
 /// Params:
 ///     r = The [Result] to transform
 ///     fun = The function to apply to the `T` value
 ///
-/// Returns: A new [Result] with the transformed `T` value or the original [Err]
+/// Returns: A new [Result] with the transformed value from `T`, or with the original `E` value
 @CorrespondingTo("map")
 auto map(alias fun = "a", T, E)(scope auto ref inout(Result!(T, E)) r)
-        if (!is(void == typeof(unaryFun!fun(inout(T).init))))
+        if (!is(T : void) && !is(void == typeof(unaryFun!fun(inout(T).init))))
 {
     alias U = Unqual!(typeof(unaryFun!fun(inout(T).init)));
     alias S = Result!(U, E);
