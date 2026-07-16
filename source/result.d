@@ -1006,13 +1006,13 @@ inout(Nullable!E) err(T, E)(scope auto ref inout(Result!(T, E)) r)
     assert(err(iResultErr) == Nullable!string("Nothing here"));
 }
 
-/// Chains two [Result]s, returning the second if the first has `T`.
+/// Chains two [Result]s, returning the second if the first has a successful state.
 ///
 /// Params:
 ///     r1 = The first [Result] to check
-///     r2 = The [Result] to return if `r1` has `T`
+///     r2 = The [Result] to return if `r1` has a successful state
 ///
-/// Returns: `r2` if `r1` has `T`, otherwise a new [Result]`!(U, E)` with `r1`'s [Err] value
+/// Returns: `r2` if `r1` has a successful state, otherwise a new [Result]`!(U, E)` with `r1`'s error value
 @CorrespondingTo("and")
 inout(Result!(U, E)) and(T, U, E)(scope auto ref inout(Result!(T, E)) r1,
         scope auto ref inout(Result!(U, E)) r2)
@@ -1043,17 +1043,40 @@ inout(Result!(U, E)) and(T, U, E)(scope auto ref inout(Result!(T, E)) r1,
     assert(and(x4, y4) == S.ok("different result type"));
 }
 
+///
+@safe @nogc nothrow unittest
+{
+    alias R = Result!(void, string);
+    alias S = Result!(string, string);
+
+    auto x1 = R.ok();
+    auto y1 = S.err("late error");
+    assert(and(x1, y1) == S.err("late error"));
+
+    auto x2 = R.err("early error");
+    auto y2 = S.ok("foo");
+    assert(and(x2, y2) == S.err("early error"));
+
+    auto x3 = R.err("not a 2");
+    auto y3 = S.err("late error");
+    assert(and(x3, y3) == S.err("not a 2"));
+
+    auto x4 = R.ok();
+    auto y4 = S.ok("different result type");
+    assert(and(x4, y4) == S.ok("different result type"));
+}
+
 @safe @nogc nothrow unittest
 {
     alias R = Result!(uint, string);
-    alias S = Result!(string, string);
+    alias S = Result!(const(void), string);
 
     immutable x1 = R.ok(2);
     auto y1 = S.err("late error");
     assert(and(x1, y1) == S.err("late error"));
 
     auto x2 = R.err("early error");
-    const y2 = S.ok("foo");
+    const y2 = S.ok();
     assert(and(x2, y2) == S.err("early error"));
 
     const x3 = R.err("not a 2");
@@ -1061,8 +1084,8 @@ inout(Result!(U, E)) and(T, U, E)(scope auto ref inout(Result!(T, E)) r1,
     assert(and(x3, y3) == S.err("not a 2"));
 
     immutable x4 = R.ok(2);
-    immutable y4 = S.ok("different result type");
-    assert(and(x4, y4) == S.ok("different result type"));
+    immutable y4 = S.ok();
+    assert(and(x4, y4) == S.ok());
 }
 
 /// Applies a function to the `T` value of a [Result], chaining [Result]s.
