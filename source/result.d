@@ -1634,20 +1634,21 @@ auto ref inout(E) tryUnwrapErr(T, E)(scope return auto ref inout(Result!(T, E)) 
     assertThrown!UnwrapException(tryUnwrapErr(resultOk));
 }
 
-/// Extracts the `T` value from a [Result], with a default value for [Err].
+/// Extracts the `T` value from a [Result], with a default value for an error.
 ///
-/// If the [Result] has `T`, returns its value.
-/// If the [Result] is [Err], returns defaultValue.
-/// The `T` value and defaultValue must be able to be implicitly converted to some common type.
+/// If the [Result] has a `T`, returns the value.
+/// If the [Result] has an `E`, returns the default value.
+/// The `T` value and the default value must be able to be implicitly converted to some common type.
 ///
 /// Params:
 ///     r = The [Result] to unwrap
-///     defaultValue = The fallback value to be used if [Err]
+///     defaultValue = The fallback value to be used if an error
 ///
-/// Returns: The `T` value or `defaultValue` if [Err]
+/// Returns: The contained `T` value, or `defaultValue` if `r` has an `E`
 @CorrespondingTo("unwrap_or")
 @CorrespondingTo("unwrap_or_default")
 auto unwrapOr(T, U, E)(scope auto ref inout(Result!(T, E)) r, U defaultValue = inout(T).init)
+        if (!is(T : void))
 {
     return isOk(r) ? unwrap(r) : defaultValue;
 }
