@@ -1531,18 +1531,18 @@ auto ref inout(T) tryUnwrap(T, E)(scope return auto ref inout(Result!(T, E)) r, 
     assertThrown!UnwrapException(tryUnwrap(resultErr));
 }
 
-/// Tries to extract the [Err] value from a [Result], with a custom error message.
+/// Tries to extract the `E` value from a [Result], with a custom error message.
 ///
-/// If the [Result] has `T`, an [UnwrapException] is thrown with `msg`.
+/// If the [Result] has a successful state, an [UnwrapException] is thrown with `msg`.
 /// If `msg` is not provided, the default message is used.
 ///
 /// Params:
 ///     r = The [Result] to unwrap
-///     msg = The message to include in the exception if [Result] has `T`
+///     msg = The message to include in the exception if [Result] has a successful state
 ///
-/// Returns: The value contained in the [Err]
+/// Returns: The contained `E` value
 ///
-/// Throws: [UnwrapException] with message `msg` if the [Result] has `T`
+/// Throws: [UnwrapException] with message `msg` if the `r` has a successful state
 @CorrespondingTo("expect_err")
 auto ref inout(E) tryUnwrapErr(T, E)(scope return auto ref inout(Result!(T, E)) r,
         lazy string msg = null)
@@ -1575,6 +1575,43 @@ auto ref inout(E) tryUnwrapErr(T, E)(scope return auto ref inout(Result!(T, E)) 
     auto resultErr = R.err("emergency failure");
     assert(assertNotThrown!UnwrapException(tryUnwrapErr(resultErr,
             "Testing tryUnwrapErr")) == "emergency failure");
+}
+
+///
+@safe unittest
+{
+    import std.exception : assertThrown, assertNotThrown, collectExceptionMsg;
+
+    alias R = Result!(void, string);
+
+    auto resultOk = R.ok();
+    assertThrown!UnwrapException(tryUnwrapErr(resultOk, "Testing tryUnwrapErr"));
+    assert(collectExceptionMsg(tryUnwrapErr(resultOk,
+            "Testing tryUnwrapErr")) == "Testing tryUnwrapErr");
+
+    auto resultErr = R.err("emergency failure");
+    assert(assertNotThrown!UnwrapException(tryUnwrapErr(resultErr,
+            "Testing tryUnwrapErr")) == "emergency failure");
+}
+
+@safe unittest
+{
+    import std.exception : assertThrown, assertNotThrown, collectExceptionMsg;
+
+    auto resultErr1 = Result!(immutable(void), string).err("123");
+    assert(assertNotThrown!UnwrapException(tryUnwrapErr(resultErr1, "bar")) == "123");
+    assert(assertNotThrown!UnwrapException(tryUnwrapErr(resultErr1)) == "123");
+
+    alias R = Result!(const(void), uint);
+
+    auto resultErr2 = R.err(123);
+    assert(assertNotThrown!UnwrapException(tryUnwrapErr(resultErr2, "bar")) == 123);
+    assert(assertNotThrown!UnwrapException(tryUnwrapErr(resultErr2)) == 123);
+
+    auto resultOk = R.ok();
+    assertThrown!UnwrapException(tryUnwrapErr(resultOk, "bar"));
+    assert(collectExceptionMsg(tryUnwrapErr(resultOk, "bar")) == "bar");
+    assertThrown!UnwrapException(tryUnwrapErr(resultOk));
 }
 
 @safe unittest
