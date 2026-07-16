@@ -133,7 +133,7 @@ import std.traits : CommonType, Unqual;
 
 /// Wrapper struct representing an error result with a value of type `E`.
 /// Serves as the error variant in a [Result] type.
-struct Err(E) if (!is(void == Unqual!E))
+struct Err(E) if (!is(E : void))
 {
     ///
     E error;
