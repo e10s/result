@@ -962,17 +962,24 @@ inout(Nullable!T) ok(T, E)(scope auto ref inout(Result!(T, E)) r) if (!is(T : vo
     assert(ok(iResultErr).isNull);
 }
 
-/// Extracts the [Err] value from a [Result] as a `Nullable!E`.
+/// Extracts the error value from a [Result] as a `Nullable!E`.
 ///
 /// Params:
 ///     r = The [Result] to extract from
 ///
-/// Returns: A `Nullable!E` containing the [Err] value, or in the null state if `T`
+/// Returns: A `Nullable!E` containing the `E` value, in the null state if a `T`
 @CorrespondingTo("err")
 inout(Nullable!E) err(T, E)(scope auto ref inout(Result!(T, E)) r)
 {
-    alias N = typeof(return);
-    return isOk(r) ? N.init : N(unwrapErr(r));
+    static if (is(T : void))
+    {
+        return r.nullablePayload;
+    }
+    else
+    {
+        alias N = typeof(return);
+        return isOk(r) ? N.init : N(unwrapErr(r));
+    }
 }
 
 ///
@@ -989,6 +996,20 @@ inout(Nullable!E) err(T, E)(scope auto ref inout(Result!(T, E)) r)
     assert(err(resultErr) == Nullable!string("Nothing here"));
 }
 
+///
+@safe nothrow unittest
+{
+    alias R = Result!(void, string);
+
+    import std.typecons : Nullable;
+
+    auto resultOk = R.ok();
+    assert(err(resultOk).isNull);
+
+    auto resultErr = R.err("Nothing here");
+    assert(err(resultErr) == Nullable!string("Nothing here"));
+}
+
 @safe nothrow unittest
 {
     alias R = Result!(uint, string);
@@ -997,6 +1018,23 @@ inout(Nullable!E) err(T, E)(scope auto ref inout(Result!(T, E)) r)
     assert(err(cResultOk).isNull);
 
     immutable iResultOk = R.ok(2);
+    assert(err(iResultOk).isNull);
+
+    const cResultErr = R.err("Nothing here");
+    assert(err(cResultErr) == Nullable!string("Nothing here"));
+
+    immutable iResultErr = R.err("Nothing here");
+    assert(err(iResultErr) == Nullable!string("Nothing here"));
+}
+
+@safe nothrow unittest
+{
+    alias R = Result!(immutable(void), string);
+
+    const cResultOk = R.ok();
+    assert(err(cResultOk).isNull);
+
+    immutable iResultOk = R.ok();
     assert(err(iResultOk).isNull);
 
     const cResultErr = R.err("Nothing here");
