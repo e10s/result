@@ -1146,18 +1146,24 @@ auto andThen(alias fun, T, E)(scope auto ref inout(Result!(T, E)) r)
     assert(andThen!toInt(resultErr) == S.err("bad value"));
 }
 
-/// Chains two [Result]s, returning the first if the first has `T`.
+/// Chains two [Result]s, returning the first if the first has a successful state.
 ///
 /// Params:
 ///     r1 = The first [Result] to check
-///     r2 = The [Result] to return if `r1` is [Err]
+///     r2 = The [Result] to return if `r1` has an `E` value
 ///
-/// Returns: `r2` if `r1` is [Err], otherwise a new [Result]`!(T, F)` with `r1`'s `T` value
+/// Returns: `r2` if `r1` has an error value, otherwise a new [Result]`!(T, F)` with `r1`'s `T` value
 @CorrespondingTo("or")
-inout(Result!(T, F)) or(T, E, F)(scope auto ref inout(Result!(T, E)) r1,
-        scope auto ref inout(Result!(T, F)) r2)
+auto or(T, E, F)(scope auto ref inout(Result!(T, E)) r1, scope auto ref inout(Result!(T, F)) r2)
 {
-    return isErr(r1) ? r2 : Result!(T, F).ok(unwrap(r1));
+    static if (is(T : void))
+    {
+        return isErr(r1) ? r2 : Result!(T, F).ok();
+    }
+    else
+    {
+        return isErr(r1) ? r2 : Result!(T, F).ok(unwrap(r1));
+    }
 }
 
 ///
@@ -1181,6 +1187,51 @@ inout(Result!(T, F)) or(T, E, F)(scope auto ref inout(Result!(T, E)) r1,
     auto x4 = R.ok(2);
     auto y4 = S.ok(100);
     assert(or(x4, y4) == S.ok(2));
+}
+
+///
+@safe @nogc nothrow unittest
+{
+    alias R = Result!(void, string);
+    alias S = Result!(void, dstring);
+
+    auto x1 = R.ok();
+    auto y1 = S.err("late error");
+    assert(or(x1, y1) == S.ok());
+
+    auto x2 = R.err("early error");
+    auto y2 = S.ok();
+    assert(or(x2, y2) == S.ok());
+
+    auto x3 = R.err("not a 2");
+    auto y3 = S.err("late error");
+    assert(or(x3, y3) == S.err("late error"));
+
+    auto x4 = R.ok();
+    auto y4 = S.ok();
+    assert(or(x4, y4) == S.ok());
+}
+
+@safe @nogc nothrow unittest
+{
+    alias R = Result!(const(void), string);
+    alias S = Result!(const(void), dstring);
+
+    auto x1 = R.ok();
+    const y1 = S.err("late error");
+    assert(or(x1, y1) == S.ok());
+
+    immutable x2 = R.err("early error");
+    const y2 = S.ok();
+    assert(or(x2, y2) == S.ok());
+
+    immutable x3 = R.err("not a 2");
+    immutable y3 = S.err("late error");
+    assert(or(x3, y3) == S.err("late error"));
+
+    const x4 = R.ok();
+    const y4 = S.ok();
+    assert(or(x4, y4) == S.ok());
 }
 
 @safe @nogc nothrow unittest
