@@ -1321,23 +1321,30 @@ unittest
     assertThrown!AssertError(unwrap(resultErr));
 }
 
-/// Extracts the [Err] value from a [Result].
+/// Extracts the `E` value from a [Result].
 ///
-/// The [Result] must contain an [Err] value. Use [isErr] to check.
+/// The [Result] must contain an `E` value. Use [isErr] to check.
 ///
 /// Params:
 ///     r = The [Result] to unwrap
 ///
-/// Returns: The value contained in the [Err]
+/// Returns: The contained `E` value
 @CorrespondingTo("unwrap_err")
 @CorrespondingTo("unwrap_err_unchecked")
 auto ref inout(E) unwrapErr(T, E)(scope return auto ref inout(Result!(T, E)) r)
 {
-    assert(isErr(r), "Result does not have an Err value.");
+    assert(isErr(r), "Result does not have an error value.");
 
-    import std.sumtype : get;
+    static if (is(T : void))
+    {
+        return r.nullablePayload.get();
+    }
+    else
+    {
+        import std.sumtype : get;
 
-    return r.sumType.get!(inout(Err!E)).error;
+        return r.sumType.get!(inout(Err!E)).error;
+    }
 }
 
 ///
@@ -1349,7 +1356,22 @@ unittest
     alias R = Result!(uint, string);
 
     auto resultOk = R.ok(2);
-    assertThrown!AssertError(unwrapErr(resultOk)); // Assert will fail, due to SumType
+    assertThrown!AssertError(unwrapErr(resultOk));
+
+    auto resultErr = R.err("emergency failure");
+    assert(unwrapErr(resultErr) == "emergency failure");
+}
+
+///
+unittest
+{
+    import std.exception : assertThrown;
+    import core.exception : AssertError;
+
+    alias R = Result!(void, string);
+
+    auto resultOk = R.ok();
+    assertThrown!AssertError(unwrapErr(resultOk));
 
     auto resultErr = R.err("emergency failure");
     assert(unwrapErr(resultErr) == "emergency failure");
@@ -1369,6 +1391,23 @@ unittest
     assert(assertNotThrown!AssertError(unwrapErr(resultErr2)) == 123);
 
     auto resultOk = R.ok("123");
+    assertThrown!AssertError(unwrapErr(resultOk));
+}
+
+unittest
+{
+    import std.exception : assertThrown, assertNotThrown;
+    import core.exception : AssertError;
+
+    auto resultErr1 = Result!(void, string).err("123");
+    assert(assertNotThrown!AssertError(unwrapErr(resultErr1)) == "123");
+
+    alias R = Result!(const(void), uint);
+
+    auto resultErr2 = R.err(123);
+    assert(assertNotThrown!AssertError(unwrapErr(resultErr2)) == 123);
+
+    auto resultOk = R.ok();
     assertThrown!AssertError(unwrapErr(resultOk));
 }
 
