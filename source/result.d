@@ -2104,22 +2104,22 @@ auto mapErr(alias fun = "a", T, E)(scope auto ref inout(Result!(T, E)) r)
     assert(mapErr(iResultErr) == R.err(9));
 }
 
-/// Applies a function to the `T` value, or returns a default value for [Err].
+/// Applies a function to the `T` value, or returns a default value for an error.
 ///
-/// If the [Result] has `T`, applies `fun` to the value and returns the result.
-/// If the [Result] is [Err], returns the default value.
-/// The return value of `fun` and `defaultValue` must be able to be implicitly converted to some common type.
+/// If the [Result] has a `T`, applies `fun` to the value and returns the result.
+/// If the [Result] has an `E`, returns the default value.
+/// The return value of `fun` and the default value must be able to be implicitly converted to some common type.
 ///
 /// Params:
 ///     r = The [Result] to transform
 ///     fun = The function to apply to the `T` value,
-///     defaultValue = The default value to return if [Err]
+///     defaultValue = The fallback value to be used if an error
 ///
 /// Returns: The result of applying `fun` to the `T` value, or `defaultValue`
 @CorrespondingTo("map_or")
 @CorrespondingTo("map_or_default")
 auto mapOr(alias fun, T, U, E)(scope auto ref inout(Result!(T, E)) r,
-        U defaultValue = typeof(unaryFun!fun(inout(T).init)).init)
+        U defaultValue = typeof(unaryFun!fun(inout(T).init)).init) if (!is(T : void))
 {
     return isOk(r) ? unaryFun!fun(unwrap(r)) : defaultValue;
 }
