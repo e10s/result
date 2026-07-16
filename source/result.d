@@ -1090,18 +1090,18 @@ inout(Result!(U, E)) and(T, U, E)(scope auto ref inout(Result!(T, E)) r1,
 
 /// Applies a function to the `T` value of a [Result], chaining [Result]s.
 ///
-/// If `r` has `T`, calls `fun` with its value and returns the resulting [Result].
-/// If `r` is [Err], returns a new [Result] with the same [Err] value.
-/// `fun` must return [Result] with the same type `E` for [Err].
+/// If `r` has a `T` value, calls `fun` with the value and returns the resulting [Result].
+/// If `r` has an `E`, returns a new [Result] with the same `E` value.
+/// `fun` must return [Result] with the same type `E` for an error.
 ///
 /// Params:
 ///     r = The [Result] to operate on
 ///     fun = The function to apply to the `T` value
 ///
-/// Returns: The [Result] returned by `fun` if `T`, otherwise a new [Result] with the original [Err]
+/// Returns: The [Result] returned by `fun` if `r` contains a `T`, otherwise a new [Result] with the original `E` value
 @CorrespondingTo("and_then")
 auto andThen(alias fun, T, E)(scope auto ref inout(Result!(T, E)) r)
-        if (is(E == ErrValueTypeOf!(typeof(unaryFun!fun(inout(T).init)))))
+        if (!is(T : void) && is(E == ErrValueTypeOf!(typeof(unaryFun!fun(inout(T).init)))))
 {
     alias U = OkValueTypeOf!(typeof(unaryFun!fun(inout(T).init)));
     return isOk(r) ? unaryFun!fun(unwrap(r)) : Result!(U, E).err(unwrapErr(r));
