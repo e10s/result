@@ -1205,23 +1205,30 @@ inout(Result!(T, F)) or(T, E, F)(scope auto ref inout(Result!(T, E)) r1,
     assert(or(x4, y4) == S.ok(2));
 }
 
-/// Applies a function to the [Err] value of a [Result], chaining [Result]s.
+/// Applies a function to the `E` value of a [Result], chaining [Result]s.
 ///
-/// If `r` is [Err], calls `fun` with its value and returns the resulting [Result].
-/// If `r` has `T`, returns a new [Result] with the same `T` value.
-/// `fun` must return [Result] with `T`.
+/// If `r` has an `E` value, calls `fun` with the value and returns the resulting [Result].
+/// If `r` has a successful state, returns a new [Result] with the same `T` value.
+/// `fun` must return [Result] with the same type`T` for a successful state.
 ///
 /// Params:
 ///     r = The [Result] to operate on
-///     fun = The function to apply to the [Err] value
+///     fun = The function to apply to the `E` value
 ///
-/// Returns: The [Result] returned by `fun` if [Err], otherwise a new [Result] with the original `T` value
+/// Returns: The [Result] returned by `fun` if `r` contains an `E`, otherwise a new [Result] with the original `T` value
 @CorrespondingTo("or_else")
 auto orElse(alias fun, T, E)(scope auto ref inout(Result!(T, E)) r)
         if (is(T == OkValueTypeOf!(typeof(unaryFun!fun(inout(E).init)))))
 {
     alias F = ErrValueTypeOf!(typeof(unaryFun!fun(inout(E).init)));
-    return isErr(r) ? unaryFun!fun(unwrapErr(r)) : Result!(T, F).ok(unwrap(r));
+    static if (is(T : void))
+    {
+        return isErr(r) ? unaryFun!fun(unwrapErr(r)) : Result!(T, F).ok();
+    }
+    else
+    {
+        return isErr(r) ? unaryFun!fun(unwrapErr(r)) : Result!(T, F).ok(unwrap(r));
+    }
 }
 
 ///
@@ -1242,6 +1249,27 @@ auto orElse(alias fun, T, E)(scope auto ref inout(Result!(T, E)) r)
     assert(orElse!sq(orElse!sq(R.ok(2))) == R.ok(2));
     assert(orElse!sq(orElse!err(R.ok(2))) == R.ok(2));
     assert(orElse!err(orElse!sq(R.err(3))) == R.ok(9));
+    assert(orElse!err(orElse!err(R.err(3))) == R.err(3));
+}
+
+///
+@safe @nogc nothrow unittest
+{
+    alias R = Result!(void, uint);
+
+    R forge(uint x)
+    {
+        return R.ok();
+    }
+
+    R err(uint x)
+    {
+        return R.err(x);
+    }
+
+    assert(orElse!forge(orElse!forge(R.ok())) == R.ok());
+    assert(orElse!forge(orElse!err(R.ok())) == R.ok());
+    assert(orElse!err(orElse!forge(R.err(3))) == R.ok());
     assert(orElse!err(orElse!err(R.err(3))) == R.err(3));
 }
 
