@@ -2003,23 +2003,30 @@ auto map(alias fun = "a", T, E)(scope auto ref inout(Result!(T, E)) r)
     assert(map(iResultErr) == R.err("bad"));
 }
 
-/// Transforms the [Err] value of a [Result] using a function, keeping the `T` value unchanged.
+/// Transforms the `E` value of a [Result] using a function, keeping the `T` value unchanged.
 ///
-/// If the [Result] is [Err], applies `fun` to the value and returns a new [Result] with the transformed error.
-/// If the [Result] has `T`, returns a new [Result] with the same `T` value.
+/// If the [Result] has an `E`, applies `fun` to the value and returns a new [Result] with the transformed error value.
+/// If the [Result] has a `T`, returns a new [Result] with the same `T` value.
 ///
 /// Params:
 ///     r = The [Result] to transform
-///     fun = The function to apply to the [Err] value
+///     fun = The function to apply to the `E` value
 ///
-/// Returns: A new [Result] with the original `T` value or the transformed [Err]
+/// Returns: A new [Result] with the transformed error value from `E`, or with the original `T` value
 @CorrespondingTo("map_err")
 auto mapErr(alias fun = "a", T, E)(scope auto ref inout(Result!(T, E)) r)
         if (!is(void == typeof(unaryFun!fun(inout(E).init))))
 {
     alias F = Unqual!(typeof(unaryFun!fun(inout(E).init)));
     alias S = Result!(T, F);
-    return isErr(r) ? S.err(unaryFun!fun(unwrapErr(r))) : S.ok(unwrap(r));
+    static if (is(T : void))
+    {
+        return isErr(r) ? S.err(unaryFun!fun(unwrapErr(r))) : S.ok();
+    }
+    else
+    {
+        return isErr(r) ? S.err(unaryFun!fun(unwrapErr(r))) : S.ok(unwrap(r));
+    }
 }
 
 ///
@@ -2037,6 +2044,26 @@ auto mapErr(alias fun = "a", T, E)(scope auto ref inout(Result!(T, E)) r)
 
     auto resultOk = R.ok(2);
     assert(mapErr!stringify(resultOk) == S.ok(2));
+
+    auto resultErr = R.err(13);
+    assert(mapErr!stringify(resultErr) == S.err("error code: 13"));
+}
+
+///
+@safe unittest
+{
+    auto stringify(uint x)
+    {
+        import std.format : format;
+
+        return format!"error code: %s"(x);
+    }
+
+    alias R = Result!(void, uint);
+    alias S = Result!(void, string);
+
+    auto resultOk = R.ok();
+    assert(mapErr!stringify(resultOk) == S.ok());
 
     auto resultErr = R.err(13);
     assert(mapErr!stringify(resultErr) == S.err("error code: 13"));
@@ -2076,6 +2103,38 @@ auto mapErr(alias fun = "a", T, E)(scope auto ref inout(Result!(T, E)) r)
 
 @safe unittest
 {
+    import std.conv : to;
+
+    alias R = Result!(void, string);
+    alias S = Result!(void, size_t);
+
+    auto resultOk = R.ok();
+    assert(mapErr!(a => a.length)(resultOk) == S.ok());
+    assert(mapErr(resultOk) == R.ok());
+
+    const cResultOk = R.ok();
+    assert(mapErr!(a => a.length)(cResultOk) == S.ok());
+    assert(mapErr(cResultOk) == R.ok());
+
+    immutable iResultOk = R.ok();
+    assert(mapErr!(a => a.length)(iResultOk) == S.ok());
+    assert(mapErr(iResultOk) == R.ok());
+
+    auto resultErr = R.err("bad");
+    assert(mapErr!(a => a.length)(resultErr) == S.err(3));
+    assert(mapErr(resultErr) == R.err("bad"));
+
+    const cResultErr = R.err("bad");
+    assert(mapErr!(a => a.length)(cResultErr) == S.err(3));
+    assert(mapErr(cResultErr) == R.err("bad"));
+
+    immutable iResultErr = R.err("bad");
+    assert(mapErr!(a => a.length)(iResultErr) == S.err(3));
+    assert(mapErr(iResultErr) == R.err("bad"));
+}
+
+@safe unittest
+{
     alias R = Result!(int*, int);
 
     auto resultOk = R.ok(null);
@@ -2090,6 +2149,36 @@ auto mapErr(alias fun = "a", T, E)(scope auto ref inout(Result!(T, E)) r)
     immutable iResultOk = R.ok(null);
     assert(mapErr!(a => a + 4)(iResultOk) == R.ok(null));
     assert(mapErr(iResultOk) == R.ok(null));
+
+    auto resultErr = R.err(9);
+    assert(mapErr!(a => a + 4)(resultErr) == R.err(13));
+    assert(mapErr(resultErr) == R.err(9));
+
+    const cResultErr = R.err(9);
+    assert(mapErr!(a => a + 4)(cResultErr) == R.err(13));
+    assert(mapErr(cResultErr) == R.err(9));
+
+    immutable iResultErr = R.err(9);
+    assert(mapErr!(a => a + 4)(iResultErr) == R.err(13));
+    assert(mapErr(iResultErr) == R.err(9));
+}
+
+@safe unittest
+{
+    alias R = Result!(const(void), int);
+
+    auto resultOk = R.ok();
+    assert(mapErr!" a + 4"(resultOk) == R.ok());
+    assert(mapErr!(a => a + 4)(resultOk) == R.ok());
+    assert(mapErr(resultOk) == R.ok());
+
+    const cResultOk = R.ok();
+    assert(mapErr!(a => a + 4)(cResultOk) == R.ok());
+    assert(mapErr(cResultOk) == R.ok());
+
+    immutable iResultOk = R.ok();
+    assert(mapErr!(a => a + 4)(iResultOk) == R.ok());
+    assert(mapErr(iResultOk) == R.ok());
 
     auto resultErr = R.err(9);
     assert(mapErr!(a => a + 4)(resultErr) == R.err(13));
