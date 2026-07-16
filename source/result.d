@@ -2250,8 +2250,8 @@ auto mapOrElse(alias defaultFun, alias fun, T, E)(scope auto ref inout(Result!(T
 
 /// Invokes a function with the `T` value of a [Result] without changing the result.
 ///
-/// If the [Result] contains a `T` value, `fun` is called with that value.
-/// The original [Result] is returned unchanged, which is useful for side effects during chaining.
+/// If the [Result] contains a `T` value, `fun` is called with the value.
+/// The original [Result] is returned unchanged, which is useful for peeking the value during chaining.
 ///
 /// Params:
 ///     r = The [Result] to inspect
@@ -2260,7 +2260,7 @@ auto mapOrElse(alias defaultFun, alias fun, T, E)(scope auto ref inout(Result!(T
 /// Returns: The original [Result]
 @CorrespondingTo("inspect")
 auto ref inout(Result!(T, E)) inspect(alias fun, T, E)(scope auto ref inout(Result!(T, E)) r)
-        if (is(typeof(unaryFun!fun(inout(T).init))))
+        if (!is(T : void) && is(typeof(unaryFun!fun(inout(T).init))))
 {
     if (isOk(r))
     {
