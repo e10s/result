@@ -1272,21 +1272,28 @@ auto orElse(alias fun, T, E)(scope auto ref inout(Result!(T, E)) r)
 
 /// Extracts the `T` value from a [Result].
 ///
-/// The [Result] must contain a `T` value. Use [isOk] to check.
+/// The [Result] must contain a successful state. Use [isOk] to check.
 ///
 /// Params:
 ///     r = The [Result] to unwrap
 ///
-/// Returns: The `T` value
+/// Returns: The contained `T` value, or nothing if `T` is `void`
 @CorrespondingTo("unwrap")
 @CorrespondingTo("unwrap_unchecked")
 auto ref inout(T) unwrap(T, E)(scope return auto ref inout(Result!(T, E)) r)
 {
     assert(isOk(r), "Result does not have an Ok value.");
 
-    import std.sumtype : get;
+    static if (is(T : void))
+    {
+        return;
+    }
+    else
+    {
+        import std.sumtype : get;
 
-    return r.sumType.get!(inout(T));
+        return r.sumType.get!(inout(T));
+    }
 }
 
 ///
@@ -1301,7 +1308,22 @@ unittest
     import core.exception : AssertError;
 
     auto resultErr = R.err("emergency failure");
-    assertThrown!AssertError(unwrap(resultErr)); // Assert will fail, due to SumType
+    assertThrown!AssertError(unwrap(resultErr));
+}
+
+///
+unittest
+{
+    alias R = Result!(void, string);
+
+    import std.exception : assertNotThrown, assertThrown;
+    import core.exception : AssertError;
+
+    auto resultOk = R.ok();
+    assertNotThrown!AssertError(unwrap(resultOk));
+
+    auto resultErr = R.err("emergency failure");
+    assertThrown!AssertError(unwrap(resultErr));
 }
 
 unittest
@@ -1309,13 +1331,13 @@ unittest
     import std.exception : assertThrown, assertNotThrown;
     import core.exception : AssertError;
 
-    auto resultOk1 = Result!(int, string).ok(123);
-    assert(assertNotThrown!AssertError(unwrap(resultOk1)) == 123);
+    auto resultOk1 = Result!(immutable(void), string).ok();
+    assertNotThrown!AssertError(unwrap(resultOk1));
 
-    alias R = Result!(string, uint);
+    alias R = Result!(void, uint);
 
-    auto resultOk2 = R.ok("123");
-    assert(assertNotThrown!AssertError(unwrap(resultOk2)) == "123");
+    auto resultOk2 = R.ok();
+    assertNotThrown!AssertError(unwrap(resultOk2));
 
     auto resultErr = R.err(123);
     assertThrown!AssertError(unwrap(resultErr));
