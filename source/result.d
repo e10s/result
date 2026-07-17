@@ -2446,9 +2446,10 @@ auto ref inout(Result!(T, E)) inspectErr(alias fun, T, E)(scope auto ref inout(R
 /// Params:
 ///     r = The [Result] containing either a `Nullable!T` or an `E`.
 ///
-/// Returns: A `Nullable!Result!(T, E)` with the `T` value obtained from the `Nullable!T` or the `E` value.
+/// Returns: A `Nullable!Result!(T, E)` with the `T` value obtained from the `Nullable!T` or the `E` value
 @CorrespondingTo("transpose")
 inout(Nullable!(Result!(T, E))) transpose(T, E)(scope auto ref inout(Result!(Nullable!T, E)) r)
+        if (!is(T : void))
 {
     alias R = Result!(T, E);
     alias N = inout(Nullable!R);
