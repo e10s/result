@@ -1963,11 +1963,26 @@ auto unwrapOrElse(alias fun, T, E)(scope auto ref inout(Result!(T, E)) r)
 /// Returns: A new [Result] with the transformed value from `T`, or with the original `E` value
 @CorrespondingTo("map")
 auto map(alias fun = "a", T, E)(scope auto ref inout(Result!(T, E)) r)
-        if (!is(T : void) && !is(void == typeof(unaryFun!fun(inout(T).init))))
+        if (!is(T : void) && is(typeof(unaryFun!fun(inout(T).init))))
 {
     alias U = Unqual!(typeof(unaryFun!fun(inout(T).init)));
     alias S = Result!(U, E);
-    return isOk(r) ? S.ok(unaryFun!fun(unwrap(r))) : S.err(unwrapErr(r));
+    static if (is(U : void))
+    {
+        if (isOk(r))
+        {
+            unaryFun!fun(unwrap(r));
+            return S.ok();
+        }
+        else
+        {
+            return S.err(unwrapErr(r));
+        }
+    }
+    else
+    {
+        return isOk(r) ? S.ok(unaryFun!fun(unwrap(r))) : S.err(unwrapErr(r));
+    }
 }
 
 ///
@@ -2038,6 +2053,34 @@ auto map(alias fun = "a", T, E)(scope auto ref inout(Result!(T, E)) r)
     immutable iResultErr = R.err("bad");
     assert(map!(to!dstring)(iResultErr) == S.err("bad"));
     assert(map(iResultErr) == R.err("bad"));
+}
+
+@safe unittest
+{
+    alias R = Result!(int, string);
+    alias S = Result!(void, string);
+    void f(int _)
+    {
+        return;
+    }
+
+    auto resultOk = R.ok(-22);
+    assert(map!f(resultOk) == S.ok());
+
+    const cResultOk = R.ok(-22);
+    assert(map!f(cResultOk) == S.ok());
+
+    immutable iResultOk = R.ok(-22);
+    assert(map!f(iResultOk) == S.ok());
+
+    auto resultErr = R.err("bad");
+    assert(map!f(resultErr) == S.err("bad"));
+
+    const cResultErr = R.err("bad");
+    assert(map!f(cResultErr) == S.err("bad"));
+
+    immutable iResultErr = R.err("bad");
+    assert(map!f(iResultErr) == S.err("bad"));
 }
 
 /// Transforms the `E` value of a [Result] using a function, keeping the `T` value unchanged.
