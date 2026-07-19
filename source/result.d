@@ -2429,11 +2429,19 @@ auto mapOrElse(alias defaultFun, alias fun, T, E)(scope auto ref inout(Result!(T
 /// Returns: The original [Result]
 @CorrespondingTo("inspect")
 auto ref inout(Result!(T, E)) inspect(alias fun, T, E)(scope auto ref inout(Result!(T, E)) r)
-        if (!is(T : void) && is(typeof(unaryFun!fun(inout(T).init))))
+        if ((!is(T : void) && is(typeof(unaryFun!fun(inout(T).init)))) || (is(T
+            : void) && is(typeof(fun()))))
 {
     if (isOk(r))
     {
-        unaryFun!fun(unwrap(r));
+        static if (is(T : void))
+        {
+            fun();
+        }
+        else
+        {
+            unaryFun!fun(unwrap(r));
+        }
     }
     return r;
 }
@@ -2466,6 +2474,34 @@ auto ref inout(Result!(T, E)) inspect(alias fun, T, E)(scope auto ref inout(Resu
         .tryUnwrap("failed to parse number");
     assert(x == 64);
     assert(writer[] == "original: 4");
+}
+
+///
+@safe unittest
+{
+    auto isParsable(string s)
+    {
+        alias R = Result!(void, string);
+
+        try
+        {
+            import std.conv : to;
+
+            to!ubyte(s);
+            return R.ok();
+        }
+        catch (Exception _)
+        {
+            return R.err(s);
+        }
+    }
+
+    import std.array : appender;
+    import std.conv : writeText;
+
+    auto writer = appender!string();
+    assert(isParsable("4").inspect!(() => writer.writeText("success")).isOk());
+    assert(writer[] == "success");
 }
 
 /// Invokes a function with the `E` value of a [Result] without changing the result.
