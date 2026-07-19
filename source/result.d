@@ -1963,26 +1963,44 @@ auto unwrapOrElse(alias fun, T, E)(scope auto ref inout(Result!(T, E)) r)
 /// Returns: A new [Result] with the transformed value from `T`, or with the original `E` value
 @CorrespondingTo("map")
 auto map(alias fun = "a", T, E)(scope auto ref inout(Result!(T, E)) r)
-        if (!is(T : void) && is(typeof(unaryFun!fun(inout(T).init))))
+        if ((!is(T : void) && is(typeof(unaryFun!fun(inout(T).init)))) || (is(T
+            : void) && is(typeof(fun()))))
 {
-    alias U = Unqual!(typeof(unaryFun!fun(inout(T).init)));
-    alias S = Result!(U, E);
-    static if (is(U : void))
+    static if (is(T : void))
     {
-        if (isOk(r))
+        alias U = Unqual!(typeof(fun()));
+    }
+    else
+    {
+        alias U = Unqual!(typeof(unaryFun!fun(inout(T).init)));
+    }
+    alias S = Result!(U, E);
+    if (isOk(r))
+    {
+        static if (is(T : void) && is(U : void))
+        {
+            fun();
+            return S.ok();
+        }
+        else static if (!is(T : void) && is(U : void))
         {
             unaryFun!fun(unwrap(r));
             return S.ok();
         }
+        else static if (is(T : void) && !is(U : void))
+        {
+            return S.ok(fun());
+        }
         else
         {
-            return S.err(unwrapErr(r));
+            return S.ok(unaryFun!fun(unwrap(r)));
         }
     }
     else
     {
-        return isOk(r) ? S.ok(unaryFun!fun(unwrap(r))) : S.err(unwrapErr(r));
+        return S.err(unwrapErr(r));
     }
+
 }
 
 ///
@@ -2053,6 +2071,61 @@ auto map(alias fun = "a", T, E)(scope auto ref inout(Result!(T, E)) r)
     immutable iResultErr = R.err("bad");
     assert(map!(to!dstring)(iResultErr) == S.err("bad"));
     assert(map(iResultErr) == R.err("bad"));
+}
+
+@safe unittest
+{
+    alias R = Result!(void, string);
+    void f()
+    {
+        return;
+    }
+
+    auto resultOk = R.ok();
+    assert(map!f(resultOk) == R.ok());
+
+    const cResultOk = R.ok();
+    assert(map!f(cResultOk) == R.ok());
+
+    immutable iResultOk = R.ok();
+    assert(map!f(iResultOk) == R.ok());
+
+    auto resultErr = R.err("bad");
+    assert(map!f(resultErr) == R.err("bad"));
+
+    const cResultErr = R.err("bad");
+    assert(map!f(cResultErr) == R.err("bad"));
+
+    immutable iResultErr = R.err("bad");
+    assert(map!f(iResultErr) == R.err("bad"));
+}
+
+@safe unittest
+{
+    alias R = Result!(void, string);
+    alias S = Result!(int, string);
+    int f()
+    {
+        return 11;
+    }
+
+    auto resultOk = R.ok();
+    assert(map!f(resultOk) == S.ok(11));
+
+    const cResultOk = R.ok();
+    assert(map!f(cResultOk) == S.ok(11));
+
+    immutable iResultOk = R.ok();
+    assert(map!f(iResultOk) == S.ok(11));
+
+    auto resultErr = R.err("bad");
+    assert(map!f(resultErr) == S.err("bad"));
+
+    const cResultErr = R.err("bad");
+    assert(map!f(cResultErr) == S.err("bad"));
+
+    immutable iResultErr = R.err("bad");
+    assert(map!f(iResultErr) == S.err("bad"));
 }
 
 @safe unittest
