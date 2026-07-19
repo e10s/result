@@ -813,7 +813,7 @@ bool isOk(T, E)(scope auto ref inout(Result!(T, E)) r)
 /// Returns: `true` if `r` has a `T` value and it satisfies `pred`, `false` otherwise
 @CorrespondingTo("is_ok_and")
 bool isOkAnd(alias pred = "a", T, E)(scope auto ref inout(Result!(T, E)) r)
-        if (!is(T : void) && !is(void == typeof(unaryFun!pred(inout(T).init))))
+        if (!is(T : void) && !is(typeof(unaryFun!pred(inout(T).init)) : void))
 {
     return isOk(r) && !!unaryFun!pred(unwrap(r));
 }
@@ -907,7 +907,7 @@ alias isErr = not!isOk;
 /// Returns: `true` if `r` has an error and it satisfies `pred`, `false` otherwise
 @CorrespondingTo("is_err_and")
 bool isErrAnd(alias pred = "a", T, E)(scope auto ref inout(Result!(T, E)) r)
-        if (!is(void == typeof(unaryFun!pred(inout(E).init))))
+        if (!is(typeof(unaryFun!pred(inout(E).init)) : void))
 {
     return isErr(r) && !!unaryFun!pred(unwrapErr(r));
 }
@@ -1900,7 +1900,7 @@ auto unwrapOr(T, U, E)(scope auto ref inout(Result!(T, E)) r, U defaultValue = i
 /// Returns: The contained `T` value or the result of calling `fun` with the `E` value
 @CorrespondingTo("unwrap_or_else")
 auto unwrapOrElse(alias fun, T, E)(scope auto ref inout(Result!(T, E)) r)
-        if (!is(void == CommonType!(inout(T), typeof(unaryFun!fun(inout(E).init)))))
+        if (!is(CommonType!(inout(T), typeof(unaryFun!fun(inout(E).init))) : void))
 {
     return isOk(r) ? unwrap(r) : unaryFun!fun(unwrapErr(r));
 }
@@ -2095,7 +2095,7 @@ auto map(alias fun = "a", T, E)(scope auto ref inout(Result!(T, E)) r)
 /// Returns: A new [Result] with the transformed error value from `E`, or with the original `T` value
 @CorrespondingTo("map_err")
 auto mapErr(alias fun = "a", T, E)(scope auto ref inout(Result!(T, E)) r)
-        if (!is(void == typeof(unaryFun!fun(inout(E).init))))
+        if (!is(typeof(unaryFun!fun(inout(E).init)) : void))
 {
     alias F = Unqual!(typeof(unaryFun!fun(inout(E).init)));
     alias S = Result!(T, F);
@@ -2365,8 +2365,8 @@ auto mapOr(alias fun, T, U, E)(scope auto ref inout(Result!(T, E)) r,
 /// Returns: The result of applying the appropriate function based on `T` or `E`
 @CorrespondingTo("map_or_else")
 auto mapOrElse(alias defaultFun, alias fun, T, E)(scope auto ref inout(Result!(T, E)) r)
-        if (!is(T : void) && !is(void == CommonType!(typeof(unaryFun!defaultFun(inout(E)
-            .init)), typeof(unaryFun!fun(inout(T).init)))))
+        if (!is(T : void) && !is(CommonType!(typeof(unaryFun!defaultFun(inout(E)
+            .init)), typeof(unaryFun!fun(inout(T).init))) : void))
 {
     return isOk(r) ? unaryFun!fun(unwrap(r)) : unaryFun!defaultFun(unwrapErr(r));
 }
