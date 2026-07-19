@@ -2365,7 +2365,7 @@ auto mapOr(alias fun, T, U, E)(scope auto ref inout(Result!(T, E)) r,
 /// Returns: The result of applying the appropriate function based on `T` or `E`
 @CorrespondingTo("map_or_else")
 auto mapOrElse(alias defaultFun, alias fun, T, E)(scope auto ref inout(Result!(T, E)) r)
-        if (!is(void == CommonType!(typeof(unaryFun!defaultFun(inout(E)
+        if (!is(T : void) && !is(void == CommonType!(typeof(unaryFun!defaultFun(inout(E)
             .init)), typeof(unaryFun!fun(inout(T).init)))))
 {
     return isOk(r) ? unaryFun!fun(unwrap(r)) : unaryFun!defaultFun(unwrapErr(r));
