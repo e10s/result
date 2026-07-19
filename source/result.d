@@ -2577,6 +2577,41 @@ auto ref inout(Result!(T, E)) inspect(alias fun, T, E)(scope auto ref inout(Resu
     assert(writer[] == "success");
 }
 
+@safe unittest
+{
+    alias R = Result!(int, string);
+
+    import std.array : appender;
+    import std.conv : writeText;
+
+    auto writer1 = appender!string();
+    auto okResult = R.ok(42).inspect!(x => writer1.writeText("value: ", x));
+    assert(okResult == R.ok(42));
+    assert(writer1[] == "value: 42");
+
+    auto writer2 = appender!string();
+    auto errResult = R.err("bad").inspect!(x => writer2.writeText("value: ", x));
+    assert(errResult == R.err("bad"));
+    assert(writer2.length == 0);
+}
+
+@safe unittest
+{
+    alias R = Result!(void, string);
+
+    import std.array : appender;
+    import std.conv : writeText;
+
+    auto writer1 = appender!string();
+    assert(R.ok().inspect!(() => writer1.writeText("ok")).isOk());
+    assert(writer1[] == "ok");
+
+    auto writer2 = appender!string();
+    auto errResult = R.err("bad").inspect!(() => writer2.writeText("no"));
+    assert(errResult == R.err("bad"));
+    assert(writer2.length == 0);
+}
+
 /// Invokes a function with the `E` value of a [Result] without changing the result.
 ///
 /// If the [Result] contains an `E` value, `fun` is called with the value.
@@ -2624,6 +2659,41 @@ auto ref inout(Result!(T, E)) inspectErr(alias fun, T, E)(scope auto ref inout(R
             readToString("address.txt"));
 
     assert(isOk(r) || writer[].length > 0);
+}
+
+@safe unittest
+{
+    alias R = Result!(int, string);
+
+    import std.array : appender;
+    import std.conv : writeText;
+
+    auto writer1 = appender!string();
+    auto okResult = R.ok(42).inspectErr!(e => writer1.writeText("error: ", e));
+    assert(okResult == R.ok(42));
+    assert(writer1.length == 0);
+
+    auto writer2 = appender!string();
+    auto errResult = R.err("fail").inspectErr!(e => writer2.writeText("error: ", e));
+    assert(errResult == R.err("fail"));
+    assert(writer2[] == "error: fail");
+}
+
+@safe unittest
+{
+    alias R = Result!(void, string);
+
+    import std.array : appender;
+    import std.conv : writeText;
+
+    auto writer1 = appender!string();
+    assert(R.ok().inspectErr!(e => writer1.writeText("error: ", e)).isOk());
+    assert(writer1.length == 0);
+
+    auto writer2 = appender!string();
+    auto errResult = R.err("fail").inspectErr!(e => writer2.writeText("error: ", e));
+    assert(errResult == R.err("fail"));
+    assert(writer2[] == "error: fail");
 }
 
 /// Converts a [Result] that can hold a nullable `T` value into a nullable [Result].
@@ -2751,4 +2821,16 @@ inout(Result!(T, E)) flatten(T, E)(scope auto ref inout(Result!(Result!(T, E), E
     auto result = R3.ok(R2.ok(R1.ok("hello")));
     assert(flatten(result) == R2.ok(R1.ok("hello")));
     assert(flatten(flatten(result)) == R1.ok("hello"));
+}
+
+@safe @nogc nothrow unittest
+{
+    alias R1 = Result!(int, string);
+    alias R2 = Result!(R1, string);
+
+    auto outerOk = R2.ok(R1.err("inner failure"));
+    assert(flatten(outerOk) == R1.err("inner failure"));
+
+    auto outerErr = R2.err("outer failure");
+    assert(flatten(outerErr) == R1.err("outer failure"));
 }
