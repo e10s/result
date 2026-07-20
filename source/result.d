@@ -1182,37 +1182,35 @@ auto andThen(alias fun, T, E)(scope auto ref inout(Result!(T, E)) r)
     return isOk(r) ? unaryFun!fun(unwrap(r)) : Result!(U, E).err(unwrapErr(r));
 }
 
-// FIXME: need to reproduce `Option`
 ///
 @safe nothrow unittest
 {
-    alias Q = Result!(uint, string);
-    alias R = Result!(string, bool);
+    alias R = Result!(uint, string);
     alias S = Result!(string, string);
 
-    auto checkedMulToString(uint x, uint y)
+    auto checkedBinOp(string op, X, Y)(X x, Y y)
     {
         import std.checkedint : opChecked;
+        import std.typecons : nullable, Nullable;
 
         bool overflow;
-        immutable r = opChecked!"*"(x, y, overflow);
-        if (overflow)
-        {
-            return R.err(true);
-        }
-        import std.conv : to;
-
-        return R.ok(to!string(r));
+        auto r = opChecked!op(x, y, overflow);
+        return overflow ? Nullable!(typeof(r)).init : nullable(r);
     }
 
     auto sqThenToString(uint x)
     {
-        return orElse!(r => S.err("overflowed"))(checkedMulToString(x, x));
+        import std.conv : to;
+        import std.typecons : apply;
+
+        return checkedBinOp!"*"(x, x).apply!(to!string)
+            .apply!(S.ok)
+            .get(S.err("overflowed"));
     }
 
-    assert(andThen!sqThenToString(Q.ok(2)) == S.ok("4"));
-    assert(andThen!sqThenToString(Q.ok(1_000_000)) == S.err("overflowed"));
-    assert(andThen!sqThenToString(Q.err("not a number")) == S.err("not a number"));
+    assert(andThen!sqThenToString(R.ok(2)) == S.ok("4"));
+    assert(andThen!sqThenToString(R.ok(1_000_000)) == S.err("overflowed"));
+    assert(andThen!sqThenToString(R.err("not a number")) == S.err("not a number"));
 }
 
 @safe nothrow unittest
