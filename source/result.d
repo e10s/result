@@ -718,10 +718,11 @@ unittest
 /* Convenience templates end */
 
 /* For UDA begin */
-// Represents which Rust method the function corresponds to.
+// Represents which function of a certain language the function corresponds to.
 struct CorrespondingTo
 {
-    string rustMethodName;
+    string language;
+    string functionName;
 }
 /* For UDA end */
 
@@ -738,7 +739,8 @@ struct CorrespondingTo
 ///     r = The [Result] to check
 ///
 /// Returns: `true` if `r` contains a successful state, `false` otherwise
-@CorrespondingTo("is_ok")
+@CorrespondingTo("rust", "is_ok")
+@CorrespondingTo("c++", "has_value")
 bool isOk(T, E)(scope auto ref inout(Result!(T, E)) r)
 {
     static if (is(T : void))
@@ -825,7 +827,7 @@ bool isOk(T, E)(scope auto ref inout(Result!(T, E)) r)
 ///     pred = The predicate to apply to the `T` value
 ///
 /// Returns: `true` if `r` has a `T` value and it satisfies `pred`, `false` otherwise
-@CorrespondingTo("is_ok_and")
+@CorrespondingTo("rust", "is_ok_and")
 bool isOkAnd(alias pred = "a", T, E)(scope auto ref inout(Result!(T, E)) r)
         if (!is(T : void) && !is(typeof(unaryFun!pred(inout(T).init)) : void))
 {
@@ -884,7 +886,7 @@ bool isOkAnd(alias pred = "a", T, E)(scope auto ref inout(Result!(T, E)) r)
 ///     `.ok(*)`|`false`
 ///     `.err(*)`|`true`
 /// )
-@CorrespondingTo("is_err")
+@CorrespondingTo("rust", "is_err")
 alias isErr = not!isOk;
 
 ///
@@ -933,7 +935,7 @@ alias isErr = not!isOk;
 ///     pred = The predicate to apply to the `E` value
 ///
 /// Returns: `true` if `r` has an error and it satisfies `pred`, `false` otherwise
-@CorrespondingTo("is_err_and")
+@CorrespondingTo("rust", "is_err_and")
 bool isErrAnd(alias pred = "a", T, E)(scope auto ref inout(Result!(T, E)) r)
         if (!is(typeof(unaryFun!pred(inout(E).init)) : void))
 {
@@ -996,7 +998,7 @@ bool isErrAnd(alias pred = "a", T, E)(scope auto ref inout(Result!(T, E)) r)
 ///     r = The [Result] to extract from
 ///
 /// Returns: A `Nullable!T` containing the `T` value, or in the null state if an `E`
-@CorrespondingTo("ok")
+@CorrespondingTo("rust", "ok")
 inout(Nullable!T) ok(T, E)(scope auto ref inout(Result!(T, E)) r) if (!is(T : void))
 {
     alias N = typeof(return);
@@ -1047,7 +1049,7 @@ inout(Nullable!T) ok(T, E)(scope auto ref inout(Result!(T, E)) r) if (!is(T : vo
 ///     r = The [Result] to extract from
 ///
 /// Returns: A `Nullable!E` containing the `E` value, in the null state if a `T`
-@CorrespondingTo("err")
+@CorrespondingTo("rust", "err")
 inout(Nullable!E) err(T, E)(scope auto ref inout(Result!(T, E)) r)
 {
     static if (is(T : void))
@@ -1137,7 +1139,7 @@ inout(Nullable!E) err(T, E)(scope auto ref inout(Result!(T, E)) r)
 ///     r2 = The [Result] to return if `r1` has a successful state
 ///
 /// Returns: `r2` if `r1` has a successful state, otherwise a new [Result]`!(U, E)` with `r1`'s error value
-@CorrespondingTo("and")
+@CorrespondingTo("rust", "and")
 inout(Result!(U, E)) and(T, U, E)(scope auto ref inout(Result!(T, E)) r1,
         scope auto ref inout(Result!(U, E)) r2)
 {
@@ -1230,7 +1232,8 @@ inout(Result!(U, E)) and(T, U, E)(scope auto ref inout(Result!(T, E)) r1,
 ///     fun = The function to apply to the `T` value
 ///
 /// Returns: The [Result] returned by `fun` if `r` contains a `T`, otherwise a new [Result] with the original `E` value
-@CorrespondingTo("and_then")
+@CorrespondingTo("rust", "and_then")
+@CorrespondingTo("c++", "and_then")
 auto andThen(alias fun, T, E)(scope auto ref inout(Result!(T, E)) r)
         if (!is(T : void) && is(E == ErrValueTypeOf!(typeof(unaryFun!fun(inout(T).init)))))
 {
@@ -1312,7 +1315,7 @@ auto andThen(alias fun, T, E)(scope auto ref inout(Result!(T, E)) r)
 ///     r2 = The [Result] to return if `r1` has an `E` value
 ///
 /// Returns: `r2` if `r1` has an error value, otherwise a new [Result]`!(T, F)` with `r1`'s `T` value
-@CorrespondingTo("or")
+@CorrespondingTo("rust", "or")
 auto or(T, E, F)(scope auto ref inout(Result!(T, E)) r1, scope auto ref inout(Result!(T, F)) r2)
 {
     static if (is(T : void))
@@ -1433,7 +1436,8 @@ auto or(T, E, F)(scope auto ref inout(Result!(T, E)) r1, scope auto ref inout(Re
 ///     fun = The function to apply to the `E` value
 ///
 /// Returns: The [Result] returned by `fun` if `r` contains an `E`, otherwise a new [Result] with the original `T` value
-@CorrespondingTo("or_else")
+@CorrespondingTo("rust", "or_else")
+@CorrespondingTo("c++", "or_else")
 auto orElse(alias fun, T, E)(scope auto ref inout(Result!(T, E)) r)
         if (is(T == OkValueTypeOf!(typeof(unaryFun!fun(inout(E).init)))))
 {
@@ -1530,8 +1534,8 @@ auto orElse(alias fun, T, E)(scope auto ref inout(Result!(T, E)) r)
 ///     r = The [Result] to unwrap
 ///
 /// Returns: The contained `T` value, or nothing if `T` is `void`
-@CorrespondingTo("unwrap")
-@CorrespondingTo("unwrap_unchecked")
+@CorrespondingTo("rust", "unwrap")
+@CorrespondingTo("rust", "unwrap_unchecked")
 auto ref inout(T) unwrap(T, E)(scope return auto ref inout(Result!(T, E)) r)
 {
     assert(isOk(r), "Result does not have an Ok value.");
@@ -1610,8 +1614,9 @@ unittest
 ///     r = The [Result] to unwrap
 ///
 /// Returns: The contained `E` value
-@CorrespondingTo("unwrap_err")
-@CorrespondingTo("unwrap_err_unchecked")
+@CorrespondingTo("rust", "unwrap_err")
+@CorrespondingTo("rust", "unwrap_err_unchecked")
+@CorrespondingTo("c++", "error")
 auto ref inout(E) unwrapErr(T, E)(scope return auto ref inout(Result!(T, E)) r)
 {
     assert(isErr(r), "Result does not have an error value.");
@@ -1711,7 +1716,8 @@ unittest
 /// Returns: The contained `T` value, or nothing if `T` is `void`
 ///
 /// Throws: [UnwrapException] with message `msg` if `r` contains an `E`
-@CorrespondingTo("expect")
+@CorrespondingTo("rust", "expect")
+@CorrespondingTo("c++", "value")
 auto ref inout(T) tryUnwrap(T, E)(scope return auto ref inout(Result!(T, E)) r, lazy string msg = null)
 {
     import std.exception : enforce;
@@ -1815,7 +1821,7 @@ auto ref inout(T) tryUnwrap(T, E)(scope return auto ref inout(Result!(T, E)) r, 
 /// Returns: The contained `E` value
 ///
 /// Throws: [UnwrapException] with message `msg` if the `r` has a successful state
-@CorrespondingTo("expect_err")
+@CorrespondingTo("rust", "expect_err")
 auto ref inout(E) tryUnwrapErr(T, E)(scope return auto ref inout(Result!(T, E)) r,
         lazy string msg = null)
 {
@@ -1924,8 +1930,9 @@ auto ref inout(E) tryUnwrapErr(T, E)(scope return auto ref inout(Result!(T, E)) 
 ///     defaultValue = The fallback value to be used if an error
 ///
 /// Returns: The contained `T` value, or `defaultValue` if `r` has an `E`
-@CorrespondingTo("unwrap_or")
-@CorrespondingTo("unwrap_or_default")
+@CorrespondingTo("rust", "unwrap_or")
+@CorrespondingTo("rust", "unwrap_or_default")
+@CorrespondingTo("c++", "value_or")
 auto unwrapOr(T, U, E)(scope auto ref inout(Result!(T, E)) r, U defaultValue = inout(T).init)
         if (!is(T : void))
 {
@@ -2007,7 +2014,7 @@ auto unwrapOr(T, U, E)(scope auto ref inout(Result!(T, E)) r, U defaultValue = i
 ///     fun = The function to apply to the `E` value
 ///
 /// Returns: The contained `T` value or the result of calling `fun` with the `E` value
-@CorrespondingTo("unwrap_or_else")
+@CorrespondingTo("rust", "unwrap_or_else")
 auto unwrapOrElse(alias fun, T, E)(scope auto ref inout(Result!(T, E)) r)
         if (!is(CommonType!(inout(T), typeof(unaryFun!fun(inout(E).init))) : void))
 {
@@ -2077,7 +2084,8 @@ auto unwrapOrElse(alias fun, T, E)(scope auto ref inout(Result!(T, E)) r)
 ///     fun = The function to apply to the `T` value
 ///
 /// Returns: A new [Result] with the transformed value from `T`, or with the original `E` value
-@CorrespondingTo("map")
+@CorrespondingTo("rust", "map")
+@CorrespondingTo("c++", "transform")
 auto map(alias fun = "a", T, E)(scope auto ref inout(Result!(T, E)) r)
         if ((!is(T : void) && is(typeof(unaryFun!fun(inout(T).init)))) || (is(T
             : void) && is(typeof(fun()))))
@@ -2289,7 +2297,8 @@ auto map(alias fun = "a", T, E)(scope auto ref inout(Result!(T, E)) r)
 ///     fun = The function to apply to the `E` value
 ///
 /// Returns: A new [Result] with the transformed error value from `E`, or with the original `T` value
-@CorrespondingTo("map_err")
+@CorrespondingTo("rust", "map_err")
+@CorrespondingTo("c++", "transform_error")
 auto mapErr(alias fun = "a", T, E)(scope auto ref inout(Result!(T, E)) r)
         if (!is(typeof(unaryFun!fun(inout(E).init)) : void))
 {
@@ -2488,8 +2497,8 @@ auto mapErr(alias fun = "a", T, E)(scope auto ref inout(Result!(T, E)) r)
 ///     defaultValue = The fallback value to be used if an error
 ///
 /// Returns: The result of applying `fun` to the `T` value, or `defaultValue`
-@CorrespondingTo("map_or")
-@CorrespondingTo("map_or_default")
+@CorrespondingTo("rust", "map_or")
+@CorrespondingTo("rust", "map_or_default")
 auto mapOr(alias fun, T, U, E)(scope auto ref inout(Result!(T, E)) r,
         U defaultValue = typeof(unaryFun!fun(inout(T).init)).init) if (!is(T : void))
 {
@@ -2573,7 +2582,7 @@ auto mapOr(alias fun, T, U, E)(scope auto ref inout(Result!(T, E)) r,
 ///     fun = The function to apply to the `T` value
 ///
 /// Returns: The result of applying the appropriate function based on `T` or `E`
-@CorrespondingTo("map_or_else")
+@CorrespondingTo("rust", "map_or_else")
 auto mapOrElse(alias defaultFun, alias fun, T, E)(scope auto ref inout(Result!(T, E)) r)
         if (!is(T : void) && !is(CommonType!(typeof(unaryFun!defaultFun(inout(E)
             .init)), typeof(unaryFun!fun(inout(T).init))) : void))
@@ -2643,7 +2652,7 @@ auto mapOrElse(alias defaultFun, alias fun, T, E)(scope auto ref inout(Result!(T
 ///     fun = The function to apply to the `T` value
 ///
 /// Returns: The original [Result]
-@CorrespondingTo("inspect")
+@CorrespondingTo("rust", "inspect")
 auto ref inout(Result!(T, E)) inspect(alias fun, T, E)(scope auto ref inout(Result!(T, E)) r)
         if ((!is(T : void) && is(typeof(unaryFun!fun(inout(T).init)))) || (is(T
             : void) && is(typeof(fun()))))
@@ -2771,7 +2780,7 @@ auto ref inout(Result!(T, E)) inspect(alias fun, T, E)(scope auto ref inout(Resu
 ///     fun = The function to apply to the `E` value
 ///
 /// Returns: The original [Result]
-@CorrespondingTo("inspect_err")
+@CorrespondingTo("rust", "inspect_err")
 auto ref inout(Result!(T, E)) inspectErr(alias fun, T, E)(scope auto ref inout(Result!(T, E)) r)
         if (is(typeof(unaryFun!fun(inout(E).init))))
 {
@@ -2863,7 +2872,7 @@ auto ref inout(Result!(T, E)) inspectErr(alias fun, T, E)(scope auto ref inout(R
 ///     r = The [Result] containing either a `Nullable!T` or an `E`.
 ///
 /// Returns: A `Nullable!Result!(T, E)` with the `T` value obtained from the `Nullable!T` or the `E` value
-@CorrespondingTo("transpose")
+@CorrespondingTo("rust", "transpose")
 inout(Nullable!(Result!(T, E))) transpose(T, E)(scope auto ref inout(Result!(Nullable!T, E)) r)
         if (!is(T : void))
 {
@@ -2953,7 +2962,7 @@ unittest
 ///     r = The nested [Result] to flatten
 ///
 /// Returns: A flattened [Result] with the inner [Result] or the `E` value
-@CorrespondingTo("flatten")
+@CorrespondingTo("rust", "flatten")
 inout(Result!(T, E)) flatten(T, E)(scope auto ref inout(Result!(Result!(T, E), E)) r)
 {
     return isOk(r) ? unwrap(r) : Result!(T, E).err(unwrapErr(r));
