@@ -727,6 +727,13 @@ struct CorrespondingTo
 
 /// Checks if a [Result] contains a successful state.
 ///
+/// $(SMALL_TABLE
+///     Conceptual I/O summary
+///     Input: `Result!(T, E)`|Output: `bool`
+///     `.ok(*)`|`true`
+///     `.err(*)`|`false`
+/// )
+///
 /// Params:
 ///     r = The [Result] to check
 ///
@@ -806,6 +813,13 @@ bool isOk(T, E)(scope auto ref inout(Result!(T, E)) r)
 
 /// Checks if a [Result] contains a `T` value satisfying a predicate.
 ///
+/// $(SMALL_TABLE
+///     Conceptual I/O summary
+///     Input: `Result!(T, E)`|Output: `bool`
+///     `.ok(t)`|`pred(t)`
+///     `.err(*)`|`false`
+/// )
+///
 /// Params:
 ///     r = The [Result] to check
 ///     pred = The predicate to apply to the `T` value
@@ -863,6 +877,13 @@ bool isOkAnd(alias pred = "a", T, E)(scope auto ref inout(Result!(T, E)) r)
 
 /// Checks if a [Result] contains an error.
 /// Equivalent to `!`[isOk]`(r)`.
+///
+/// $(SMALL_TABLE
+///     Conceptual I/O summary
+///     Input: `Result!(T, E)`|Output: `bool`
+///     `.ok(*)`|`false`
+///     `.err(*)`|`true`
+/// )
 @CorrespondingTo("is_err")
 alias isErr = not!isOk;
 
@@ -899,6 +920,13 @@ alias isErr = not!isOk;
 }
 
 /// Checks if a [Result] contains an error satisfying a predicate.
+///
+/// $(SMALL_TABLE
+///     Conceptual I/O summary
+///     Input: `Result!(T, E)`|Output: `bool`
+///     `.ok(*)`|`false`
+///     `.err(e)`|`pred(e)`
+/// )
 ///
 /// Params:
 ///     r = The [Result] to check
@@ -957,6 +985,13 @@ bool isErrAnd(alias pred = "a", T, E)(scope auto ref inout(Result!(T, E)) r)
 
 /// Extracts the `T` value from a [Result] as a `Nullable!T`.
 ///
+/// $(SMALL_TABLE
+///     Conceptual I/O summary
+///     Input: `Result!(T, E)`|Output: `Nullable!T`
+///     `.ok(t)`|`t`
+///     `.err(*)`|null state
+/// )
+///
 /// Params:
 ///     r = The [Result] to extract from
 ///
@@ -1000,6 +1035,13 @@ inout(Nullable!T) ok(T, E)(scope auto ref inout(Result!(T, E)) r) if (!is(T : vo
 }
 
 /// Extracts the error value from a [Result] as a `Nullable!E`.
+///
+/// $(SMALL_TABLE
+///     Conceptual I/O summary
+///     Input: `Result!(T, E)`|Output: `Nullable!E`
+///     `.ok(*)`|null state
+///     `.err(e)`|`e`
+/// )
 ///
 /// Params:
 ///     r = The [Result] to extract from
@@ -1082,6 +1124,13 @@ inout(Nullable!E) err(T, E)(scope auto ref inout(Result!(T, E)) r)
 }
 
 /// Chains two [Result]s, returning the second if the first has a successful state.
+///
+/// $(SMALL_TABLE
+///     Conceptual I/O summary
+///     Input 1: `Result!(T, E)`|Input 2: `Result!(U, E)`|Output: `Result!(U, E)`
+///     `.ok(*)`|Any `r2`|`r2`
+///     `.err(e)`|Any (ignored)|`.err(e)`
+/// )
 ///
 /// Params:
 ///     r1 = The first [Result] to check
@@ -1169,6 +1218,13 @@ inout(Result!(U, E)) and(T, U, E)(scope auto ref inout(Result!(T, E)) r1,
 /// If `r` has an `E`, returns a new [Result] with the same `E` value.
 /// `fun` must return [Result] with the same type `E` for an error.
 ///
+/// $(SMALL_TABLE
+///     Conceptual I/O summary
+///     Input: `Result!(T, E)`|Output: `Result!(U, E)`
+///     `.ok(t)`|`fun(t)`
+///     `.err(e)`|`.err(e)`
+/// )
+//
 /// Params:
 ///     r = The [Result] to operate on
 ///     fun = The function to apply to the `T` value
@@ -1244,6 +1300,13 @@ auto andThen(alias fun, T, E)(scope auto ref inout(Result!(T, E)) r)
 
 /// Chains two [Result]s, returning the first if the first has a successful state.
 ///
+/// $(SMALL_TABLE
+///     Conceptual I/O summary
+///     Input 1: `Result!(T, E)`|Input 2: `Result!(T, F)`|Output: `Result!(T, F)`
+///     `.ok(t)`|Any (ignored)|`.ok(t)`
+///     `.err(*)`|Any `r2`|`r2`
+/// )
+//
 /// Params:
 ///     r1 = The first [Result] to check
 ///     r2 = The [Result] to return if `r1` has an `E` value
@@ -1358,6 +1421,13 @@ auto or(T, E, F)(scope auto ref inout(Result!(T, E)) r1, scope auto ref inout(Re
 /// If `r` has a successful state, returns a new [Result] with the same `T` value.
 /// `fun` must return [Result] with the same type`T` for a successful state.
 ///
+/// $(SMALL_TABLE
+///     Conceptual I/O summary
+///     Input: `Result!(T, E)`|Output: `Result!(T, F)`
+///     `.ok(t)`|`.ok(t)`
+///     `.err(e)`|`fun(e)`
+/// )
+//
 /// Params:
 ///     r = The [Result] to operate on
 ///     fun = The function to apply to the `E` value
@@ -1449,6 +1519,13 @@ auto orElse(alias fun, T, E)(scope auto ref inout(Result!(T, E)) r)
 ///
 /// The [Result] must contain a successful state. Use [isOk] to check.
 ///
+/// $(SMALL_TABLE
+///     Conceptual I/O summary
+///     Input: `Result!(T, E)`|Output: `T`
+///     `.ok(t)`|`t`
+///     `.err(*)`|Undefined
+/// )
+///
 /// Params:
 ///     r = The [Result] to unwrap
 ///
@@ -1521,6 +1598,13 @@ unittest
 /// Extracts the `E` value from a [Result].
 ///
 /// The [Result] must contain an `E` value. Use [isErr] to check.
+///
+/// $(SMALL_TABLE
+///     Conceptual I/O summary
+///     Input: `Result!(T, E)`|Output: `E`
+///     `.ok(*)`|Undefined
+///     `.err(e)`|`e`
+/// )
 ///
 /// Params:
 ///     r = The [Result] to unwrap
@@ -1612,6 +1696,13 @@ unittest
 ///
 /// If the [Result] has an `E`, an [UnwrapException] is thrown with `msg`.
 /// If `msg` is not provided, the default message is used.
+///
+/// $(SMALL_TABLE
+///     Conceptual I/O summary
+///     Input: `Result!(T, E)`|Output: `T`
+///     `.ok(t)`|`t`
+///     `.err(*)`|`UnwrapException` is thrown
+/// )
 ///
 /// Params:
 ///     r = The [Result] to unwrap
@@ -1711,7 +1802,13 @@ auto ref inout(T) tryUnwrap(T, E)(scope return auto ref inout(Result!(T, E)) r, 
 /// If the [Result] has a successful state, an [UnwrapException] is thrown with `msg`.
 /// If `msg` is not provided, the default message is used.
 ///
-/// Params:
+/// $(SMALL_TABLE
+///     Conceptual I/O summary
+///     Input: `Result!(T, E)`|Output: `E`
+///     `.ok(*)`|`UnwrapException` is thrown
+///     `.err(e)`|`e`
+/// )
+////// Params:
 ///     r = The [Result] to unwrap
 ///     msg = The message to include in the exception if [Result] has a successful state
 ///
@@ -1815,6 +1912,13 @@ auto ref inout(E) tryUnwrapErr(T, E)(scope return auto ref inout(Result!(T, E)) 
 /// If the [Result] has an `E`, returns the default value.
 /// The `T` value and the default value must be able to be implicitly converted to some common type.
 ///
+/// $(SMALL_TABLE
+///     Conceptual I/O summary
+///     Input: `Result!(T, E)`|Output: `auto`
+///     `.ok(t)`|`t`
+///     `.err(*)`|Default value
+/// )
+///
 /// Params:
 ///     r = The [Result] to unwrap
 ///     defaultValue = The fallback value to be used if an error
@@ -1891,6 +1995,13 @@ auto unwrapOr(T, U, E)(scope auto ref inout(Result!(T, E)) r, U defaultValue = i
 /// If the [Result] has an `E`, calls `fun` with the value and returns the result.
 /// The return value of `fun` and the `T` value must be able to be implicitly converted to some common type.
 ///
+/// $(SMALL_TABLE
+///     Conceptual I/O summary
+///     Input: `Result!(T, E)`|Output: `auto`
+///     `.ok(t)`|`t`
+///     `.err(e)`|`fun(e)`
+/// )
+///
 /// Params:
 ///     r = The [Result] to unwrap
 ///     fun = The function to apply to the `E` value
@@ -1953,6 +2064,13 @@ auto unwrapOrElse(alias fun, T, E)(scope auto ref inout(Result!(T, E)) r)
 ///
 /// If the [Result] has a `T`, applies `fun` to the value and returns a new [Result] with the transformed value.
 /// If the [Result] has an `E`, returns a new [Result] with the same `E` value.
+///
+/// $(SMALL_TABLE
+///     Conceptual I/O summary
+///     Input: `Result!(T, E)`|Output: `Result!(U, E)`
+///     `.ok(t)`|`.ok(fun(t))`
+///     `.err(e)`|`.err(e)`
+/// )
 ///
 /// Params:
 ///     r = The [Result] to transform
@@ -2159,6 +2277,13 @@ auto map(alias fun = "a", T, E)(scope auto ref inout(Result!(T, E)) r)
 /// If the [Result] has an `E`, applies `fun` to the value and returns a new [Result] with the transformed error value.
 /// If the [Result] has a `T`, returns a new [Result] with the same `T` value.
 ///
+/// $(SMALL_TABLE
+///     Conceptual I/O summary
+///     Input: `Result!(T, E)`|Output: `Result!(T, F)`
+///     `.ok(t)`|`.ok(t)`
+///     `.err(e)`|`.err(fun(e))`
+/// )
+///
 /// Params:
 ///     r = The [Result] to transform
 ///     fun = The function to apply to the `E` value
@@ -2350,6 +2475,13 @@ auto mapErr(alias fun = "a", T, E)(scope auto ref inout(Result!(T, E)) r)
 /// If the [Result] has an `E`, returns the default value.
 /// The return value of `fun` and the default value must be able to be implicitly converted to some common type.
 ///
+/// $(SMALL_TABLE
+///     Conceptual I/O summary
+///     Input: `Result!(T, E)`|Output: `auto`
+///     `.ok(t)`|`fun(t)`
+///     `.err(*)`|Default value
+/// )
+///
 /// Params:
 ///     r = The [Result] to transform
 ///     fun = The function to apply to the `T` value,
@@ -2428,6 +2560,13 @@ auto mapOr(alias fun, T, U, E)(scope auto ref inout(Result!(T, E)) r,
 /// If the [Result] has an `E`, applies `defaultFun` to the value and returns the result.
 /// The return values of `defaultFun` and `fun` must be able to be implicitly converted to some common type.
 ///
+/// $(SMALL_TABLE
+///     Conceptual I/O summary
+///     Input: `Result!(T, E)`|Output: `auto`
+///     `.ok(t)`|`fun(t)`
+///     `.err(e)`|`defaultFun(e)`
+/// )
+///
 /// Params:
 ///     r = The [Result] to transform
 ///     defaultFun = The function to apply to the `E` value
@@ -2493,7 +2632,13 @@ auto mapOrElse(alias defaultFun, alias fun, T, E)(scope auto ref inout(Result!(T
 /// If the [Result] contains a `T` value, `fun` is called with the value.
 /// The original [Result] is returned unchanged, which is useful for peeking the value during chaining.
 ///
-/// Params:
+/// $(SMALL_TABLE
+///     Conceptual I/O summary
+///     Input: `Result!(T, E)`|Output: `Result!(T, E)`
+///     Any `r`|`r`
+/// )
+///
+////// Params:
 ///     r = The [Result] to inspect
 ///     fun = The function to apply to the `T` value
 ///
@@ -2615,6 +2760,12 @@ auto ref inout(Result!(T, E)) inspect(alias fun, T, E)(scope auto ref inout(Resu
 /// If the [Result] contains an `E` value, `fun` is called with the value.
 /// The original [Result] is returned unchanged, which is useful for peeking the value during chaining.
 ///
+/// $(SMALL_TABLE
+///     Conceptual I/O summary
+///     Input: `Result!(T, E)`|Output: `Result!(T, E)`
+///     Any `r`|`r`
+/// )
+///
 /// Params:
 ///     r = The [Result] to inspect
 ///     fun = The function to apply to the `E` value
@@ -2700,6 +2851,14 @@ auto ref inout(Result!(T, E)) inspectErr(alias fun, T, E)(scope auto ref inout(R
 /// the same `T` value when it is non-null, or the null state otherwise.
 /// If the [Result] has an `E`, returns a nullable [Result] containing the value.
 ///
+/// $(SMALL_TABLE
+///     Conceptual I/O summary
+///     Input: `Result!(Nullable!T, E)`|Output: `Nullable!(Result!(T, E))`
+///     `.ok(n)`, n is non-null|`Result!(T, E).ok(n.get)`
+///     `.ok(n)`, n is null|null state
+///     `.err(e)`|`Result!(T, E).err(e)`
+/// )
+///
 /// Params:
 ///     r = The [Result] containing either a `Nullable!T` or an `E`.
 ///
@@ -2782,6 +2941,13 @@ unittest
 /// Converts [Result]`!(Result!(T, E), E)` into [Result]`!(T, E)`.
 /// If the outer [Result] has an inner [Result]`!(T, E)`, returns it.
 /// If the outer [Result] has an `E`, returns a new [Result]`!(T, E)` with the value.
+///
+/// $(SMALL_TABLE
+///     Conceptual I/O summary
+///     Input: `Result!(Result!(T, E), E)`|Output: `Result!(T, E)`
+///     `.ok(inner)`|`inner`
+///     `.err(e)`|`.err(e)`
+/// )
 ///
 /// Params:
 ///     r = The nested [Result] to flatten
