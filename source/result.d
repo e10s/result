@@ -2067,6 +2067,67 @@ auto unwrapOrElse(alias fun, T, E)(scope auto ref inout(Result!(T, E)) r)
     assert(unwrapOrElse!fFoo(resultErr) == "Foo is 123");
 }
 
+/// Extracts the `E` value from a [Result], with a default value for an error.
+///
+/// If the [Result] has a `T`, returns the default value.
+/// If the [Result] has an `E`, returns the value.
+/// The `E` value and the default value must be able to be implicitly converted to some common type.
+///
+/// $(SMALL_TABLE
+///     Conceptual I/O summary
+///     Input: `Result!(T, E)`|Output: `auto`
+///     `.ok(*)`|Default value
+///     `.err(e)`|`e`
+/// )
+///
+/// Params:
+///     r = The [Result] to unwrap
+///     defaultValue = The fallback value to be used if an error
+///
+/// Returns: The contained `E` value, or `defaultValue` if `r` has a `T`
+@CorrespondingTo("c++", "error_or")
+auto unwrapErrOr(T, E, F)(scope auto ref inout(Result!(T, E)) r, F defaultValue = inout(E).init)
+{
+    return isErr(r) ? unwrapErr(r) : defaultValue;
+}
+
+///
+@safe @nogc nothrow unittest
+{
+    alias R = Result!(uint, string);
+
+    immutable defaultValue = "Being right is wrong.";
+
+    auto resultOk = R.ok(9);
+    assert(unwrapErrOr(resultOk, defaultValue) == defaultValue);
+    assert(unwrapErrOr(resultOk) == "");
+
+    auto resultErr = R.err("error");
+    assert(unwrapErrOr(resultErr, defaultValue) == "error");
+    assert(unwrapErrOr(resultErr) == "error");
+}
+
+@safe @nogc nothrow unittest
+{
+    auto resultOk1 = Result!(int, string).ok(123);
+    assert(unwrapErrOr(resultOk1, "bad") == "bad");
+    assert(unwrapErrOr(resultOk1) == "");
+
+    alias R = Result!(string, uint);
+
+    const resultOk2 = R.ok("123");
+    assert(unwrapErrOr(resultOk2, 1) == 1);
+    assert(unwrapErrOr(resultOk2) == 0);
+
+    auto resultErr1 = R.err(123);
+    assert(unwrapErrOr(resultErr1, 1) == 123);
+    assert(unwrapErrOr(resultErr1) == 123);
+
+    const resultErr2 = R.err(123);
+    assert(unwrapErrOr(resultErr2, 1) == 123);
+    assert(unwrapErrOr(resultErr2) == 123);
+}
+
 /// Transforms the `T` value of a [Result] using a function, keeping the `E` value unchanged.
 ///
 /// If the [Result] has a `T`, applies `fun` to the value and returns a new [Result] with the transformed value.
