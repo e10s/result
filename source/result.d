@@ -1537,9 +1537,8 @@ auto orElse(alias fun, T, E)(scope auto ref inout(Result!(T, E)) r)
 @CorrespondingTo("rust", "unwrap")
 @CorrespondingTo("rust", "unwrap_unchecked")
 auto ref inout(T) unwrap(T, E)(scope return auto ref inout(Result!(T, E)) r)
+in (isOk(r), "Result does not have an Ok value.")
 {
-    assert(isOk(r), "Result does not have an Ok value.");
-
     static if (is(T : void))
     {
         return;
@@ -1618,9 +1617,8 @@ unittest
 @CorrespondingTo("rust", "unwrap_err_unchecked")
 @CorrespondingTo("c++", "error")
 auto ref inout(E) unwrapErr(T, E)(scope return auto ref inout(Result!(T, E)) r)
+in (isErr(r), "Result does not have an error value.")
 {
-    assert(isErr(r), "Result does not have an error value.");
-
     static if (is(T : void))
     {
         return r.payload.get();
