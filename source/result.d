@@ -267,9 +267,13 @@ struct Result(T, E) if (!is(T : Err!(E), E) && !is(E : void))
         /// The payload to switch states and contain values.
         SumType!(T, Err!E) payload;
 
-        // The constructor accepts `T` and `Err!E` values.
-        private this(SumTypePayload)(auto ref inout(SumTypePayload) value) inout
-                if (is(SumTypePayload == T) || is(SumTypePayload == Err!E))
+        /// The constructor for `T`.
+        this(inout(T) value) inout
+        {
+            payload = value;
+        }
+        /// Ditto
+        this(ref inout(T) value) inout
         {
             payload = value;
         }
@@ -312,6 +316,31 @@ struct Result(T, E) if (!is(T : Err!(E), E) && !is(E : void))
     }
 
     alias payload this;
+
+    /// The constructor for `Err!E`.
+    this(inout(Err!E) error) inout
+    {
+        static if (is(T : void))
+        {
+            this(error.error);
+        }
+        else
+        {
+            payload = error;
+        }
+    }
+    /// Ditto
+    this(ref inout(Err!E) error) inout
+    {
+        static if (is(T : void))
+        {
+            this(error.error);
+        }
+        else
+        {
+            payload = error;
+        }
+    }
 
     /// Creates a [Result]`!(T, E)` with an _error `E` value.
     ///
@@ -503,6 +532,86 @@ struct Result(T, E) if (!is(T : Err!(E), E) && !is(E : void))
     result2 = result3;
     assert(result2.get!Exception == k1);
 }
+
+// Ctor
+@safe @nogc nothrow unittest
+{
+    alias R = Result!(int, string);
+
+    import std.sumtype : get;
+
+    auto result1 = R(123);
+    assert(result1.get!int == 123);
+
+    auto result2 = R(Err!string("error"));
+    assert(result2.get!(Err!string) == Err!string("error"));
+
+    const cResult1 = const(R)(456);
+    assert(cResult1.get!(const(int)) == 456);
+
+    const cResult2 = const(R)(Err!string("error"));
+    assert(cResult2.get!(const(Err!string)) == Err!string("error"));
+
+    immutable iResult1 = immutable(R)(456);
+    assert(iResult1.get!(immutable(int)) == 456);
+
+    immutable iResult2 = immutable(R)(Err!string("error"));
+    assert(iResult2.get!(immutable(Err!string)) == Err!string("error"));
+}
+
+// Ditto
+@safe @nogc nothrow unittest
+{
+    alias R = Result!(int, string);
+
+    import std.sumtype : get;
+    int v=123;
+    auto e=Err!string("error");
+
+    auto result1 = R(v);
+    assert(result1.get!int == 123);
+
+    auto result2 = R(e);
+    assert(result2.get!(Err!string) == Err!string("error"));
+
+    const cResult1 = const(R)(v);
+    assert(cResult1.get!(const(int)) == 123);
+
+    const cResult2 = const(R)(e);
+    assert(cResult2.get!(const(Err!string)) == Err!string("error"));
+
+    immutable iResult1 = immutable(R)(v);
+    assert(iResult1.get!(immutable(int)) == 123);
+
+    immutable iResult2 = immutable(R)(e);
+    assert(iResult2.get!(immutable(Err!string)) == Err!string("error"));
+}
+
+// Ditto
+@safe nothrow unittest
+{
+    struct S
+    {
+    }
+
+    alias R = Result!(Exception, S*);
+
+    import std.sumtype : get;
+
+    auto s = new S;
+
+    auto result1 = R(new Exception("test"));
+    assert(result1.get!Exception.msg == "test");
+
+    auto result2 = R(Err!(S*)(s));
+    assert(result2.get!(Err!(S*)).error == s);
+
+    const cResult1 = const(R)(new Exception("test"));
+    assert(cResult1.get!(const(Exception)).msg == "test");
+
+    const cResult2 = const(R)(Err!(S*)(s));
+    assert(cResult2.get!(const(Err!(S*))).error == s);
+}
 /* Tests for non-void T end */
 
 /* Tests for void T begin */
@@ -619,6 +728,49 @@ struct Result(T, E) if (!is(T : Err!(E), E) && !is(E : void))
 
     result2 = result3;
     assert(result2.isNull);
+}
+
+// Ctor
+@safe @nogc nothrow unittest
+{
+    alias R = Result!(void, string);
+
+    auto result1 = R(Err!string("error"));
+    assert(result1.get == "error");
+
+    const cResult1 = const(R)(Err!string("error"));
+    assert(cResult1.get == "error");
+}
+
+// Ditto
+@safe @nogc nothrow unittest
+{
+    alias R = Result!(void, string);
+    auto e = Err!string("error");
+
+    auto result1 = R(e);
+    assert(result1.get == "error");
+
+    const cResult1 = const(R)(e);
+    assert(cResult1.get == "error");
+}
+
+// Ditto
+@safe nothrow unittest
+{
+    struct S
+    {
+    }
+
+    alias R = Result!(void, S*);
+
+    auto s = new S;
+
+    auto result1 = R(Err!(S*)(s));
+    assert(result1.get == s);
+
+    const cResult1 = const(R)(Err!(S*)(s));
+    assert(cResult1.get == s);
 }
 /* Tests for void T end */
 
