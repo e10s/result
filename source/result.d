@@ -126,7 +126,7 @@ unittest
 import std.functional : not;
 import std.functional : unaryFun;
 import std.typecons : Nullable;
-import std.traits : CommonType, Unqual;
+import std.traits : CommonType, Unqual, isAssignable;
 
 /// Wrapper struct representing an error result with a value of type `E`.
 /// Serves as the error variant in a [Result] type.
@@ -278,6 +278,12 @@ struct Result(T, E) if (!is(T : Err!(E), E) && !is(E : void))
             payload = value;
         }
 
+        /// Assigns a `T` value into a [Result].
+        void opAssign()(T value) if (isAssignable!T)
+        {
+            payload = value;
+        }
+
         /// Creates a [Result]`!(T, E)` with a successful `T` _value.
         ///
         /// Params:
@@ -335,6 +341,19 @@ struct Result(T, E) if (!is(T : Err!(E), E) && !is(E : void))
         static if (is(T : void))
         {
             this(error.error);
+        }
+        else
+        {
+            payload = error;
+        }
+    }
+
+    /// Assigns an `Err!E` wrapping an `E` value into a [Result].
+    void opAssign()(Err!E error) if (isAssignable!E)
+    {
+        static if (is(T : void))
+        {
+            payload = error.error;
         }
         else
         {
@@ -533,6 +552,21 @@ struct Result(T, E) if (!is(T : Err!(E), E) && !is(E : void))
     assert(result2.get!Exception == k1);
 }
 
+// Ditto
+@trusted @nogc nothrow unittest
+{
+    alias R = Result!(int, string);
+    import std.sumtype : get;
+
+    auto result = R.ok(123);
+
+    result = 456;
+    assert(result.get!int == 456);
+
+    result = Err!string("error");
+    assert(result.get!(Err!string) == Err!string("error"));
+}
+
 // Ctor
 @safe @nogc nothrow unittest
 {
@@ -565,8 +599,9 @@ struct Result(T, E) if (!is(T : Err!(E), E) && !is(E : void))
     alias R = Result!(int, string);
 
     import std.sumtype : get;
-    int v=123;
-    auto e=Err!string("error");
+
+    int v = 123;
+    auto e = Err!string("error");
 
     auto result1 = R(v);
     assert(result1.get!int == 123);
@@ -728,6 +763,17 @@ struct Result(T, E) if (!is(T : Err!(E), E) && !is(E : void))
 
     result2 = result3;
     assert(result2.isNull);
+}
+
+// Ditto
+@trusted @nogc nothrow unittest
+{
+    alias R = Result!(void, string);
+
+    auto result = R.ok();
+
+    result = Err!string("error");
+    assert(result.get == "error");
 }
 
 // Ctor
