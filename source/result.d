@@ -224,7 +224,7 @@ class UnwrapException : Exception
 /// See_Also:
 ///     [std.sumtype](https://dlang.org/phobos/std_sumtype.html)
 ///     [std.typecons.Nullable](https://dlang.org/phobos/std_typecons.html#Nullable)
-struct Result(T, E) if (!is(T : Err!(E), E) && !is(E : void))
+struct Result(T, E) if (!is(T : Err!X, X) && !is(E : void))
 {
     static if (is(T : void))
     {
@@ -232,11 +232,6 @@ struct Result(T, E) if (!is(T : Err!(E), E) && !is(E : void))
         Nullable!E payload;
 
         // The constructor accepts `E` values.
-        private this(inout(E) error) inout
-        {
-            payload = error;
-        }
-        // Ditto
         private this(ref inout(E) error) inout
         {
             payload = error;
