@@ -1,0 +1,50 @@
+name: Docs
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  build:
+    runs-on: ubuntu-slim
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          ref: main
+          sparse-checkout: |
+            source
+
+      - name: Install D compiler
+        uses: dlang-community/setup-dlang@v2
+        with:
+          compiler: dmd
+
+      - name: Install dependencies
+        run: |
+          dub fetch adrdox
+
+      - name: Build
+        run: |
+          dub run adrdox -- -i source -o docs
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v5
+        with:
+          path: docs/
+
+  deploy:
+    needs: build
+    if: github.ref == 'refs/heads/main'
+    permissions:
+      id-token: write
+      pages: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-slim
+    steps:
+      - name: Deploy
+        uses: actions/deploy-pages@v5
+        id: deployment

@@ -7,6 +7,9 @@ charset = utf-8
 trim_trailing_whitespace = true
 insert_final_newline = true
 
+[*.yml]
+indent_size = 2
+
 # https://zenn.dev/nonanonno/scraps/8f400771dbe2e8
 [*.d]
 max_line_length = 120
