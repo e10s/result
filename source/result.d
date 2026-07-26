@@ -2258,7 +2258,7 @@ auto unwrapOrElse(alias fun, T, E)(scope auto ref inout(Result!(T, E)) r)
     assert(unwrapOrElse!fFoo(resultErr) == "Foo is 123");
 }
 
-/// Extracts the `E` value from a [Result], with a default value for an error.
+/// Extracts the `E` value from a [Result], with a default value for a successful state.
 ///
 /// If the [Result] has a `T`, returns the default value.
 /// If the [Result] has an `E`, returns the value.
@@ -2899,7 +2899,7 @@ auto mapOrElse(alias defaultFun, alias fun, T, E)(scope auto ref inout(Result!(T
 ///     Any `r`|`r`
 /// )
 ///
-////// Params:
+/// Params:
 ///     r = The [Result] to inspect
 ///     fun = The function to apply to the `T` value
 ///
