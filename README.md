@@ -1,2 +1,469 @@
-# yares
-Result type for D
+# yares: Yet another Result type for D
+
+`Result!(T, E)` is a type for D programs that need to return either a successful value or an error value from a function.
+
+Its design is heavily inspired by Rust's `Result` and C++'s `expected`.
+
+A `Result!(T, E)` object stores one of two states:
+
+- the operation succeeded and contains a value of type `T`.
+- the operation failed and contains an error of type `E`.
+
+The error type is chosen by the caller.
+It can be a `string`, an `Exception`, a user-defined `struct`, or any other type that fits the application.
+The module does not prescribe how errors should be logged or handled.
+
+## Basic use
+
+The following example validates input and then handles the result explicitly.
+
+```d
+import result;
+import std.conv : ConvException, to;
+import std.stdio : writeln;
+
+Result!(int, string) parsePositiveInt(string text)
+{
+    try
+    {
+        auto value = to!int(text);
+        return value > 0 ?
+            Result!(int, string).ok(value) :
+            Result!(int, string).err("Value must be positive");
+    }
+    catch (ConvException)
+    {
+        return Result!(int, string).err("Invalid integer");
+    }
+}
+
+auto parsed = parsePositiveInt("42");
+if (isOk(parsed))
+{
+    writeln("Value: ", unwrap(parsed));
+}
+else
+{
+    writeln("Error: ", unwrapErr(parsed));
+}
+```
+
+For a success state with no value, use `Result!(void, E)`.
+
+## Core types and construction
+
+<table>
+<thead>
+<tr>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>Result!(T, E)</code></td>
+<td>Holds either a successful <code>T</code> value or an error <code>E</code> value.
+<code>T</code> may be <code>void</code> when success has no payload.</td>
+</tr>
+<tr>
+<td><code>Err!E</code></td>
+<td>Wraps an error value. Used for assigning the error to a <code>Result</code>.
+Its value is available through <code>.error</code>.</td>
+</tr>
+<tr>
+<td><code>UnwrapException</code></td>
+<td>Thrown by <code>tryUnwrap</code> or <code>tryUnwrapErr</code> when the requested state is not present.</td>
+</tr>
+<tr>
+<td><code>std.sumtype.SumType!(T, Err!E)</code></td>
+<td>The underlying <code>SumType</code> for a non-<code>void</code> <code>T</code>.
+It can be obtained by referring to <code>.payload</code> field of a <code>Result</code>.</td>
+</tr>
+<tr>
+<td><code>std.typecons.Nullable!E</code></td>
+<td>The underlying <code>Nullable</code> for a <code>void</code> <code>T</code>.
+It can be obtained by referring to <code>.payload</code> field of a <code>Result</code>.</td>
+</tr>
+</tbody>
+</table>
+
+Note that `Result!(T, E)` rejects `void` as `E` and prevents using `Err!X` as `T`.
+
+`Result` also provides the following static member functions to construct `Result` objects easily.
+
+<table>
+<thead>
+<tr>
+<th>Function</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>Result!(T, E).ok(value)</code></td>
+<td>Creates a successful result containing <code>value</code> of <code>T</code>.</td>
+</tr>
+<tr>
+<td><code>Result!(void, E).ok()</code></td>
+<td>Creates a successful result with no value.</td>
+</tr>
+<tr>
+<td><code>Result!(T, E).err(error)</code></td>
+<td>Creates an error result containing <code>error</code> of <code>E</code>.</td>
+</tr>
+</tbody>
+</table>
+
+## API reference
+
+UFCS-friendly functions are provided.
+
+The tables below summarize the predefined functions for `Result`.
+In the tables, `t` is a success value, `e` is an error value,
+and `*` means that the behavior depends on the state rather than the value.
+If `T` is `void`, interpret the table entries appropriately.
+
+For more information, please refer to the [official documentation](https://e10s.github.io/yares/).
+To create an offline copy, use [adrdox](https://code.dlang.org/packages/adrdox) as a documentation generator.
+
+### State checks and extraction
+
+<table>
+<thead>
+<tr>
+<th>Function</th>
+<th>Input</th>
+<th>Output</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td rowspan="2"><code>isOk(r)</code></td>
+<td><code>Result!(T, E).ok(*)</code></td>
+<td><code>true</code></td>
+<td rowspan="2">Equivalent to <code>!isErr(r)</code></td>
+</tr>
+<tr>
+<td><code>Result!(T, E).err(*)</code></td>
+<td><code>false</code></td>
+</tr>
+<tr>
+<td rowspan="2"><code>isOkAnd!pred(r)</code></td>
+<td><code>Result!(T, E).ok(t)</code></td>
+<td><code>pred(t)</code></td>
+<td rowspan="2">For a non-<code>void</code> <code>T</code></td>
+</tr>
+<tr>
+<td><code>Result!(T, E).err(*)</code></td>
+<td><code>false</code></td>
+</tr>
+<tr>
+<td rowspan="2"><code>isErr(r)</code></td>
+<td><code>Result!(T, E).ok(*)</code></td>
+<td><code>false</code></td>
+<td rowspan="2">Equivalent to <code>!isOk(r)</code></td>
+</tr>
+<tr>
+<td><code>Result!(T, E).err(*)</code></td>
+<td><code>true</code></td>
+</tr>
+<tr>
+<td rowspan="2"><code>isErrAnd!pred(r)</code></td>
+<td><code>Result!(T, E).ok(*)</code></td>
+<td><code>false</code></td>
+<td></td>
+</tr>
+<tr>
+<td><code>Result!(T, E).err(e)</code></td>
+<td><code>pred(e)</code></td>
+<td></td>
+</tr>
+<tr>
+<td rowspan="2"><code>ok(r)</code></td>
+<td><code>Result!(T, E).ok(t)</code></td>
+<td><code>nullable(t)</code></td>
+<td rowspan="2">For a non-<code>void</code> <code>T</code></td>
+</tr>
+<tr>
+<td><code>Result!(T, E).err(*)</code></td>
+<td><code>Nullable!T.init</code> (the null state)</td>
+</tr>
+<tr>
+<td rowspan="2"><code>err(r)</code></td>
+<td><code>Result!(T, E).ok(*)</code></td>
+<td><code>Nullable!E.init</code> (the null state)</td>
+<td></td>
+</tr>
+<tr>
+<td><code>Result!(T, E).err(e)</code></td>
+<td><code>nullable(e)</code></td>
+<td></td>
+</tr>
+<tr>
+<td><code>unwrap(r)</code></td>
+<td><code>Result!(T, E).ok(t)</code></td>
+<td><code>t</code></td>
+<td></td>
+</tr>
+<tr>
+<td rowspan="2"><code>unwrapErr(r)</code></td>
+<td><code>Result!(T, E).err(e)</code></td>
+<td><code>e</code></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+
+Use `isOk` or `isErr` before `unwrap` and `unwrapErr` when the contained state is unknown.
+The `Nullable`-returning `ok` and `err` functions are useful when absence should be represented as a value.
+
+### Checked unwrapping and fallback values
+
+<table>
+<thead>
+<tr>
+<th>Function</th>
+<th>Input</th>
+<th>Output</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td rowspan="2"><code>tryUnwrap(r, msg)</code></td>
+<td><code>Result!(T, E).ok(t)</code></td>
+<td><code>t</code></td>
+<td></td>
+</tr>
+<tr>
+<td><code>Result!(T, E).err(*)</code></td>
+<td></td>
+<td>Throws <code>UnwrapException</code>.</td>
+</tr>
+<tr>
+<td rowspan="2"><code>tryUnwrapErr(r, msg)</code></td>
+<td><code>Result!(T, E).ok(*)</code></td>
+<td></td>
+<td>Throws <code>UnwrapException</code>.</td>
+</tr>
+<tr>
+<td><code>Result!(T, E).err(e)</code></td>
+<td><code>e</code></td>
+<td></td>
+</tr>
+<tr>
+<td rowspan="2"><code>unwrapOr(r, defaultValue)</code></td>
+<td><code>Result!(T, E).ok(t)</code></td>
+<td><code>t</code></td>
+<td rowspan="2">For a non-<code>void</code> <code>T</code></td>
+</tr>
+<tr>
+<td><code>Result!(T, E).err(*)</code></td>
+<td><code>defaultValue</code></td>
+</tr>
+<tr>
+<td rowspan="2"><code>unwrapOrElse!fun(r)</code></td>
+<td><code>Result!(T, E).ok(t)</code></td>
+<td><code>t</code></td>
+<td rowspan="2">For a non-<code>void</code> <code>T</code></td>
+</tr>
+<tr>
+<td><code>Result!(T, E).err(e)</code></td>
+<td><code>fun(e)</code></td>
+</tr>
+<tr>
+<td rowspan="3"><code>unwrapErrOr(r, defaultValue)</code></td>
+<td><code>Result!(T, E).ok(*)</code></td>
+<td><code>defaultValue</code></td>
+<td></td>
+</tr>
+<tr>
+<td><code>Result!(T, E).err(e)</code></td>
+<td><code>e</code></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+
+`tryUnwrap` and `tryUnwrapErr` accept an optional message.
+
+### Chaining and mapping
+
+<table>
+<thead>
+<tr>
+<th>Function</th>
+<th>Input</th>
+<th>Output</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td rowspan="2"><code>and(r1, r2)</code></td>
+<td><code>Result!(T, E).ok(*)</code>, <code>Result!(U, E)</code></td>
+<td><code>r2</code></td>
+<td></td>
+</tr>
+<tr>
+<td><code>Result!(T, E).err(e)</code>, <code>Result!(U, E)</code></td>
+<td><code>Result!(U, E).err(e)</code></td>
+<td></td>
+</tr>
+<tr>
+<td rowspan="2"><code>andThen!fun(r)</code></td>
+<td><code>Result!(T, E).ok(t)</code></td>
+<td><code>fun(t)</code></td>
+<td rowspan="2"><code>Result!(U, E) fun(T);</code> and for a non-<code>void</code> <code>T</code></td>
+</tr>
+<tr>
+<td><code>Result!(T, E).err(e)</code></td>
+<td><code>Result!(U, E).err(e)</code></td>
+</tr>
+<tr>
+<td rowspan="2"><code>or(r1, r2)</code></td>
+<td><code>Result!(T, E).ok(t)</code>, <code>Result!(T, F)</code></td>
+<td><code>Result!(T, F).ok(t)</code></td>
+<td></td>
+</tr>
+<tr>
+<td><code>Result!(T, E).err(*)</code>, <code>Result!(T, F)</code></td>
+<td><code>r2</code></td>
+<td></td>
+</tr>
+<tr>
+<td rowspan="2"><code>orElse!fun(r)</code></td>
+<td><code>Result!(T, E).ok(t)</code></td>
+<td><code>Result!(T, F).ok(t)</code></td>
+<td rowspan="2"><code>Result!(T, F) fun(E);</code></td>
+</tr>
+<tr>
+<td><code>Result!(T, E).err(e)</code></td>
+<td><code>fun(e)</code></td>
+</tr>
+<tr>
+<td rowspan="2"><code>map!fun(r)</code></td>
+<td><code>Result!(T, E).ok(t)</code></td>
+<td><code>Result!(U, E).ok(fun(t))</code></td>
+<td rowspan="2"><code>U fun(T);</code></td>
+</tr>
+<tr>
+<td><code>Result!(T, E).err(e)</code></td>
+<td><code>Result!(U, E).err(e)</code></td>
+</tr>
+<tr>
+<td rowspan="2"><code>mapErr!fun(r)</code></td>
+<td><code>Result!(T, E).ok(t)</code></td>
+<td><code>Result!(T, F).ok(t)</code></td>
+<td rowspan="2"><code>F fun(E);</code></td>
+</tr>
+<tr>
+<td><code>Result!(T, E).err(e)</code></td>
+<td><code>Result!(T, F).err(fun(e))</code></td>
+</tr>
+<tr>
+<td rowspan="2"><code>mapOr!fun(r, defaultValue)</code></td>
+<td><code>Result!(T, E).ok(t)</code></td>
+<td><code>fun(t)</code></td>
+<td rowspan="2">For a non-<code>void</code> <code>T</code></td>
+</tr>
+<tr>
+<td><code>Result!(T, E).err(*)</code></td>
+<td><code>defaultValue</code></td>
+</tr>
+<tr>
+<td rowspan="2"><code>mapOrElse!(defaultFun,fun)(r)</code></td>
+<td><code>Result!(T, E).ok(t)</code></td>
+<td><code>fun(t)</code></td>
+<td rowspan="2">For a non-<code>void</code> <code>T</code></td>
+</tr>
+<tr>
+<td><code>Result!(T, E).err(e)</code></td>
+<td><code>defaultFun(e)</code></td>
+</tr>
+</tbody>
+</table>
+
+### Inspection
+
+<table>
+<thead>
+<tr>
+<th>Function</th>
+<th>Input</th>
+<th>Output</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td rowspan="2"><code>inspect!fun(r)</code></td>
+<td><code>Result!(T, E).ok(t)</code></td>
+<td><code>r</code></td>
+<td>Calls <code>fun(t)</code> before returning.</td>
+</tr>
+<tr>
+<td><code>Result!(T, E).err(*)</code></td>
+<td><code>r</code></td>
+<td></td>
+</tr>
+<tr>
+<td rowspan="2"><code>inspectErr!fun(r)</code></td>
+<td><code>Result!(T, E).ok(*)</code></td>
+<td><code>r</code></td>
+<td></td>
+</tr>
+<td><code>Result!(T, E).err(e)</code></td>
+<td><code>r</code></td>
+<td>Calls <code>fun(e)</code> before returning.</td>
+</tr>
+</tbody>
+</table>
+
+`inspect` and `inspectErr` are intended for side effects such as logging or
+debugging while preserving the result for subsequent operations.
+
+### Structural helpers
+
+<table>
+<thead>
+<tr>
+<th>Function</th>
+<th>Input</th>
+<th>Output</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td rowspan="3"><code>transpose(r)</code></td>
+<td><code>Result!(Nullable!T, E).ok(nullable(t))</code></td>
+<td><code>nullable(Result!(Nullable!T, E).ok(t))</code></td>
+<td rowspan="3">For a non-<code>void</code> <code>T</code></td>
+</tr>
+<tr>
+<td><code>Result!(Nullable!T, E).ok(Nullable!T.init)</code></td>
+<td><code>Nullable!(Result!(T, E)).init</code> (the null state)</td>
+</tr>
+<tr>
+<td><code>Result!(Nullable!T, E).err(e)</code></td>
+<td><code>nullable(Result!(Nullable!T, E).err(e))</code></td>
+</tr>
+<tr>
+<td rowspan="2"><code>flatten(r)</code></td>
+<td><code>Result!(Result!(T, E), E).ok(inner)</code></td>
+<td><code>inner</code></td>
+<td></td>
+</tr>
+<tr>
+<td><code>Result!(Result!(T, E), E).err(e)</code></td>
+<td><code>Result!(T, E).err(e)</code></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+
+## License
+
+This project is available under the MIT License. See [LICENSE](LICENSE).
