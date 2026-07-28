@@ -2,24 +2,24 @@ name: DUB Tests
 on: [push, pull_request]
 
 jobs:
-    test:
-        name: ${{ matrix.os }} - ${{ matrix.dc }}
-        strategy:
-            fail-fast: false
-            matrix:
-                os: [ubuntu-slim, windows-latest, macos-latest]
-                dc: [dmd, ldc]
-                exclude:
-                    - { os: macos-latest, dc: dmd }
-        runs-on: ${{ matrix.os }}
-        steps:
-            - name: Checkout
-              uses: actions/checkout@v7
+  test:
+    name: ${{ matrix.os }} - ${{ matrix.dc }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-slim, windows-latest, macos-latest]
+        dc: [dmd, ldc]
+        exclude:
+          - { os: macos-latest, dc: dmd }
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
 
-            - name: Install D compiler
-              uses: dlang-community/setup-dlang@v2
-              with:
-                  compiler: ${{ matrix.dc }}
+      - name: Install D compiler
+        uses: dlang-community/setup-dlang@v2
+        with:
+          compiler: ${{ matrix.dc }}
 
-            - name: Run tests
-              run: dub -q test
+      - name: Run tests
+        run: dub -q test
