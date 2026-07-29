@@ -1730,7 +1730,7 @@ auto orElse(alias fun, T, E)(scope auto ref inout(Result!(T, E)) r)
 @CorrespondingTo("rust", "unwrap")
 @CorrespondingTo("rust", "unwrap_unchecked")
 auto ref inout(T) unwrap(T, E)(scope return auto ref inout(Result!(T, E)) r)
-in (isOk(r), "Result does not have an Ok value.")
+in (isOk(r), "Result does not have a successful state.")
 {
     static if (is(T : void))
     {
@@ -1810,7 +1810,7 @@ unittest
 @CorrespondingTo("rust", "unwrap_err_unchecked")
 @CorrespondingTo("c++", "error")
 auto ref inout(E) unwrapErr(T, E)(scope return auto ref inout(Result!(T, E)) r)
-in (isErr(r), "Result does not have an error value.")
+in (isErr(r), "Result does not have an error state.")
 {
     static if (is(T : void))
     {
@@ -2020,7 +2020,7 @@ auto ref inout(E) tryUnwrapErr(T, E)(scope return auto ref inout(Result!(T, E)) 
 
     if (msg is null)
     {
-        enforce!UnwrapException(isErr(r), "Result does not have an Err value.");
+        enforce!UnwrapException(isErr(r), "Result does not have an error state.");
     }
     else
     {
