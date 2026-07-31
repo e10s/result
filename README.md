@@ -123,9 +123,6 @@ In the tables, `t` is a success value, `e` is an error value,
 and `*` means that the behavior depends on the state rather than the value.
 If `T` is `void`, interpret the table entries appropriately.
 
-For more information, please refer to the [official documentation](https://e10s.github.io/yares/).
-To create an offline copy, use [adrdox](https://code.dlang.org/packages/adrdox) as a documentation generator.
-
 ### State checks and extraction
 
 <table>
@@ -463,6 +460,16 @@ debugging while preserving the result for subsequent operations.
 </tr>
 </tbody>
 </table>
+
+## More information
+
+[The official documentation](https://e10s.github.io/yares/), generated with [adrdox](https://code.dlang.org/packages/adrdox), is available.
+To create an offline copy, run:
+
+```sh
+dub fetch adrdox
+dub run adrdox -- -i path/to/yares/source
+```
 
 ## License
 
