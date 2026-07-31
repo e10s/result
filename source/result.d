@@ -816,36 +816,6 @@ struct Result(T, E) if (!is(T : Err!X, X) && !is(E : void))
 /* Tests for void T end */
 
 /* Convenience templates begin */
-private enum bool isResult(R) = is(R : Result!(T, E), T, E);
-
-unittest
-{
-    alias R = Result!(int, string);
-    assert(isResult!R);
-    assert(isResult!(const(R)));
-    assert(isResult!(immutable(R)));
-    assert(isResult!(shared(R)));
-    assert(isResult!(inout(R)));
-}
-
-private enum bool isResultVoidT(R) = is(R : Result!(T, E), T:
-            void, E);
-unittest
-{
-    alias R = Result!(int, string);
-    assert(!isResultVoidT!R);
-    assert(!isResultVoidT!(const(R)));
-    assert(!isResultVoidT!(immutable(R)));
-    assert(!isResultVoidT!(shared(R)));
-    assert(!isResultVoidT!(inout(R)));
-
-    assert(isResultVoidT!(Result!(void, string)));
-    assert(isResultVoidT!(Result!(const(void), string)));
-    assert(isResultVoidT!(Result!(immutable(void), string)));
-    assert(isResultVoidT!(Result!(shared(void), string)));
-    assert(isResultVoidT!(Result!(inout(void), string)));
-}
-
 private alias OkValueTypeOf(R : Result!(T, E), T, E) = T;
 
 unittest
@@ -865,36 +835,6 @@ unittest
     assert(is(OkValueTypeOf!(const(R)) == const(void)));
     assert(is(OkValueTypeOf!(immutable(R)) == const(void)));
     assert(is(OkValueTypeOf!(inout(R)) == const(void)));
-}
-
-private template ErrTypeOf(R) if (isResult!R && !isResultVoidT!R)
-{
-    alias ErrTypeOf = typeof(R.payload).Types[1];
-}
-
-unittest
-{
-    alias R = Result!(int, string);
-    assert(is(ErrTypeOf!R == Err!string));
-    assert(is(ErrTypeOf!(const(R)) == Err!string));
-    assert(is(ErrTypeOf!(immutable(R)) == Err!string));
-    assert(is(ErrTypeOf!(inout(R)) == Err!string));
-}
-
-private template QualifiedErrTypeOf(R) if (isResult!R && !isResultVoidT!R)
-{
-    import std.traits : CopyTypeQualifiers;
-
-    alias QualifiedErrTypeOf = CopyTypeQualifiers!(R, ErrTypeOf!R);
-}
-
-unittest
-{
-    alias R = Result!(int, string);
-    assert(is(QualifiedErrTypeOf!R == Err!string));
-    assert(is(QualifiedErrTypeOf!(const(R)) == const(Err!string)));
-    assert(is(QualifiedErrTypeOf!(immutable(R)) == immutable(Err!string)));
-    assert(is(QualifiedErrTypeOf!(inout(R)) == inout(Err!string)));
 }
 
 private alias ErrValueTypeOf(R : Result!(T, E), T, E) = E;
