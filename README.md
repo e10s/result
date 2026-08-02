@@ -38,7 +38,7 @@ Result!(int, string) parsePositiveInt(string text)
 }
 
 auto parsed = parsePositiveInt("42");
-if (isOk(parsed))
+if (isSuccess(parsed))
 {
     writeln("Value: ", unwrap(parsed));
 }
@@ -136,7 +136,7 @@ If `T` is `void`, interpret the table entries appropriately.
 </thead>
 <tbody>
 <tr>
-<td rowspan="2"><code>isOk(r)</code></td>
+<td rowspan="2"><code>isSuccess(r)</code></td>
 <td><code>Result!(T, E).success(*)</code></td>
 <td><code>true</code></td>
 <td rowspan="2">Equivalent to <code>!isErr(r)</code></td>
@@ -146,7 +146,7 @@ If `T` is `void`, interpret the table entries appropriately.
 <td><code>false</code></td>
 </tr>
 <tr>
-<td rowspan="2"><code>isOkAnd!pred(r)</code></td>
+<td rowspan="2"><code>isSuccessAnd!pred(r)</code></td>
 <td><code>Result!(T, E).success(t)</code></td>
 <td><code>pred(t)</code></td>
 <td rowspan="2">For a non-<code>void</code> <code>T</code></td>
@@ -159,7 +159,7 @@ If `T` is `void`, interpret the table entries appropriately.
 <td rowspan="2"><code>isErr(r)</code></td>
 <td><code>Result!(T, E).success(*)</code></td>
 <td><code>false</code></td>
-<td rowspan="2">Equivalent to <code>!isOk(r)</code></td>
+<td rowspan="2">Equivalent to <code>!isSuccess(r)</code></td>
 </tr>
 <tr>
 <td><code>Result!(T, E).error(*)</code></td>
@@ -212,7 +212,7 @@ If `T` is `void`, interpret the table entries appropriately.
 </tbody>
 </table>
 
-Use `isOk` or `isErr` before `unwrap` and `unwrapError` when the contained state is unknown.
+Use `isSuccess` or `isErr` before `unwrap` and `unwrapError` when the contained state is unknown.
 The `Nullable`-returning `ok` and `err` functions are useful when absence should be represented as a value.
 
 ### Checked unwrapping and fallback values

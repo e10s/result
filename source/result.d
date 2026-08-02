@@ -826,7 +826,7 @@ struct CorrespondingTo
 /// Returns: `true` if `r` contains a successful state, `false` otherwise
 @CorrespondingTo("rust", "is_ok")
 @CorrespondingTo("c++", "has_value")
-bool isOk(T, E)(scope auto ref inout(Result!(T, E)) r)
+bool isSuccess(T, E)(scope auto ref inout(Result!(T, E)) r)
 {
     static if (is(T : void))
     {
@@ -846,10 +846,10 @@ bool isOk(T, E)(scope auto ref inout(Result!(T, E)) r)
     alias R = Result!(int, string);
 
     auto resultOk = R.success(-3);
-    assert(isOk(resultOk));
+    assert(isSuccess(resultOk));
 
     auto resultErr = R.error("Some error message");
-    assert(!isOk(resultErr));
+    assert(!isSuccess(resultErr));
 }
 
 ///
@@ -858,10 +858,10 @@ bool isOk(T, E)(scope auto ref inout(Result!(T, E)) r)
     alias R = Result!(void, string);
 
     auto resultOk = R.success();
-    assert(isOk(resultOk));
+    assert(isSuccess(resultOk));
 
     auto resultErr = R.error("Some error message");
-    assert(!isOk(resultErr));
+    assert(!isSuccess(resultErr));
 }
 
 @safe @nogc nothrow unittest
@@ -869,16 +869,16 @@ bool isOk(T, E)(scope auto ref inout(Result!(T, E)) r)
     alias R = Result!(int, string);
 
     const cResultOk = R.success(123);
-    assert(isOk(cResultOk));
+    assert(isSuccess(cResultOk));
 
     immutable iResultOk = R.success(123);
-    assert(isOk(iResultOk));
+    assert(isSuccess(iResultOk));
 
     const cResultErr = R.error("123");
-    assert(!isOk(cResultErr));
+    assert(!isSuccess(cResultErr));
 
     immutable iResultErr = R.error("123");
-    assert(!isOk(iResultErr));
+    assert(!isSuccess(iResultErr));
 }
 
 @safe @nogc nothrow unittest
@@ -886,16 +886,16 @@ bool isOk(T, E)(scope auto ref inout(Result!(T, E)) r)
     alias R = Result!(immutable(void), string);
 
     const cResultOk = R.success();
-    assert(isOk(cResultOk));
+    assert(isSuccess(cResultOk));
 
     immutable iResultOk = R.success();
-    assert(isOk(iResultOk));
+    assert(isSuccess(iResultOk));
 
     const cResultErr = R.error("123");
-    assert(!isOk(cResultErr));
+    assert(!isSuccess(cResultErr));
 
     immutable iResultErr = R.error("123");
-    assert(!isOk(iResultErr));
+    assert(!isSuccess(iResultErr));
 }
 
 /// Checks if a [Result] contains a `T` value satisfying a predicate.
@@ -913,10 +913,10 @@ bool isOk(T, E)(scope auto ref inout(Result!(T, E)) r)
 ///
 /// Returns: `true` if `r` has a `T` value and it satisfies `pred`, `false` otherwise
 @CorrespondingTo("rust", "is_ok_and")
-bool isOkAnd(alias pred = "a", T, E)(scope auto ref inout(Result!(T, E)) r)
+bool isSuccessAnd(alias pred = "a", T, E)(scope auto ref inout(Result!(T, E)) r)
         if (!is(T : void) && !is(typeof(unaryFun!pred(inout(T).init)) : void))
 {
-    return isOk(r) && !!unaryFun!pred(unwrap(r));
+    return isSuccess(r) && !!unaryFun!pred(unwrap(r));
 }
 
 ///
@@ -925,13 +925,13 @@ bool isOkAnd(alias pred = "a", T, E)(scope auto ref inout(Result!(T, E)) r)
     alias R = Result!(uint, string);
 
     auto resultOk1 = R.success(2);
-    assert(isOkAnd!(a => a > 1)(resultOk1) == true);
+    assert(isSuccessAnd!(a => a > 1)(resultOk1) == true);
 
     auto resultOk2 = R.success(0);
-    assert(isOkAnd!"a>1"(resultOk2) == false);
+    assert(isSuccessAnd!"a>1"(resultOk2) == false);
 
     auto resultErr = R.error("hey");
-    assert(isOkAnd!"a>1"(resultErr) == false);
+    assert(isSuccessAnd!"a>1"(resultErr) == false);
 }
 
 @safe nothrow unittest
@@ -944,26 +944,26 @@ bool isOkAnd(alias pred = "a", T, E)(scope auto ref inout(Result!(T, E)) r)
     alias R = Result!(int, string);
 
     auto resultOk = R.success(123);
-    assert(isOkAnd!isOdd(resultOk));
+    assert(isSuccessAnd!isOdd(resultOk));
 
     const cResultOk = R.success(123);
-    assert(isOkAnd!isOdd(cResultOk));
+    assert(isSuccessAnd!isOdd(cResultOk));
 
     immutable iResultOk = R.success(123);
-    assert(isOkAnd!isOdd(iResultOk));
+    assert(isSuccessAnd!isOdd(iResultOk));
 
     auto resultErr = R.error("123");
-    assert(!isOkAnd!isOdd(resultErr));
+    assert(!isSuccessAnd!isOdd(resultErr));
 
     const cResultErr = R.error("123");
-    assert(!isOkAnd!isOdd(cResultErr));
+    assert(!isSuccessAnd!isOdd(cResultErr));
 
     immutable iResultErr = R.error("123");
-    assert(!isOkAnd!isOdd(iResultErr));
+    assert(!isSuccessAnd!isOdd(iResultErr));
 }
 
 /// Checks if a [Result] contains an error.
-/// Equivalent to `!`[isOk]`(r)`.
+/// Equivalent to `!`[isSuccess]`(r)`.
 ///
 /// $(SMALL_TABLE
 ///     Conceptual I/O summary
@@ -972,7 +972,7 @@ bool isOkAnd(alias pred = "a", T, E)(scope auto ref inout(Result!(T, E)) r)
 ///     `.error(*)`|`true`
 /// )
 @CorrespondingTo("rust", "is_err")
-alias isErr = not!isOk;
+alias isErr = not!isSuccess;
 
 ///
 @safe @nogc nothrow unittest
@@ -1138,7 +1138,7 @@ inout(Nullable!T) ok(T, E)(scope auto ref inout(Result!(T, E)) r) if (!is(T : vo
 inout(Nullable!E) err(T, E)(scope auto ref inout(Result!(T, E)) r)
 {
     alias N = typeof(return);
-    return isOk(r) ? N.init : N(unwrapError(r));
+    return isSuccess(r) ? N.init : N(unwrapError(r));
 }
 
 ///
@@ -1221,7 +1221,7 @@ inout(Nullable!E) err(T, E)(scope auto ref inout(Result!(T, E)) r)
 inout(Result!(U, E)) and(T, U, E)(scope auto ref inout(Result!(T, E)) r1,
         scope auto ref inout(Result!(U, E)) r2)
 {
-    return isOk(r1) ? r2 : Result!(U, E).error(unwrapError(r1));
+    return isSuccess(r1) ? r2 : Result!(U, E).error(unwrapError(r1));
 }
 
 ///
@@ -1316,7 +1316,7 @@ auto andThen(alias fun, T, E)(scope auto ref inout(Result!(T, E)) r)
         if (!is(T : void) && is(E == ErrValueTypeOf!(typeof(unaryFun!fun(inout(T).init)))))
 {
     alias U = OkValueTypeOf!(typeof(unaryFun!fun(inout(T).init)));
-    return isOk(r) ? unaryFun!fun(unwrap(r)) : Result!(U, E).error(unwrapError(r));
+    return isSuccess(r) ? unaryFun!fun(unwrap(r)) : Result!(U, E).error(unwrapError(r));
 }
 
 ///
@@ -1599,7 +1599,7 @@ auto orElse(alias fun, T, E)(scope auto ref inout(Result!(T, E)) r)
 
 /// Extracts the `T` value from a [Result].
 ///
-/// The [Result] must contain a successful state. Use [isOk] to check.
+/// The [Result] must contain a successful state. Use [isSuccess] to check.
 ///
 /// $(SMALL_TABLE
 ///     Conceptual I/O summary
@@ -1615,7 +1615,7 @@ auto orElse(alias fun, T, E)(scope auto ref inout(Result!(T, E)) r)
 @CorrespondingTo("rust", "unwrap")
 @CorrespondingTo("rust", "unwrap_unchecked")
 auto ref inout(T) unwrap(T, E)(scope return auto ref inout(Result!(T, E)) r)
-in (isOk(r), "Result does not have a successful state.")
+in (isSuccess(r), "Result does not have a successful state.")
 {
     static if (is(T : void))
     {
@@ -1800,11 +1800,11 @@ auto ref inout(T) tryUnwrap(T, E)(scope return auto ref inout(Result!(T, E)) r, 
 
     if (msg is null)
     {
-        enforce!UnwrapException(isOk(r), "Result does not have a successful state.");
+        enforce!UnwrapException(isSuccess(r), "Result does not have a successful state.");
     }
     else
     {
-        enforce!UnwrapException(isOk(r), msg);
+        enforce!UnwrapException(isSuccess(r), msg);
     }
     return unwrap(r);
 }
@@ -2012,7 +2012,7 @@ auto ref inout(E) tryUnwrapError(T, E)(scope return auto ref inout(Result!(T, E)
 auto unwrapOr(T, U, E)(scope auto ref inout(Result!(T, E)) r, U defaultValue = inout(T).init)
         if (!is(T : void))
 {
-    return isOk(r) ? unwrap(r) : defaultValue;
+    return isSuccess(r) ? unwrap(r) : defaultValue;
 }
 
 ///
@@ -2094,7 +2094,7 @@ auto unwrapOr(T, U, E)(scope auto ref inout(Result!(T, E)) r, U defaultValue = i
 auto unwrapOrElse(alias fun, T, E)(scope auto ref inout(Result!(T, E)) r)
         if (!is(CommonType!(inout(T), typeof(unaryFun!fun(inout(E).init))) : void))
 {
-    return isOk(r) ? unwrap(r) : unaryFun!fun(unwrapError(r));
+    return isSuccess(r) ? unwrap(r) : unaryFun!fun(unwrapError(r));
 }
 
 ///
@@ -2236,7 +2236,7 @@ auto map(alias fun = "a", T, E)(scope auto ref inout(Result!(T, E)) r)
         alias U = Unqual!(typeof(unaryFun!fun(inout(T).init)));
     }
     alias S = Result!(U, E);
-    if (isOk(r))
+    if (isSuccess(r))
     {
         static if (is(T : void) && is(U : void))
         {
@@ -2293,7 +2293,7 @@ auto map(alias fun = "a", T, E)(scope auto ref inout(Result!(T, E)) r)
         import std.sumtype : match;
 
         immutable r = map!`a*2`(parse(num));
-        if (isOk(r))
+        if (isSuccess(r))
         {
             arr ~= unwrap(r);
         }
@@ -2639,7 +2639,7 @@ auto mapError(alias fun = "a", T, E)(scope auto ref inout(Result!(T, E)) r)
 auto mapOr(alias fun, T, U, E)(scope auto ref inout(Result!(T, E)) r,
         U defaultValue = typeof(unaryFun!fun(inout(T).init)).init) if (!is(T : void))
 {
-    return isOk(r) ? unaryFun!fun(unwrap(r)) : defaultValue;
+    return isSuccess(r) ? unaryFun!fun(unwrap(r)) : defaultValue;
 }
 
 ///
@@ -2724,7 +2724,7 @@ auto mapOrElse(alias defaultFun, alias fun, T, E)(scope auto ref inout(Result!(T
         if (!is(T : void) && !is(CommonType!(typeof(unaryFun!defaultFun(inout(E)
             .init)), typeof(unaryFun!fun(inout(T).init))) : void))
 {
-    return isOk(r) ? unaryFun!fun(unwrap(r)) : unaryFun!defaultFun(unwrapError(r));
+    return isSuccess(r) ? unaryFun!fun(unwrap(r)) : unaryFun!defaultFun(unwrapError(r));
 }
 
 ///
@@ -2794,7 +2794,7 @@ auto ref inout(Result!(T, E)) inspect(alias fun, T, E)(scope auto ref inout(Resu
         if ((!is(T : void) && is(typeof(unaryFun!fun(inout(T).init)))) || (is(T
             : void) && is(typeof(fun()))))
 {
-    if (isOk(r))
+    if (isSuccess(r))
     {
         static if (is(T : void))
         {
@@ -2862,7 +2862,7 @@ auto ref inout(Result!(T, E)) inspect(alias fun, T, E)(scope auto ref inout(Resu
     import std.conv : writeText;
 
     auto writer = appender!string();
-    assert(isParsable("4").inspect!(() => writer.writeText("success")).isOk());
+    assert(isParsable("4").inspect!(() => writer.writeText("success")).isSuccess());
     assert(writer[] == "success");
 }
 
@@ -2892,7 +2892,7 @@ auto ref inout(Result!(T, E)) inspect(alias fun, T, E)(scope auto ref inout(Resu
     import std.conv : writeText;
 
     auto writer1 = appender!string();
-    assert(R.success().inspect!(() => writer1.writeText("ok")).isOk());
+    assert(R.success().inspect!(() => writer1.writeText("ok")).isSuccess());
     assert(writer1[] == "ok");
 
     auto writer2 = appender!string();
@@ -2953,7 +2953,7 @@ auto ref inout(Result!(T, E)) inspectError(alias fun, T, E)(scope auto ref inout
     auto r = inspectError!(e => writer.writeText("failed to read file: ", e))(
             readToString("address.txt"));
 
-    assert(isOk(r) || writer[].length > 0);
+    assert(isSuccess(r) || writer[].length > 0);
 }
 
 @safe unittest
@@ -2982,7 +2982,7 @@ auto ref inout(Result!(T, E)) inspectError(alias fun, T, E)(scope auto ref inout
     import std.conv : writeText;
 
     auto writer1 = appender!string();
-    assert(R.success().inspectError!(e => writer1.writeText("error: ", e)).isOk());
+    assert(R.success().inspectError!(e => writer1.writeText("error: ", e)).isSuccess());
     assert(writer1.length == 0);
 
     auto writer2 = appender!string();
@@ -3102,7 +3102,7 @@ unittest
 @CorrespondingTo("rust", "flatten")
 inout(Result!(T, E)) flatten(T, E)(scope auto ref inout(Result!(Result!(T, E), E)) r)
 {
-    return isOk(r) ? unwrap(r) : Result!(T, E).error(unwrapError(r));
+    return isSuccess(r) ? unwrap(r) : Result!(T, E).error(unwrapError(r));
 }
 
 ///
