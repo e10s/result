@@ -27,13 +27,13 @@ unittest
             auto value = to!int(text);
             if (value <= 0)
             {
-                return R.err("Value must be a positive integer");
+                return R.error("Value must be a positive integer");
             }
             return R.ok(value);
         }
         catch (ConvException e)
         {
-            return R.err("Invalid input: " ~ e.msg);
+            return R.error("Invalid input: " ~ e.msg);
         }
     }
 
@@ -44,7 +44,7 @@ unittest
 
         if (denominator == 0)
         {
-            return R.err("Division by zero");
+            return R.error("Division by zero");
         }
         return R.ok(cast(double) numerator / denominator);
     }
@@ -60,7 +60,7 @@ unittest
         }
         catch (Exception e)
         {
-            return R.err(e);
+            return R.error(e);
         }
     }
 
@@ -327,7 +327,7 @@ struct Result(T, E) if (!is(T : Err!X, X) && !is(E : void))
     ///     error = The _error value to wrap
     ///
     /// Returns: A new [Result]`!(T, E)` containing the `E` value
-    static auto err(inout(E) error)
+    static auto error(inout(E) error)
     {
         static if (is(inout(E) == E))
         {
@@ -347,13 +347,13 @@ struct Result(T, E) if (!is(T : Err!X, X) && !is(E : void))
         ///
         unittest
         {
-            auto r1 = Result!(int, string).err("BAD");
+            auto r1 = Result!(int, string).error("BAD");
             assert(is(typeof(r1) == Result!(int, string)));
-            auto r2 = Result!(void, string).err("BAD");
+            auto r2 = Result!(void, string).error("BAD");
             assert(is(typeof(r2) == Result!(void, string)));
 
-            auto immutableR = Result!(int, string).err(cast(immutable) "Immutable BAD");
-            auto constR = Result!(void, string).err(cast(const) "Const BAD");
+            auto immutableR = Result!(int, string).error(cast(immutable) "Immutable BAD");
+            auto constR = Result!(void, string).error(cast(const) "Const BAD");
 
             // The obtained Results are automatically qualified according to the arguments
             assert(is(typeof(immutableR) == immutable(Result!(int, string))));
@@ -378,13 +378,13 @@ struct Result(T, E) if (!is(T : Err!X, X) && !is(E : void))
     immutable iResultOk = R.ok(123);
     assert(iResultOk.get!(immutable(int)) == 123);
 
-    auto resultErr = R.err("123");
+    auto resultErr = R.error("123");
     assert(resultErr.get!(Err!string) == Err!string("123"));
 
-    const cResultErr = R.err("123");
+    const cResultErr = R.error("123");
     assert(cResultErr.get!(const(Err!string)) == Err!string("123"));
 
-    immutable iResultErr = R.err("123");
+    immutable iResultErr = R.error("123");
     assert(iResultErr.get!(immutable(Err!string)) == Err!string("123"));
 }
 
@@ -408,13 +408,13 @@ struct Result(T, E) if (!is(T : Err!X, X) && !is(E : void))
     immutable iResultOk = R.ok(new Exception(""));
     assert(iResultOk.has!(immutable(Exception)));
 
-    auto resultErr = R.err(new S);
+    auto resultErr = R.error(new S);
     assert(resultErr.has!(Err!(S*)));
 
-    const cResultErr = R.err(new S);
+    const cResultErr = R.error(new S);
     assert(cResultErr.has!(const(Err!(S*))));
 
-    immutable iResultErr = R.err(new S);
+    immutable iResultErr = R.error(new S);
     assert(iResultErr.has!(immutable(Err!(S*))));
 }
 
@@ -440,13 +440,13 @@ struct Result(T, E) if (!is(T : Err!X, X) && !is(E : void))
     auto iResultOk = R.ok(new immutable(Exception)(""));
     assert(iResultOk.has!(immutable(T)));
 
-    auto resultErr = R.err(new S);
+    auto resultErr = R.error(new S);
     assert(resultErr.has!(Err!E));
 
-    auto cResultErr = R.err(new const(S));
+    auto cResultErr = R.error(new const(S));
     assert(cResultErr.has!(Err!E));
 
-    auto iResultErr = R.err(new immutable(S));
+    auto iResultErr = R.error(new immutable(S));
     assert(iResultErr.has!(Err!E));
 }
 
@@ -457,8 +457,8 @@ struct Result(T, E) if (!is(T : Err!X, X) && !is(E : void))
 
     import std.sumtype : get;
 
-    auto result1 = R.err("333");
-    auto result2 = R.err("3");
+    auto result1 = R.error("333");
+    auto result2 = R.error("3");
 
     result2 = result1;
     assert(result2.get!(Err!string) == Err!string("333"));
@@ -467,7 +467,7 @@ struct Result(T, E) if (!is(T : Err!X, X) && !is(E : void))
     result2 = result3;
     assert(result2.get!int == 100);
 
-    immutable result4 = R.err("1000");
+    immutable result4 = R.error("1000");
     result2 = result4;
     assert(result2.get!(Err!string) == Err!string("1000"));
 }
@@ -485,8 +485,8 @@ struct Result(T, E) if (!is(T : Err!X, X) && !is(E : void))
 
     auto s1 = new S;
     auto s2 = new S;
-    auto result1 = R.err(s1);
-    auto result2 = R.err(s2);
+    auto result1 = R.error(s1);
+    auto result2 = R.error(s2);
 
     result2 = result1;
     assert(result2.get!(Err!(S*)) == Err!(S*)(s1));
@@ -610,13 +610,13 @@ struct Result(T, E) if (!is(T : Err!X, X) && !is(E : void))
     immutable iResultOk = R.ok();
     assert(iResultOk.isNull);
 
-    auto resultErr = R.err("123");
+    auto resultErr = R.error("123");
     assert(resultErr.get == "123");
 
-    const cResultErr = R.err("123");
+    const cResultErr = R.error("123");
     assert(cResultErr.get == "123");
 
-    immutable iResultErr = R.err("123");
+    immutable iResultErr = R.error("123");
     assert(iResultErr.get == "123");
 }
 // Ditto
@@ -638,13 +638,13 @@ struct Result(T, E) if (!is(T : Err!X, X) && !is(E : void))
     immutable iResultOk = R.ok();
     assert(iResultOk.isNull);
 
-    auto resultErr = R.err(new S);
+    auto resultErr = R.error(new S);
     assert(is(typeof(resultErr.get()) == ErrE));
 
-    const cResultErr = R.err(new S);
+    const cResultErr = R.error(new S);
     assert(is(typeof(cResultErr.get()) == const(ErrE)));
 
-    immutable iResultErr = R.err(new S);
+    immutable iResultErr = R.error(new S);
     assert(is(typeof(iResultErr.get()) == immutable(ErrE)));
 }
 
@@ -659,13 +659,13 @@ struct Result(T, E) if (!is(T : Err!X, X) && !is(E : void))
     alias E = immutable(S*);
     alias R = Result!(T, E);
 
-    auto resultErr = R.err(new S);
+    auto resultErr = R.error(new S);
     assert(is(typeof(resultErr.get()) == Err!E));
 
-    auto cResultErr = R.err(new const(S));
+    auto cResultErr = R.error(new const(S));
     assert(is(typeof(cResultErr.get()) == Err!E));
 
-    auto iResultErr = R.err(new immutable(S));
+    auto iResultErr = R.error(new immutable(S));
     assert(is(typeof(iResultErr.get()) == Err!E));
 }
 
@@ -674,8 +674,8 @@ struct Result(T, E) if (!is(T : Err!X, X) && !is(E : void))
 {
     alias R = Result!(void, string);
 
-    auto result1 = R.err("333");
-    auto result2 = R.err("3");
+    auto result1 = R.error("333");
+    auto result2 = R.error("3");
 
     result2 = result1;
     assert(result2.get == "333");
@@ -684,7 +684,7 @@ struct Result(T, E) if (!is(T : Err!X, X) && !is(E : void))
     result2 = result3;
     assert(result2.isNull);
 
-    immutable result4 = R.err("1000");
+    immutable result4 = R.error("1000");
     result2 = result4;
     assert(result2.get == "1000");
 }
@@ -700,8 +700,8 @@ struct Result(T, E) if (!is(T : Err!X, X) && !is(E : void))
 
     auto s1 = new S;
     auto s2 = new S;
-    auto result1 = R.err(s1);
-    auto result2 = R.err(s2);
+    auto result1 = R.error(s1);
+    auto result2 = R.error(s2);
 
     result2 = result1;
     assert(result2.get == s1);
@@ -817,7 +817,7 @@ struct CorrespondingTo
 ///     Conceptual I/O summary
 ///     Input: `Result!(T, E)`|Output: `bool`
 ///     `.ok(*)`|`true`
-///     `.err(*)`|`false`
+///     `.error(*)`|`false`
 /// )
 ///
 /// Params:
@@ -848,7 +848,7 @@ bool isOk(T, E)(scope auto ref inout(Result!(T, E)) r)
     auto resultOk = R.ok(-3);
     assert(isOk(resultOk));
 
-    auto resultErr = R.err("Some error message");
+    auto resultErr = R.error("Some error message");
     assert(!isOk(resultErr));
 }
 
@@ -860,7 +860,7 @@ bool isOk(T, E)(scope auto ref inout(Result!(T, E)) r)
     auto resultOk = R.ok();
     assert(isOk(resultOk));
 
-    auto resultErr = R.err("Some error message");
+    auto resultErr = R.error("Some error message");
     assert(!isOk(resultErr));
 }
 
@@ -874,10 +874,10 @@ bool isOk(T, E)(scope auto ref inout(Result!(T, E)) r)
     immutable iResultOk = R.ok(123);
     assert(isOk(iResultOk));
 
-    const cResultErr = R.err("123");
+    const cResultErr = R.error("123");
     assert(!isOk(cResultErr));
 
-    immutable iResultErr = R.err("123");
+    immutable iResultErr = R.error("123");
     assert(!isOk(iResultErr));
 }
 
@@ -891,10 +891,10 @@ bool isOk(T, E)(scope auto ref inout(Result!(T, E)) r)
     immutable iResultOk = R.ok();
     assert(isOk(iResultOk));
 
-    const cResultErr = R.err("123");
+    const cResultErr = R.error("123");
     assert(!isOk(cResultErr));
 
-    immutable iResultErr = R.err("123");
+    immutable iResultErr = R.error("123");
     assert(!isOk(iResultErr));
 }
 
@@ -904,7 +904,7 @@ bool isOk(T, E)(scope auto ref inout(Result!(T, E)) r)
 ///     Conceptual I/O summary
 ///     Input: `Result!(T, E)`|Output: `bool`
 ///     `.ok(t)`|`pred(t)`
-///     `.err(*)`|`false`
+///     `.error(*)`|`false`
 /// )
 ///
 /// Params:
@@ -930,7 +930,7 @@ bool isOkAnd(alias pred = "a", T, E)(scope auto ref inout(Result!(T, E)) r)
     auto resultOk2 = R.ok(0);
     assert(isOkAnd!"a>1"(resultOk2) == false);
 
-    auto resultErr = R.err("hey");
+    auto resultErr = R.error("hey");
     assert(isOkAnd!"a>1"(resultErr) == false);
 }
 
@@ -952,13 +952,13 @@ bool isOkAnd(alias pred = "a", T, E)(scope auto ref inout(Result!(T, E)) r)
     immutable iResultOk = R.ok(123);
     assert(isOkAnd!isOdd(iResultOk));
 
-    auto resultErr = R.err("123");
+    auto resultErr = R.error("123");
     assert(!isOkAnd!isOdd(resultErr));
 
-    const cResultErr = R.err("123");
+    const cResultErr = R.error("123");
     assert(!isOkAnd!isOdd(cResultErr));
 
-    immutable iResultErr = R.err("123");
+    immutable iResultErr = R.error("123");
     assert(!isOkAnd!isOdd(iResultErr));
 }
 
@@ -969,7 +969,7 @@ bool isOkAnd(alias pred = "a", T, E)(scope auto ref inout(Result!(T, E)) r)
 ///     Conceptual I/O summary
 ///     Input: `Result!(T, E)`|Output: `bool`
 ///     `.ok(*)`|`false`
-///     `.err(*)`|`true`
+///     `.error(*)`|`true`
 /// )
 @CorrespondingTo("rust", "is_err")
 alias isErr = not!isOk;
@@ -982,7 +982,7 @@ alias isErr = not!isOk;
     auto resultOk = R.ok(-3);
     assert(!isErr(resultOk));
 
-    auto resultErr = R.err("Some error message");
+    auto resultErr = R.error("Some error message");
     assert(isErr(resultErr));
 }
 
@@ -990,10 +990,10 @@ alias isErr = not!isOk;
 {
     alias R = Result!(int, string);
 
-    const cResultErr = R.err("123");
+    const cResultErr = R.error("123");
     assert(isErr(cResultErr));
 
-    immutable iResultErr = R.err("123");
+    immutable iResultErr = R.error("123");
     assert(isErr(iResultErr));
 
     auto resultOk = R.ok(123);
@@ -1012,7 +1012,7 @@ alias isErr = not!isOk;
 ///     Conceptual I/O summary
 ///     Input: `Result!(T, E)`|Output: `bool`
 ///     `.ok(*)`|`false`
-///     `.err(e)`|`pred(e)`
+///     `.error(e)`|`pred(e)`
 /// )
 ///
 /// Params:
@@ -1032,10 +1032,10 @@ bool isErrAnd(alias pred = "a", T, E)(scope auto ref inout(Result!(T, E)) r)
 {
     alias R = Result!(uint, string);
 
-    auto resultErr1 = R.err("!!!");
+    auto resultErr1 = R.error("!!!");
     assert(isErrAnd!(e => e == "!!!")(resultErr1) == true);
 
-    auto resultErr2 = R.err("?");
+    auto resultErr2 = R.error("?");
     assert(isErrAnd!`a=="!!!"`(resultErr2) == false);
 
     auto resultOk = R.ok(123);
@@ -1057,16 +1057,16 @@ bool isErrAnd(alias pred = "a", T, E)(scope auto ref inout(Result!(T, E)) r)
     immutable iResultOk = R.ok(123);
     assert(!isErrAnd!isNumeric(iResultOk));
 
-    auto resultErr = R.err("123");
+    auto resultErr = R.error("123");
     assert(isErrAnd!isNumeric(resultErr));
 
-    const cResultErr = R.err("123");
+    const cResultErr = R.error("123");
     assert(isErrAnd!isNumeric(cResultErr));
 
-    immutable iResultErr = R.err("123");
+    immutable iResultErr = R.error("123");
     assert(isErrAnd!isNumeric(iResultErr));
 
-    auto resultErr2 = R.err("Good morning, 007.");
+    auto resultErr2 = R.error("Good morning, 007.");
     assert(!isErrAnd!isNumeric(resultErr2));
 }
 
@@ -1076,7 +1076,7 @@ bool isErrAnd(alias pred = "a", T, E)(scope auto ref inout(Result!(T, E)) r)
 ///     Conceptual I/O summary
 ///     Input: `Result!(T, E)`|Output: `Nullable!T`
 ///     `.ok(t)`|`t`
-///     `.err(*)`|null state
+///     `.error(*)`|null state
 /// )
 ///
 /// Params:
@@ -1100,7 +1100,7 @@ inout(Nullable!T) ok(T, E)(scope auto ref inout(Result!(T, E)) r) if (!is(T : vo
     auto resultOk = R.ok(2);
     assert(ok(resultOk) == Nullable!uint(2));
 
-    auto resultErr = R.err("Nothing here");
+    auto resultErr = R.error("Nothing here");
     assert(ok(resultErr).isNull);
 }
 
@@ -1114,10 +1114,10 @@ inout(Nullable!T) ok(T, E)(scope auto ref inout(Result!(T, E)) r) if (!is(T : vo
     immutable iResultOk = R.ok(2);
     assert(ok(iResultOk) == Nullable!uint(2));
 
-    const cResultErr = R.err("Nothing here");
+    const cResultErr = R.error("Nothing here");
     assert(ok(cResultErr).isNull);
 
-    immutable iResultErr = R.err("Nothing here");
+    immutable iResultErr = R.error("Nothing here");
     assert(ok(iResultErr).isNull);
 }
 
@@ -1127,7 +1127,7 @@ inout(Nullable!T) ok(T, E)(scope auto ref inout(Result!(T, E)) r) if (!is(T : vo
 ///     Conceptual I/O summary
 ///     Input: `Result!(T, E)`|Output: `Nullable!E`
 ///     `.ok(*)`|null state
-///     `.err(e)`|`e`
+///     `.error(e)`|`e`
 /// )
 ///
 /// Params:
@@ -1151,7 +1151,7 @@ inout(Nullable!E) err(T, E)(scope auto ref inout(Result!(T, E)) r)
     auto resultOk = R.ok(2);
     assert(err(resultOk).isNull);
 
-    auto resultErr = R.err("Nothing here");
+    auto resultErr = R.error("Nothing here");
     assert(err(resultErr) == Nullable!string("Nothing here"));
 }
 
@@ -1165,7 +1165,7 @@ inout(Nullable!E) err(T, E)(scope auto ref inout(Result!(T, E)) r)
     auto resultOk = R.ok();
     assert(err(resultOk).isNull);
 
-    auto resultErr = R.err("Nothing here");
+    auto resultErr = R.error("Nothing here");
     assert(err(resultErr) == Nullable!string("Nothing here"));
 }
 
@@ -1179,10 +1179,10 @@ inout(Nullable!E) err(T, E)(scope auto ref inout(Result!(T, E)) r)
     immutable iResultOk = R.ok(2);
     assert(err(iResultOk).isNull);
 
-    const cResultErr = R.err("Nothing here");
+    const cResultErr = R.error("Nothing here");
     assert(err(cResultErr) == Nullable!string("Nothing here"));
 
-    immutable iResultErr = R.err("Nothing here");
+    immutable iResultErr = R.error("Nothing here");
     assert(err(iResultErr) == Nullable!string("Nothing here"));
 }
 
@@ -1196,10 +1196,10 @@ inout(Nullable!E) err(T, E)(scope auto ref inout(Result!(T, E)) r)
     immutable iResultOk = R.ok();
     assert(err(iResultOk).isNull);
 
-    const cResultErr = R.err("Nothing here");
+    const cResultErr = R.error("Nothing here");
     assert(err(cResultErr) == Nullable!string("Nothing here"));
 
-    immutable iResultErr = R.err("Nothing here");
+    immutable iResultErr = R.error("Nothing here");
     assert(err(iResultErr) == Nullable!string("Nothing here"));
 }
 
@@ -1209,7 +1209,7 @@ inout(Nullable!E) err(T, E)(scope auto ref inout(Result!(T, E)) r)
 ///     Conceptual I/O summary
 ///     Input 1: `Result!(T, E)`|Input 2: `Result!(U, E)`|Output: `Result!(U, E)`
 ///     `.ok(*)`|Any `r2`|`r2`
-///     `.err(e)`|Any (ignored)|`.err(e)`
+///     `.error(e)`|Any (ignored)|`.error(e)`
 /// )
 ///
 /// Params:
@@ -1221,7 +1221,7 @@ inout(Nullable!E) err(T, E)(scope auto ref inout(Result!(T, E)) r)
 inout(Result!(U, E)) and(T, U, E)(scope auto ref inout(Result!(T, E)) r1,
         scope auto ref inout(Result!(U, E)) r2)
 {
-    return isOk(r1) ? r2 : Result!(U, E).err(unwrapErr(r1));
+    return isOk(r1) ? r2 : Result!(U, E).error(unwrapErr(r1));
 }
 
 ///
@@ -1231,16 +1231,16 @@ inout(Result!(U, E)) and(T, U, E)(scope auto ref inout(Result!(T, E)) r1,
     alias S = Result!(string, string);
 
     auto x1 = R.ok(2);
-    auto y1 = S.err("late error");
-    assert(and(x1, y1) == S.err("late error"));
+    auto y1 = S.error("late error");
+    assert(and(x1, y1) == S.error("late error"));
 
-    auto x2 = R.err("early error");
+    auto x2 = R.error("early error");
     auto y2 = S.ok("foo");
-    assert(and(x2, y2) == S.err("early error"));
+    assert(and(x2, y2) == S.error("early error"));
 
-    auto x3 = R.err("not a 2");
-    auto y3 = S.err("late error");
-    assert(and(x3, y3) == S.err("not a 2"));
+    auto x3 = R.error("not a 2");
+    auto y3 = S.error("late error");
+    assert(and(x3, y3) == S.error("not a 2"));
 
     auto x4 = R.ok(2);
     auto y4 = S.ok("different result type");
@@ -1254,16 +1254,16 @@ inout(Result!(U, E)) and(T, U, E)(scope auto ref inout(Result!(T, E)) r1,
     alias S = Result!(string, string);
 
     auto x1 = R.ok();
-    auto y1 = S.err("late error");
-    assert(and(x1, y1) == S.err("late error"));
+    auto y1 = S.error("late error");
+    assert(and(x1, y1) == S.error("late error"));
 
-    auto x2 = R.err("early error");
+    auto x2 = R.error("early error");
     auto y2 = S.ok("foo");
-    assert(and(x2, y2) == S.err("early error"));
+    assert(and(x2, y2) == S.error("early error"));
 
-    auto x3 = R.err("not a 2");
-    auto y3 = S.err("late error");
-    assert(and(x3, y3) == S.err("not a 2"));
+    auto x3 = R.error("not a 2");
+    auto y3 = S.error("late error");
+    assert(and(x3, y3) == S.error("not a 2"));
 
     auto x4 = R.ok();
     auto y4 = S.ok("different result type");
@@ -1276,16 +1276,16 @@ inout(Result!(U, E)) and(T, U, E)(scope auto ref inout(Result!(T, E)) r1,
     alias S = Result!(const(void), string);
 
     immutable x1 = R.ok(2);
-    auto y1 = S.err("late error");
-    assert(and(x1, y1) == S.err("late error"));
+    auto y1 = S.error("late error");
+    assert(and(x1, y1) == S.error("late error"));
 
-    auto x2 = R.err("early error");
+    auto x2 = R.error("early error");
     const y2 = S.ok();
-    assert(and(x2, y2) == S.err("early error"));
+    assert(and(x2, y2) == S.error("early error"));
 
-    const x3 = R.err("not a 2");
-    immutable y3 = S.err("late error");
-    assert(and(x3, y3) == S.err("not a 2"));
+    const x3 = R.error("not a 2");
+    immutable y3 = S.error("late error");
+    assert(and(x3, y3) == S.error("not a 2"));
 
     immutable x4 = R.ok(2);
     immutable y4 = S.ok();
@@ -1302,7 +1302,7 @@ inout(Result!(U, E)) and(T, U, E)(scope auto ref inout(Result!(T, E)) r1,
 ///     Conceptual I/O summary
 ///     Input: `Result!(T, E)`|Output: `Result!(U, E)`
 ///     `.ok(t)`|`fun(t)`
-///     `.err(e)`|`.err(e)`
+///     `.error(e)`|`.error(e)`
 /// )
 //
 /// Params:
@@ -1316,7 +1316,7 @@ auto andThen(alias fun, T, E)(scope auto ref inout(Result!(T, E)) r)
         if (!is(T : void) && is(E == ErrValueTypeOf!(typeof(unaryFun!fun(inout(T).init)))))
 {
     alias U = OkValueTypeOf!(typeof(unaryFun!fun(inout(T).init)));
-    return isOk(r) ? unaryFun!fun(unwrap(r)) : Result!(U, E).err(unwrapErr(r));
+    return isOk(r) ? unaryFun!fun(unwrap(r)) : Result!(U, E).error(unwrapErr(r));
 }
 
 ///
@@ -1342,12 +1342,12 @@ auto andThen(alias fun, T, E)(scope auto ref inout(Result!(T, E)) r)
 
         return checkedBinOp!"*"(x, x).apply!(to!string)
             .apply!(S.ok)
-            .get(S.err("overflowed"));
+            .get(S.error("overflowed"));
     }
 
     assert(andThen!sqThenToString(R.ok(2)) == S.ok("4"));
-    assert(andThen!sqThenToString(R.ok(1_000_000)) == S.err("overflowed"));
-    assert(andThen!sqThenToString(R.err("not a number")) == S.err("not a number"));
+    assert(andThen!sqThenToString(R.ok(1_000_000)) == S.error("overflowed"));
+    assert(andThen!sqThenToString(R.error("not a number")) == S.error("not a number"));
 }
 
 @safe nothrow unittest
@@ -1365,7 +1365,7 @@ auto andThen(alias fun, T, E)(scope auto ref inout(Result!(T, E)) r)
         }
         catch (Exception e)
         {
-            return S.err(typeid(e).toString());
+            return S.error(typeid(e).toString());
         }
     }
 
@@ -1373,10 +1373,10 @@ auto andThen(alias fun, T, E)(scope auto ref inout(Result!(T, E)) r)
     assert(andThen!toInt(resultOk1) == S.ok(2));
 
     auto resultOk2 = R.ok(float.nan);
-    assert(andThen!toInt(resultOk2) == S.err("std.conv.ConvException"));
+    assert(andThen!toInt(resultOk2) == S.error("std.conv.ConvException"));
 
-    auto resultErr = R.err("bad value");
-    assert(andThen!toInt(resultErr) == S.err("bad value"));
+    auto resultErr = R.error("bad value");
+    assert(andThen!toInt(resultErr) == S.error("bad value"));
 }
 
 /// Chains two [Result]s, returning the first if the first has a successful state.
@@ -1385,7 +1385,7 @@ auto andThen(alias fun, T, E)(scope auto ref inout(Result!(T, E)) r)
 ///     Conceptual I/O summary
 ///     Input 1: `Result!(T, E)`|Input 2: `Result!(T, F)`|Output: `Result!(T, F)`
 ///     `.ok(t)`|Any (ignored)|`.ok(t)`
-///     `.err(*)`|Any `r2`|`r2`
+///     `.error(*)`|Any `r2`|`r2`
 /// )
 //
 /// Params:
@@ -1413,16 +1413,16 @@ auto or(T, E, F)(scope auto ref inout(Result!(T, E)) r1, scope auto ref inout(Re
     alias S = Result!(uint, dstring);
 
     auto x1 = R.ok(2);
-    auto y1 = S.err("late error");
+    auto y1 = S.error("late error");
     assert(or(x1, y1) == S.ok(2));
 
-    auto x2 = R.err("early error");
+    auto x2 = R.error("early error");
     auto y2 = S.ok(2);
     assert(or(x2, y2) == S.ok(2));
 
-    auto x3 = R.err("not a 2");
-    auto y3 = S.err("late error");
-    assert(or(x3, y3) == S.err("late error"));
+    auto x3 = R.error("not a 2");
+    auto y3 = S.error("late error");
+    assert(or(x3, y3) == S.error("late error"));
 
     auto x4 = R.ok(2);
     auto y4 = S.ok(100);
@@ -1436,16 +1436,16 @@ auto or(T, E, F)(scope auto ref inout(Result!(T, E)) r1, scope auto ref inout(Re
     alias S = Result!(void, dstring);
 
     auto x1 = R.ok();
-    auto y1 = S.err("late error");
+    auto y1 = S.error("late error");
     assert(or(x1, y1) == S.ok());
 
-    auto x2 = R.err("early error");
+    auto x2 = R.error("early error");
     auto y2 = S.ok();
     assert(or(x2, y2) == S.ok());
 
-    auto x3 = R.err("not a 2");
-    auto y3 = S.err("late error");
-    assert(or(x3, y3) == S.err("late error"));
+    auto x3 = R.error("not a 2");
+    auto y3 = S.error("late error");
+    assert(or(x3, y3) == S.error("late error"));
 
     auto x4 = R.ok();
     auto y4 = S.ok();
@@ -1458,16 +1458,16 @@ auto or(T, E, F)(scope auto ref inout(Result!(T, E)) r1, scope auto ref inout(Re
     alias S = Result!(const(void), dstring);
 
     auto x1 = R.ok();
-    const y1 = S.err("late error");
+    const y1 = S.error("late error");
     assert(or(x1, y1) == S.ok());
 
-    immutable x2 = R.err("early error");
+    immutable x2 = R.error("early error");
     const y2 = S.ok();
     assert(or(x2, y2) == S.ok());
 
-    immutable x3 = R.err("not a 2");
-    immutable y3 = S.err("late error");
-    assert(or(x3, y3) == S.err("late error"));
+    immutable x3 = R.error("not a 2");
+    immutable y3 = S.error("late error");
+    assert(or(x3, y3) == S.error("late error"));
 
     const x4 = R.ok();
     const y4 = S.ok();
@@ -1480,16 +1480,16 @@ auto or(T, E, F)(scope auto ref inout(Result!(T, E)) r1, scope auto ref inout(Re
     alias S = Result!(uint, dstring);
 
     auto x1 = R.ok(2);
-    const y1 = S.err("late error");
+    const y1 = S.error("late error");
     assert(or(x1, y1) == S.ok(2));
 
-    immutable x2 = R.err("early error");
+    immutable x2 = R.error("early error");
     const y2 = S.ok(2);
     assert(or(x2, y2) == S.ok(2));
 
-    immutable x3 = R.err("not a 2");
-    immutable y3 = S.err("late error");
-    assert(or(x3, y3) == S.err("late error"));
+    immutable x3 = R.error("not a 2");
+    immutable y3 = S.error("late error");
+    assert(or(x3, y3) == S.error("late error"));
 
     const x4 = R.ok(2);
     const y4 = S.ok(100);
@@ -1506,7 +1506,7 @@ auto or(T, E, F)(scope auto ref inout(Result!(T, E)) r1, scope auto ref inout(Re
 ///     Conceptual I/O summary
 ///     Input: `Result!(T, E)`|Output: `Result!(T, F)`
 ///     `.ok(t)`|`.ok(t)`
-///     `.err(e)`|`fun(e)`
+///     `.error(e)`|`fun(e)`
 /// )
 //
 /// Params:
@@ -1542,13 +1542,13 @@ auto orElse(alias fun, T, E)(scope auto ref inout(Result!(T, E)) r)
 
     R err(uint x)
     {
-        return R.err(x);
+        return R.error(x);
     }
 
     assert(orElse!sq(orElse!sq(R.ok(2))) == R.ok(2));
     assert(orElse!sq(orElse!err(R.ok(2))) == R.ok(2));
-    assert(orElse!err(orElse!sq(R.err(3))) == R.ok(9));
-    assert(orElse!err(orElse!err(R.err(3))) == R.err(3));
+    assert(orElse!err(orElse!sq(R.error(3))) == R.ok(9));
+    assert(orElse!err(orElse!err(R.error(3))) == R.error(3));
 }
 
 ///
@@ -1563,13 +1563,13 @@ auto orElse(alias fun, T, E)(scope auto ref inout(Result!(T, E)) r)
 
     R err(uint x)
     {
-        return R.err(x);
+        return R.error(x);
     }
 
     assert(orElse!forge(orElse!forge(R.ok())) == R.ok());
     assert(orElse!forge(orElse!err(R.ok())) == R.ok());
-    assert(orElse!err(orElse!forge(R.err(3))) == R.ok());
-    assert(orElse!err(orElse!err(R.err(3))) == R.err(3));
+    assert(orElse!err(orElse!forge(R.error(3))) == R.ok());
+    assert(orElse!err(orElse!err(R.error(3))) == R.error(3));
 }
 
 @safe @nogc nothrow unittest
@@ -1581,7 +1581,7 @@ auto orElse(alias fun, T, E)(scope auto ref inout(Result!(T, E)) r)
     {
         if (x.length > 0)
         {
-            return S.err(x.length);
+            return S.error(x.length);
         }
 
         return S.ok(true);
@@ -1590,11 +1590,11 @@ auto orElse(alias fun, T, E)(scope auto ref inout(Result!(T, E)) r)
     auto resultOk = R.ok(false);
     assert(orElse!isEmpty(resultOk) == S.ok(false));
 
-    auto resultErr1 = R.err("");
+    auto resultErr1 = R.error("");
     assert(orElse!isEmpty(resultErr1) == S.ok(true));
 
-    auto resultErr2 = R.err("too long string");
-    assert(orElse!isEmpty(resultErr2) == S.err(15));
+    auto resultErr2 = R.error("too long string");
+    assert(orElse!isEmpty(resultErr2) == S.error(15));
 }
 
 /// Extracts the `T` value from a [Result].
@@ -1605,7 +1605,7 @@ auto orElse(alias fun, T, E)(scope auto ref inout(Result!(T, E)) r)
 ///     Conceptual I/O summary
 ///     Input: `Result!(T, E)`|Output: `T`
 ///     `.ok(t)`|`t`
-///     `.err(*)`|Undefined
+///     `.error(*)`|Undefined
 /// )
 ///
 /// Params:
@@ -1640,7 +1640,7 @@ unittest
     import std.exception : assertThrown;
     import core.exception : AssertError;
 
-    auto resultErr = R.err("emergency failure");
+    auto resultErr = R.error("emergency failure");
     assertThrown!AssertError(unwrap(resultErr));
 }
 
@@ -1655,7 +1655,7 @@ unittest
     auto resultOk = R.ok();
     assertNotThrown!AssertError(unwrap(resultOk));
 
-    auto resultErr = R.err("emergency failure");
+    auto resultErr = R.error("emergency failure");
     assertThrown!AssertError(unwrap(resultErr));
 }
 
@@ -1672,7 +1672,7 @@ unittest
     auto resultOk2 = R.ok();
     assertNotThrown!AssertError(unwrap(resultOk2));
 
-    auto resultErr = R.err(123);
+    auto resultErr = R.error(123);
     assertThrown!AssertError(unwrap(resultErr));
 }
 
@@ -1684,7 +1684,7 @@ unittest
 ///     Conceptual I/O summary
 ///     Input: `Result!(T, E)`|Output: `E`
 ///     `.ok(*)`|Undefined
-///     `.err(e)`|`e`
+///     `.error(e)`|`e`
 /// )
 ///
 /// Params:
@@ -1720,7 +1720,7 @@ unittest
     auto resultOk = R.ok(2);
     assertThrown!AssertError(unwrapErr(resultOk));
 
-    auto resultErr = R.err("emergency failure");
+    auto resultErr = R.error("emergency failure");
     assert(unwrapErr(resultErr) == "emergency failure");
 }
 
@@ -1735,7 +1735,7 @@ unittest
     auto resultOk = R.ok();
     assertThrown!AssertError(unwrapErr(resultOk));
 
-    auto resultErr = R.err("emergency failure");
+    auto resultErr = R.error("emergency failure");
     assert(unwrapErr(resultErr) == "emergency failure");
 }
 
@@ -1744,12 +1744,12 @@ unittest
     import std.exception : assertThrown, assertNotThrown;
     import core.exception : AssertError;
 
-    auto resultErr1 = Result!(int, string).err("123");
+    auto resultErr1 = Result!(int, string).error("123");
     assert(assertNotThrown!AssertError(unwrapErr(resultErr1)) == "123");
 
     alias R = Result!(string, uint);
 
-    auto resultErr2 = R.err(123);
+    auto resultErr2 = R.error(123);
     assert(assertNotThrown!AssertError(unwrapErr(resultErr2)) == 123);
 
     auto resultOk = R.ok("123");
@@ -1761,12 +1761,12 @@ unittest
     import std.exception : assertThrown, assertNotThrown;
     import core.exception : AssertError;
 
-    auto resultErr1 = Result!(void, string).err("123");
+    auto resultErr1 = Result!(void, string).error("123");
     assert(assertNotThrown!AssertError(unwrapErr(resultErr1)) == "123");
 
     alias R = Result!(const(void), uint);
 
-    auto resultErr2 = R.err(123);
+    auto resultErr2 = R.error(123);
     assert(assertNotThrown!AssertError(unwrapErr(resultErr2)) == 123);
 
     auto resultOk = R.ok();
@@ -1782,7 +1782,7 @@ unittest
 ///     Conceptual I/O summary
 ///     Input: `Result!(T, E)`|Output: `T`
 ///     `.ok(t)`|`t`
-///     `.err(*)`|`UnwrapException` is thrown
+///     `.error(*)`|`UnwrapException` is thrown
 /// )
 ///
 /// Params:
@@ -1819,7 +1819,7 @@ auto ref inout(T) tryUnwrap(T, E)(scope return auto ref inout(Result!(T, E)) r, 
     auto resultOk = R.ok(2);
     assert(assertNotThrown!UnwrapException(tryUnwrap(resultOk, "Testing expect")) == 2);
 
-    auto resultErr = R.err("emergency failure");
+    auto resultErr = R.error("emergency failure");
     assertThrown!UnwrapException(tryUnwrap(resultErr, "Testing expect"));
     assert(collectExceptionMsg(tryUnwrap(resultErr, "Testing expect")) == "Testing expect");
 }
@@ -1834,7 +1834,7 @@ auto ref inout(T) tryUnwrap(T, E)(scope return auto ref inout(Result!(T, E)) r, 
     auto resultOk = R.ok();
     assertNotThrown!UnwrapException(tryUnwrap(resultOk, "Testing expect"));
 
-    auto resultErr = R.err("emergency failure");
+    auto resultErr = R.error("emergency failure");
     assertThrown!UnwrapException(tryUnwrap(resultErr, "Testing expect"));
     assert(collectExceptionMsg(tryUnwrap(resultErr, "Testing expect")) == "Testing expect");
 }
@@ -1853,7 +1853,7 @@ auto ref inout(T) tryUnwrap(T, E)(scope return auto ref inout(Result!(T, E)) r, 
     assert(assertNotThrown!UnwrapException(tryUnwrap(resultOk2, "foo")) == "123");
     assert(assertNotThrown!UnwrapException(tryUnwrap(resultOk2)) == "123");
 
-    auto resultErr = R.err(123);
+    auto resultErr = R.error(123);
     assertThrown!UnwrapException(tryUnwrap(resultErr, "foo"));
     assert(collectExceptionMsg(tryUnwrap(resultErr, "foo")) == "foo");
     assertThrown!UnwrapException(tryUnwrap(resultErr));
@@ -1873,7 +1873,7 @@ auto ref inout(T) tryUnwrap(T, E)(scope return auto ref inout(Result!(T, E)) r, 
     assertNotThrown!UnwrapException(tryUnwrap(resultOk2, "foo"));
     assertNotThrown!UnwrapException(tryUnwrap(resultOk2));
 
-    auto resultErr = R.err(123);
+    auto resultErr = R.error(123);
     assertThrown!UnwrapException(tryUnwrap(resultErr, "foo"));
     assert(collectExceptionMsg(tryUnwrap(resultErr, "foo")) == "foo");
     assertThrown!UnwrapException(tryUnwrap(resultErr));
@@ -1888,7 +1888,7 @@ auto ref inout(T) tryUnwrap(T, E)(scope return auto ref inout(Result!(T, E)) r, 
 ///     Conceptual I/O summary
 ///     Input: `Result!(T, E)`|Output: `E`
 ///     `.ok(*)`|`UnwrapException` is thrown
-///     `.err(e)`|`e`
+///     `.error(e)`|`e`
 /// )
 ////// Params:
 ///     r = The [Result] to unwrap
@@ -1926,7 +1926,7 @@ auto ref inout(E) tryUnwrapErr(T, E)(scope return auto ref inout(Result!(T, E)) 
     assert(collectExceptionMsg(tryUnwrapErr(resultOk,
             "Testing tryUnwrapErr")) == "Testing tryUnwrapErr");
 
-    auto resultErr = R.err("emergency failure");
+    auto resultErr = R.error("emergency failure");
     assert(assertNotThrown!UnwrapException(tryUnwrapErr(resultErr,
             "Testing tryUnwrapErr")) == "emergency failure");
 }
@@ -1943,7 +1943,7 @@ auto ref inout(E) tryUnwrapErr(T, E)(scope return auto ref inout(Result!(T, E)) 
     assert(collectExceptionMsg(tryUnwrapErr(resultOk,
             "Testing tryUnwrapErr")) == "Testing tryUnwrapErr");
 
-    auto resultErr = R.err("emergency failure");
+    auto resultErr = R.error("emergency failure");
     assert(assertNotThrown!UnwrapException(tryUnwrapErr(resultErr,
             "Testing tryUnwrapErr")) == "emergency failure");
 }
@@ -1952,13 +1952,13 @@ auto ref inout(E) tryUnwrapErr(T, E)(scope return auto ref inout(Result!(T, E)) 
 {
     import std.exception : assertThrown, assertNotThrown, collectExceptionMsg;
 
-    auto resultErr1 = Result!(immutable(void), string).err("123");
+    auto resultErr1 = Result!(immutable(void), string).error("123");
     assert(assertNotThrown!UnwrapException(tryUnwrapErr(resultErr1, "bar")) == "123");
     assert(assertNotThrown!UnwrapException(tryUnwrapErr(resultErr1)) == "123");
 
     alias R = Result!(const(void), uint);
 
-    auto resultErr2 = R.err(123);
+    auto resultErr2 = R.error(123);
     assert(assertNotThrown!UnwrapException(tryUnwrapErr(resultErr2, "bar")) == 123);
     assert(assertNotThrown!UnwrapException(tryUnwrapErr(resultErr2)) == 123);
 
@@ -1972,13 +1972,13 @@ auto ref inout(E) tryUnwrapErr(T, E)(scope return auto ref inout(Result!(T, E)) 
 {
     import std.exception : assertThrown, assertNotThrown, collectExceptionMsg;
 
-    auto resultErr1 = Result!(int, string).err("123");
+    auto resultErr1 = Result!(int, string).error("123");
     assert(assertNotThrown!UnwrapException(tryUnwrapErr(resultErr1, "bar")) == "123");
     assert(assertNotThrown!UnwrapException(tryUnwrapErr(resultErr1)) == "123");
 
     alias R = Result!(string, uint);
 
-    auto resultErr2 = R.err(123);
+    auto resultErr2 = R.error(123);
     assert(assertNotThrown!UnwrapException(tryUnwrapErr(resultErr2, "bar")) == 123);
     assert(assertNotThrown!UnwrapException(tryUnwrapErr(resultErr2)) == 123);
 
@@ -1998,7 +1998,7 @@ auto ref inout(E) tryUnwrapErr(T, E)(scope return auto ref inout(Result!(T, E)) 
 ///     Conceptual I/O summary
 ///     Input: `Result!(T, E)`|Output: `auto`
 ///     `.ok(t)`|`t`
-///     `.err(*)`|Default value
+///     `.error(*)`|Default value
 /// )
 ///
 /// Params:
@@ -2025,7 +2025,7 @@ auto unwrapOr(T, U, E)(scope auto ref inout(Result!(T, E)) r, U defaultValue = i
     auto resultOk = R.ok(9);
     assert(unwrapOr(resultOk, defaultValue) == 9);
 
-    auto resultErr = R.err("error");
+    auto resultErr = R.error("error");
     assert(unwrapOr(resultErr, defaultValue) == defaultValue);
 }
 
@@ -2044,7 +2044,7 @@ auto unwrapOr(T, U, E)(scope auto ref inout(Result!(T, E)) r, U defaultValue = i
         }
         catch (Exception _)
         {
-            return R.err(s);
+            return R.error(s);
         }
     }
 
@@ -2067,7 +2067,7 @@ auto unwrapOr(T, U, E)(scope auto ref inout(Result!(T, E)) r, U defaultValue = i
     assert(unwrapOr(resultOk2, "456") == "123");
     assert(unwrapOr(resultOk2) == "123");
 
-    auto resultErr = R.err(123);
+    auto resultErr = R.error(123);
     assert(unwrapOr(resultErr, "456") == "456");
     assert(unwrapOr(resultErr) == "");
 }
@@ -2082,7 +2082,7 @@ auto unwrapOr(T, U, E)(scope auto ref inout(Result!(T, E)) r, U defaultValue = i
 ///     Conceptual I/O summary
 ///     Input: `Result!(T, E)`|Output: `auto`
 ///     `.ok(t)`|`t`
-///     `.err(e)`|`fun(e)`
+///     `.error(e)`|`fun(e)`
 /// )
 ///
 /// Params:
@@ -2107,7 +2107,7 @@ auto unwrapOrElse(alias fun, T, E)(scope auto ref inout(Result!(T, E)) r)
     auto resultOk = R.ok(2);
     assert(unwrapOrElse!count(resultOk) == 2);
 
-    auto resultErr = R.err("foo");
+    auto resultErr = R.error("foo");
     assert(unwrapOrElse!count(resultErr) == 3);
     assert(unwrapOrElse!`a.length`(resultErr) == 3);
 }
@@ -2136,7 +2136,7 @@ auto unwrapOrElse(alias fun, T, E)(scope auto ref inout(Result!(T, E)) r)
     assert(unwrapOrElse!(to!string)(resultOk2) == "123");
     assert(unwrapOrElse!fFoo(resultOk2) == "123");
 
-    auto resultErr = R.err(123);
+    auto resultErr = R.error(123);
     assert(unwrapOrElse!(to!string)(resultErr) == "123");
     assert(unwrapOrElse!"to!string(a+2)"(resultErr) == "125");
     assert(unwrapOrElse!"`foo`"(resultErr) == "foo");
@@ -2153,7 +2153,7 @@ auto unwrapOrElse(alias fun, T, E)(scope auto ref inout(Result!(T, E)) r)
 ///     Conceptual I/O summary
 ///     Input: `Result!(T, E)`|Output: `auto`
 ///     `.ok(*)`|Default value
-///     `.err(e)`|`e`
+///     `.error(e)`|`e`
 /// )
 ///
 /// Params:
@@ -2178,7 +2178,7 @@ auto unwrapErrOr(T, E, F)(scope auto ref inout(Result!(T, E)) r, F defaultValue 
     assert(unwrapErrOr(resultOk, defaultValue) == defaultValue);
     assert(unwrapErrOr(resultOk) == "");
 
-    auto resultErr = R.err("error");
+    auto resultErr = R.error("error");
     assert(unwrapErrOr(resultErr, defaultValue) == "error");
     assert(unwrapErrOr(resultErr) == "error");
 }
@@ -2195,11 +2195,11 @@ auto unwrapErrOr(T, E, F)(scope auto ref inout(Result!(T, E)) r, F defaultValue 
     assert(unwrapErrOr(resultOk2, 1) == 1);
     assert(unwrapErrOr(resultOk2) == 0);
 
-    auto resultErr1 = R.err(123);
+    auto resultErr1 = R.error(123);
     assert(unwrapErrOr(resultErr1, 1) == 123);
     assert(unwrapErrOr(resultErr1) == 123);
 
-    const resultErr2 = R.err(123);
+    const resultErr2 = R.error(123);
     assert(unwrapErrOr(resultErr2, 1) == 123);
     assert(unwrapErrOr(resultErr2) == 123);
 }
@@ -2213,7 +2213,7 @@ auto unwrapErrOr(T, E, F)(scope auto ref inout(Result!(T, E)) r, F defaultValue 
 ///     Conceptual I/O summary
 ///     Input: `Result!(T, E)`|Output: `Result!(U, E)`
 ///     `.ok(t)`|`.ok(fun(t))`
-///     `.err(e)`|`.err(e)`
+///     `.error(e)`|`.error(e)`
 /// )
 ///
 /// Params:
@@ -2259,7 +2259,7 @@ auto map(alias fun = "a", T, E)(scope auto ref inout(Result!(T, E)) r)
     }
     else
     {
-        return S.err(unwrapErr(r));
+        return S.error(unwrapErr(r));
     }
 
 }
@@ -2279,7 +2279,7 @@ auto map(alias fun = "a", T, E)(scope auto ref inout(Result!(T, E)) r)
         }
         catch (Exception _)
         {
-            return R.err(s);
+            return R.error(s);
         }
     }
 
@@ -2321,17 +2321,17 @@ auto map(alias fun = "a", T, E)(scope auto ref inout(Result!(T, E)) r)
     assert(map!(to!dstring)(iResultOk) == S.ok("-22"));
     assert(map(iResultOk) == R.ok(-22));
 
-    auto resultErr = R.err("bad");
-    assert(map!(to!dstring)(resultErr) == S.err("bad"));
-    assert(map(resultErr) == R.err("bad"));
+    auto resultErr = R.error("bad");
+    assert(map!(to!dstring)(resultErr) == S.error("bad"));
+    assert(map(resultErr) == R.error("bad"));
 
-    const cResultErr = R.err("bad");
-    assert(map!(to!dstring)(cResultErr) == S.err("bad"));
-    assert(map(cResultErr) == R.err("bad"));
+    const cResultErr = R.error("bad");
+    assert(map!(to!dstring)(cResultErr) == S.error("bad"));
+    assert(map(cResultErr) == R.error("bad"));
 
-    immutable iResultErr = R.err("bad");
-    assert(map!(to!dstring)(iResultErr) == S.err("bad"));
-    assert(map(iResultErr) == R.err("bad"));
+    immutable iResultErr = R.error("bad");
+    assert(map!(to!dstring)(iResultErr) == S.error("bad"));
+    assert(map(iResultErr) == R.error("bad"));
 }
 
 @safe unittest
@@ -2351,14 +2351,14 @@ auto map(alias fun = "a", T, E)(scope auto ref inout(Result!(T, E)) r)
     immutable iResultOk = R.ok();
     assert(map!f(iResultOk) == R.ok());
 
-    auto resultErr = R.err("bad");
-    assert(map!f(resultErr) == R.err("bad"));
+    auto resultErr = R.error("bad");
+    assert(map!f(resultErr) == R.error("bad"));
 
-    const cResultErr = R.err("bad");
-    assert(map!f(cResultErr) == R.err("bad"));
+    const cResultErr = R.error("bad");
+    assert(map!f(cResultErr) == R.error("bad"));
 
-    immutable iResultErr = R.err("bad");
-    assert(map!f(iResultErr) == R.err("bad"));
+    immutable iResultErr = R.error("bad");
+    assert(map!f(iResultErr) == R.error("bad"));
 }
 
 @safe unittest
@@ -2379,14 +2379,14 @@ auto map(alias fun = "a", T, E)(scope auto ref inout(Result!(T, E)) r)
     immutable iResultOk = R.ok();
     assert(map!f(iResultOk) == S.ok(11));
 
-    auto resultErr = R.err("bad");
-    assert(map!f(resultErr) == S.err("bad"));
+    auto resultErr = R.error("bad");
+    assert(map!f(resultErr) == S.error("bad"));
 
-    const cResultErr = R.err("bad");
-    assert(map!f(cResultErr) == S.err("bad"));
+    const cResultErr = R.error("bad");
+    assert(map!f(cResultErr) == S.error("bad"));
 
-    immutable iResultErr = R.err("bad");
-    assert(map!f(iResultErr) == S.err("bad"));
+    immutable iResultErr = R.error("bad");
+    assert(map!f(iResultErr) == S.error("bad"));
 }
 
 @safe unittest
@@ -2407,14 +2407,14 @@ auto map(alias fun = "a", T, E)(scope auto ref inout(Result!(T, E)) r)
     immutable iResultOk = R.ok(-22);
     assert(map!f(iResultOk) == S.ok());
 
-    auto resultErr = R.err("bad");
-    assert(map!f(resultErr) == S.err("bad"));
+    auto resultErr = R.error("bad");
+    assert(map!f(resultErr) == S.error("bad"));
 
-    const cResultErr = R.err("bad");
-    assert(map!f(cResultErr) == S.err("bad"));
+    const cResultErr = R.error("bad");
+    assert(map!f(cResultErr) == S.error("bad"));
 
-    immutable iResultErr = R.err("bad");
-    assert(map!f(iResultErr) == S.err("bad"));
+    immutable iResultErr = R.error("bad");
+    assert(map!f(iResultErr) == S.error("bad"));
 }
 
 /// Transforms the `E` value of a [Result] using a function, keeping the `T` value unchanged.
@@ -2426,7 +2426,7 @@ auto map(alias fun = "a", T, E)(scope auto ref inout(Result!(T, E)) r)
 ///     Conceptual I/O summary
 ///     Input: `Result!(T, E)`|Output: `Result!(T, F)`
 ///     `.ok(t)`|`.ok(t)`
-///     `.err(e)`|`.err(fun(e))`
+///     `.error(e)`|`.error(fun(e))`
 /// )
 ///
 /// Params:
@@ -2443,11 +2443,11 @@ auto mapErr(alias fun = "a", T, E)(scope auto ref inout(Result!(T, E)) r)
     alias S = Result!(T, F);
     static if (is(T : void))
     {
-        return isErr(r) ? S.err(unaryFun!fun(unwrapErr(r))) : S.ok();
+        return isErr(r) ? S.error(unaryFun!fun(unwrapErr(r))) : S.ok();
     }
     else
     {
-        return isErr(r) ? S.err(unaryFun!fun(unwrapErr(r))) : S.ok(unwrap(r));
+        return isErr(r) ? S.error(unaryFun!fun(unwrapErr(r))) : S.ok(unwrap(r));
     }
 }
 
@@ -2467,8 +2467,8 @@ auto mapErr(alias fun = "a", T, E)(scope auto ref inout(Result!(T, E)) r)
     auto resultOk = R.ok(2);
     assert(mapErr!stringify(resultOk) == S.ok(2));
 
-    auto resultErr = R.err(13);
-    assert(mapErr!stringify(resultErr) == S.err("error code: 13"));
+    auto resultErr = R.error(13);
+    assert(mapErr!stringify(resultErr) == S.error("error code: 13"));
 }
 
 ///
@@ -2487,8 +2487,8 @@ auto mapErr(alias fun = "a", T, E)(scope auto ref inout(Result!(T, E)) r)
     auto resultOk = R.ok();
     assert(mapErr!stringify(resultOk) == S.ok());
 
-    auto resultErr = R.err(13);
-    assert(mapErr!stringify(resultErr) == S.err("error code: 13"));
+    auto resultErr = R.error(13);
+    assert(mapErr!stringify(resultErr) == S.error("error code: 13"));
 }
 
 @safe unittest
@@ -2510,17 +2510,17 @@ auto mapErr(alias fun = "a", T, E)(scope auto ref inout(Result!(T, E)) r)
     assert(mapErr!(a => a.length)(iResultOk) == S.ok(-22));
     assert(mapErr(iResultOk) == R.ok(-22));
 
-    auto resultErr = R.err("bad");
-    assert(mapErr!(a => a.length)(resultErr) == S.err(3));
-    assert(mapErr(resultErr) == R.err("bad"));
+    auto resultErr = R.error("bad");
+    assert(mapErr!(a => a.length)(resultErr) == S.error(3));
+    assert(mapErr(resultErr) == R.error("bad"));
 
-    const cResultErr = R.err("bad");
-    assert(mapErr!(a => a.length)(cResultErr) == S.err(3));
-    assert(mapErr(cResultErr) == R.err("bad"));
+    const cResultErr = R.error("bad");
+    assert(mapErr!(a => a.length)(cResultErr) == S.error(3));
+    assert(mapErr(cResultErr) == R.error("bad"));
 
-    immutable iResultErr = R.err("bad");
-    assert(mapErr!(a => a.length)(iResultErr) == S.err(3));
-    assert(mapErr(iResultErr) == R.err("bad"));
+    immutable iResultErr = R.error("bad");
+    assert(mapErr!(a => a.length)(iResultErr) == S.error(3));
+    assert(mapErr(iResultErr) == R.error("bad"));
 }
 
 @safe unittest
@@ -2542,17 +2542,17 @@ auto mapErr(alias fun = "a", T, E)(scope auto ref inout(Result!(T, E)) r)
     assert(mapErr!(a => a.length)(iResultOk) == S.ok());
     assert(mapErr(iResultOk) == R.ok());
 
-    auto resultErr = R.err("bad");
-    assert(mapErr!(a => a.length)(resultErr) == S.err(3));
-    assert(mapErr(resultErr) == R.err("bad"));
+    auto resultErr = R.error("bad");
+    assert(mapErr!(a => a.length)(resultErr) == S.error(3));
+    assert(mapErr(resultErr) == R.error("bad"));
 
-    const cResultErr = R.err("bad");
-    assert(mapErr!(a => a.length)(cResultErr) == S.err(3));
-    assert(mapErr(cResultErr) == R.err("bad"));
+    const cResultErr = R.error("bad");
+    assert(mapErr!(a => a.length)(cResultErr) == S.error(3));
+    assert(mapErr(cResultErr) == R.error("bad"));
 
-    immutable iResultErr = R.err("bad");
-    assert(mapErr!(a => a.length)(iResultErr) == S.err(3));
-    assert(mapErr(iResultErr) == R.err("bad"));
+    immutable iResultErr = R.error("bad");
+    assert(mapErr!(a => a.length)(iResultErr) == S.error(3));
+    assert(mapErr(iResultErr) == R.error("bad"));
 }
 
 @safe unittest
@@ -2572,17 +2572,17 @@ auto mapErr(alias fun = "a", T, E)(scope auto ref inout(Result!(T, E)) r)
     assert(mapErr!(a => a + 4)(iResultOk) == R.ok(null));
     assert(mapErr(iResultOk) == R.ok(null));
 
-    auto resultErr = R.err(9);
-    assert(mapErr!(a => a + 4)(resultErr) == R.err(13));
-    assert(mapErr(resultErr) == R.err(9));
+    auto resultErr = R.error(9);
+    assert(mapErr!(a => a + 4)(resultErr) == R.error(13));
+    assert(mapErr(resultErr) == R.error(9));
 
-    const cResultErr = R.err(9);
-    assert(mapErr!(a => a + 4)(cResultErr) == R.err(13));
-    assert(mapErr(cResultErr) == R.err(9));
+    const cResultErr = R.error(9);
+    assert(mapErr!(a => a + 4)(cResultErr) == R.error(13));
+    assert(mapErr(cResultErr) == R.error(9));
 
-    immutable iResultErr = R.err(9);
-    assert(mapErr!(a => a + 4)(iResultErr) == R.err(13));
-    assert(mapErr(iResultErr) == R.err(9));
+    immutable iResultErr = R.error(9);
+    assert(mapErr!(a => a + 4)(iResultErr) == R.error(13));
+    assert(mapErr(iResultErr) == R.error(9));
 }
 
 @safe unittest
@@ -2602,17 +2602,17 @@ auto mapErr(alias fun = "a", T, E)(scope auto ref inout(Result!(T, E)) r)
     assert(mapErr!(a => a + 4)(iResultOk) == R.ok());
     assert(mapErr(iResultOk) == R.ok());
 
-    auto resultErr = R.err(9);
-    assert(mapErr!(a => a + 4)(resultErr) == R.err(13));
-    assert(mapErr(resultErr) == R.err(9));
+    auto resultErr = R.error(9);
+    assert(mapErr!(a => a + 4)(resultErr) == R.error(13));
+    assert(mapErr(resultErr) == R.error(9));
 
-    const cResultErr = R.err(9);
-    assert(mapErr!(a => a + 4)(cResultErr) == R.err(13));
-    assert(mapErr(cResultErr) == R.err(9));
+    const cResultErr = R.error(9);
+    assert(mapErr!(a => a + 4)(cResultErr) == R.error(13));
+    assert(mapErr(cResultErr) == R.error(9));
 
-    immutable iResultErr = R.err(9);
-    assert(mapErr!(a => a + 4)(iResultErr) == R.err(13));
-    assert(mapErr(iResultErr) == R.err(9));
+    immutable iResultErr = R.error(9);
+    assert(mapErr!(a => a + 4)(iResultErr) == R.error(13));
+    assert(mapErr(iResultErr) == R.error(9));
 }
 
 /// Applies a function to the `T` value, or returns a default value for an error.
@@ -2625,7 +2625,7 @@ auto mapErr(alias fun = "a", T, E)(scope auto ref inout(Result!(T, E)) r)
 ///     Conceptual I/O summary
 ///     Input: `Result!(T, E)`|Output: `auto`
 ///     `.ok(t)`|`fun(t)`
-///     `.err(*)`|Default value
+///     `.error(*)`|Default value
 /// )
 ///
 /// Params:
@@ -2650,7 +2650,7 @@ auto mapOr(alias fun, T, U, E)(scope auto ref inout(Result!(T, E)) r,
     auto resultOk = R.ok("foo");
     assert(mapOr!"a.length"(resultOk, 42) == 3);
 
-    auto resultErr = R.err("bar");
+    auto resultErr = R.error("bar");
     assert(mapOr!"a.length"(resultErr, 42) == 42);
 }
 
@@ -2662,7 +2662,7 @@ auto mapOr(alias fun, T, U, E)(scope auto ref inout(Result!(T, E)) r,
     auto resultOk = R.ok("foo");
     assert(mapOr!"a.length"(resultOk) == 3);
 
-    auto resultErr = R.err("bar");
+    auto resultErr = R.error("bar");
     assert(mapOr!"a.length"(resultErr) == 0);
 }
 
@@ -2687,15 +2687,15 @@ auto mapOr(alias fun, T, U, E)(scope auto ref inout(Result!(T, E)) r,
     assert(mapOr!isOdd(iResultOk, -1) == 1);
     assert(mapOr!"a%5"(iResultOk) == 3);
 
-    auto resultErr = R.err("33");
+    auto resultErr = R.error("33");
     assert(mapOr!isOdd(resultErr, -1) == -1);
     assert(mapOr!"a%5"(resultErr) == 0);
 
-    const cResultErr = R.err("33");
+    const cResultErr = R.error("33");
     assert(mapOr!isOdd(cResultErr, -1) == -1);
     assert(mapOr!"a%5"(cResultErr) == 0);
 
-    immutable iResultErr = R.err("33");
+    immutable iResultErr = R.error("33");
     assert(mapOr!isOdd(iResultErr, -1) == -1);
     assert(mapOr!"a%5"(iResultErr) == 0);
 }
@@ -2710,7 +2710,7 @@ auto mapOr(alias fun, T, U, E)(scope auto ref inout(Result!(T, E)) r,
 ///     Conceptual I/O summary
 ///     Input: `Result!(T, E)`|Output: `auto`
 ///     `.ok(t)`|`fun(t)`
-///     `.err(e)`|`defaultFun(e)`
+///     `.error(e)`|`defaultFun(e)`
 /// )
 ///
 /// Params:
@@ -2736,7 +2736,7 @@ auto mapOrElse(alias defaultFun, alias fun, T, E)(scope auto ref inout(Result!(T
     auto resultOk = R.ok("foo");
     assert(mapOrElse!(_ => k * 2, "a.length")(resultOk) == 3);
 
-    auto resultErr = R.err("bar");
+    auto resultErr = R.error("bar");
     assert(mapOrElse!(_ => k * 2, "a.length")(resultErr) == 42);
 }
 
@@ -2763,13 +2763,13 @@ auto mapOrElse(alias defaultFun, alias fun, T, E)(scope auto ref inout(Result!(T
     immutable iResultOk = R.ok(33);
     assert(mapOrElse!(getLength, isPos)(iResultOk) == 1);
 
-    auto resultErr = R.err("33");
+    auto resultErr = R.error("33");
     assert(mapOrElse!(getLength, isPos)(resultErr) == 2);
 
-    const cResultErr = R.err("33");
+    const cResultErr = R.error("33");
     assert(mapOrElse!(getLength, isPos)(cResultErr) == 2);
 
-    immutable iResultErr = R.err("33");
+    immutable iResultErr = R.error("33");
     assert(mapOrElse!(getLength, isPos)(iResultErr) == 2);
 }
 
@@ -2823,7 +2823,7 @@ auto ref inout(Result!(T, E)) inspect(alias fun, T, E)(scope auto ref inout(Resu
         }
         catch (Exception _)
         {
-            return R.err(s);
+            return R.error(s);
         }
     }
 
@@ -2854,7 +2854,7 @@ auto ref inout(Result!(T, E)) inspect(alias fun, T, E)(scope auto ref inout(Resu
         }
         catch (Exception _)
         {
-            return R.err(s);
+            return R.error(s);
         }
     }
 
@@ -2879,8 +2879,8 @@ auto ref inout(Result!(T, E)) inspect(alias fun, T, E)(scope auto ref inout(Resu
     assert(writer1[] == "value: 42");
 
     auto writer2 = appender!string();
-    auto errResult = R.err("bad").inspect!(x => writer2.writeText("value: ", x));
-    assert(errResult == R.err("bad"));
+    auto errResult = R.error("bad").inspect!(x => writer2.writeText("value: ", x));
+    assert(errResult == R.error("bad"));
     assert(writer2.length == 0);
 }
 
@@ -2896,8 +2896,8 @@ auto ref inout(Result!(T, E)) inspect(alias fun, T, E)(scope auto ref inout(Resu
     assert(writer1[] == "ok");
 
     auto writer2 = appender!string();
-    auto errResult = R.err("bad").inspect!(() => writer2.writeText("no"));
-    assert(errResult == R.err("bad"));
+    auto errResult = R.error("bad").inspect!(() => writer2.writeText("no"));
+    assert(errResult == R.error("bad"));
     assert(writer2.length == 0);
 }
 
@@ -2942,7 +2942,7 @@ auto ref inout(Result!(T, E)) inspectErr(alias fun, T, E)(scope auto ref inout(R
         }
         catch (Exception e)
         {
-            return R.err(e.msg);
+            return R.error(e.msg);
         }
     }
 
@@ -2969,8 +2969,8 @@ auto ref inout(Result!(T, E)) inspectErr(alias fun, T, E)(scope auto ref inout(R
     assert(writer1.length == 0);
 
     auto writer2 = appender!string();
-    auto errResult = R.err("fail").inspectErr!(e => writer2.writeText("error: ", e));
-    assert(errResult == R.err("fail"));
+    auto errResult = R.error("fail").inspectErr!(e => writer2.writeText("error: ", e));
+    assert(errResult == R.error("fail"));
     assert(writer2[] == "error: fail");
 }
 
@@ -2986,8 +2986,8 @@ auto ref inout(Result!(T, E)) inspectErr(alias fun, T, E)(scope auto ref inout(R
     assert(writer1.length == 0);
 
     auto writer2 = appender!string();
-    auto errResult = R.err("fail").inspectErr!(e => writer2.writeText("error: ", e));
-    assert(errResult == R.err("fail"));
+    auto errResult = R.error("fail").inspectErr!(e => writer2.writeText("error: ", e));
+    assert(errResult == R.error("fail"));
     assert(writer2[] == "error: fail");
 }
 
@@ -3002,7 +3002,7 @@ auto ref inout(Result!(T, E)) inspectErr(alias fun, T, E)(scope auto ref inout(R
 ///     Input: `Result!(Nullable!T, E)`|Output: `Nullable!(Result!(T, E))`
 ///     `.ok(n)`, n is non-null|`Result!(T, E).ok(n.get)`
 ///     `.ok(n)`, n is null|null state
-///     `.err(e)`|`Result!(T, E).err(e)`
+///     `.error(e)`|`Result!(T, E).error(e)`
 /// )
 ///
 /// Params:
@@ -3017,7 +3017,7 @@ inout(Nullable!(Result!(T, E))) transpose(T, E)(scope auto ref inout(Result!(Nul
     alias N = inout(Nullable!R);
     if (isErr(r))
     {
-        return N(R.err(unwrapErr(r)));
+        return N(R.error(unwrapErr(r)));
     }
     inout t = unwrap(r);
     return t.isNull ? N.init : N(R.ok(t.get));
@@ -3069,16 +3069,16 @@ unittest
     immutable iResultOkNull = R.ok(M.init);
     assert(transpose(iResultOkNull).isNull);
 
-    auto resultErr = R.err(-999);
-    auto nullableErr = nullable(S.err(-999));
+    auto resultErr = R.error(-999);
+    auto nullableErr = nullable(S.error(-999));
     assert(transpose(resultErr) == nullableErr);
 
-    const cResultErr = R.err(-999);
-    const cNullableErr = nullable(S.err(-999));
+    const cResultErr = R.error(-999);
+    const cNullableErr = nullable(S.error(-999));
     assert(transpose(cResultErr) == cNullableErr);
 
-    immutable iResultErr = R.err(-999);
-    immutable iNullableErr = nullable(S.err(-999));
+    immutable iResultErr = R.error(-999);
+    immutable iNullableErr = nullable(S.error(-999));
     assert(transpose(iResultErr) == iNullableErr);
 }
 
@@ -3092,7 +3092,7 @@ unittest
 ///     Conceptual I/O summary
 ///     Input: `Result!(Result!(T, E), E)`|Output: `Result!(T, E)`
 ///     `.ok(inner)`|`inner`
-///     `.err(e)`|`.err(e)`
+///     `.error(e)`|`.error(e)`
 /// )
 ///
 /// Params:
@@ -3102,7 +3102,7 @@ unittest
 @CorrespondingTo("rust", "flatten")
 inout(Result!(T, E)) flatten(T, E)(scope auto ref inout(Result!(Result!(T, E), E)) r)
 {
-    return isOk(r) ? unwrap(r) : Result!(T, E).err(unwrapErr(r));
+    return isOk(r) ? unwrap(r) : Result!(T, E).error(unwrapErr(r));
 }
 
 ///
@@ -3114,11 +3114,11 @@ inout(Result!(T, E)) flatten(T, E)(scope auto ref inout(Result!(Result!(T, E), E
     auto result1 = R2.ok(R1.ok("hello"));
     assert(flatten(result1) == R1.ok("hello"));
 
-    auto result2 = R2.ok(R1.err(6));
-    assert(flatten(result2) == R1.err(6));
+    auto result2 = R2.ok(R1.error(6));
+    assert(flatten(result2) == R1.error(6));
 
-    auto result3 = R2.err(6);
-    assert(flatten(result3) == R1.err(6));
+    auto result3 = R2.error(6);
+    assert(flatten(result3) == R1.error(6));
 }
 
 ///
@@ -3138,9 +3138,9 @@ inout(Result!(T, E)) flatten(T, E)(scope auto ref inout(Result!(Result!(T, E), E
     alias R1 = Result!(int, string);
     alias R2 = Result!(R1, string);
 
-    auto outerOk = R2.ok(R1.err("inner failure"));
-    assert(flatten(outerOk) == R1.err("inner failure"));
+    auto outerOk = R2.ok(R1.error("inner failure"));
+    assert(flatten(outerOk) == R1.error("inner failure"));
 
-    auto outerErr = R2.err("outer failure");
-    assert(flatten(outerErr) == R1.err("outer failure"));
+    auto outerErr = R2.error("outer failure");
+    assert(flatten(outerErr) == R1.error("outer failure"));
 }

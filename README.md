@@ -29,11 +29,11 @@ Result!(int, string) parsePositiveInt(string text)
         auto value = to!int(text);
         return value > 0 ?
             Result!(int, string).ok(value) :
-            Result!(int, string).err("Value must be positive");
+            Result!(int, string).error("Value must be positive");
     }
     catch (ConvException)
     {
-        return Result!(int, string).err("Invalid integer");
+        return Result!(int, string).error("Invalid integer");
     }
 }
 
@@ -108,7 +108,7 @@ Note that `Result!(T, E)` rejects `void` as `E` and prevents using `Err!X` as `T
 <td>Creates a successful result with no value.</td>
 </tr>
 <tr>
-<td><code>Result!(T, E).err(error)</code></td>
+<td><code>Result!(T, E).error(error)</code></td>
 <td>Creates an error result containing <code>error</code> of <code>E</code>.</td>
 </tr>
 </tbody>
@@ -142,7 +142,7 @@ If `T` is `void`, interpret the table entries appropriately.
 <td rowspan="2">Equivalent to <code>!isErr(r)</code></td>
 </tr>
 <tr>
-<td><code>Result!(T, E).err(*)</code></td>
+<td><code>Result!(T, E).error(*)</code></td>
 <td><code>false</code></td>
 </tr>
 <tr>
@@ -152,7 +152,7 @@ If `T` is `void`, interpret the table entries appropriately.
 <td rowspan="2">For a non-<code>void</code> <code>T</code></td>
 </tr>
 <tr>
-<td><code>Result!(T, E).err(*)</code></td>
+<td><code>Result!(T, E).error(*)</code></td>
 <td><code>false</code></td>
 </tr>
 <tr>
@@ -162,7 +162,7 @@ If `T` is `void`, interpret the table entries appropriately.
 <td rowspan="2">Equivalent to <code>!isOk(r)</code></td>
 </tr>
 <tr>
-<td><code>Result!(T, E).err(*)</code></td>
+<td><code>Result!(T, E).error(*)</code></td>
 <td><code>true</code></td>
 </tr>
 <tr>
@@ -172,7 +172,7 @@ If `T` is `void`, interpret the table entries appropriately.
 <td></td>
 </tr>
 <tr>
-<td><code>Result!(T, E).err(e)</code></td>
+<td><code>Result!(T, E).error(e)</code></td>
 <td><code>pred(e)</code></td>
 <td></td>
 </tr>
@@ -183,7 +183,7 @@ If `T` is `void`, interpret the table entries appropriately.
 <td rowspan="2">For a non-<code>void</code> <code>T</code></td>
 </tr>
 <tr>
-<td><code>Result!(T, E).err(*)</code></td>
+<td><code>Result!(T, E).error(*)</code></td>
 <td><code>Nullable!T.init</code> (the null state)</td>
 </tr>
 <tr>
@@ -193,7 +193,7 @@ If `T` is `void`, interpret the table entries appropriately.
 <td></td>
 </tr>
 <tr>
-<td><code>Result!(T, E).err(e)</code></td>
+<td><code>Result!(T, E).error(e)</code></td>
 <td><code>nullable(e)</code></td>
 <td></td>
 </tr>
@@ -205,7 +205,7 @@ If `T` is `void`, interpret the table entries appropriately.
 </tr>
 <tr>
 <td rowspan="2"><code>unwrapErr(r)</code></td>
-<td><code>Result!(T, E).err(e)</code></td>
+<td><code>Result!(T, E).error(e)</code></td>
 <td><code>e</code></td>
 <td></td>
 </tr>
@@ -234,7 +234,7 @@ The `Nullable`-returning `ok` and `err` functions are useful when absence should
 <td></td>
 </tr>
 <tr>
-<td><code>Result!(T, E).err(*)</code></td>
+<td><code>Result!(T, E).error(*)</code></td>
 <td></td>
 <td>Throws <code>UnwrapException</code>.</td>
 </tr>
@@ -245,7 +245,7 @@ The `Nullable`-returning `ok` and `err` functions are useful when absence should
 <td>Throws <code>UnwrapException</code>.</td>
 </tr>
 <tr>
-<td><code>Result!(T, E).err(e)</code></td>
+<td><code>Result!(T, E).error(e)</code></td>
 <td><code>e</code></td>
 <td></td>
 </tr>
@@ -256,7 +256,7 @@ The `Nullable`-returning `ok` and `err` functions are useful when absence should
 <td rowspan="2">For a non-<code>void</code> <code>T</code></td>
 </tr>
 <tr>
-<td><code>Result!(T, E).err(*)</code></td>
+<td><code>Result!(T, E).error(*)</code></td>
 <td><code>defaultValue</code></td>
 </tr>
 <tr>
@@ -266,7 +266,7 @@ The `Nullable`-returning `ok` and `err` functions are useful when absence should
 <td rowspan="2">For a non-<code>void</code> <code>T</code></td>
 </tr>
 <tr>
-<td><code>Result!(T, E).err(e)</code></td>
+<td><code>Result!(T, E).error(e)</code></td>
 <td><code>fun(e)</code></td>
 </tr>
 <tr>
@@ -276,7 +276,7 @@ The `Nullable`-returning `ok` and `err` functions are useful when absence should
 <td></td>
 </tr>
 <tr>
-<td><code>Result!(T, E).err(e)</code></td>
+<td><code>Result!(T, E).error(e)</code></td>
 <td><code>e</code></td>
 <td></td>
 </tr>
@@ -304,8 +304,8 @@ The `Nullable`-returning `ok` and `err` functions are useful when absence should
 <td></td>
 </tr>
 <tr>
-<td><code>Result!(T, E).err(e)</code>, <code>Result!(U, E)</code></td>
-<td><code>Result!(U, E).err(e)</code></td>
+<td><code>Result!(T, E).error(e)</code>, <code>Result!(U, E)</code></td>
+<td><code>Result!(U, E).error(e)</code></td>
 <td></td>
 </tr>
 <tr>
@@ -315,8 +315,8 @@ The `Nullable`-returning `ok` and `err` functions are useful when absence should
 <td rowspan="2"><code>Result!(U, E) fun(T);</code> and for a non-<code>void</code> <code>T</code></td>
 </tr>
 <tr>
-<td><code>Result!(T, E).err(e)</code></td>
-<td><code>Result!(U, E).err(e)</code></td>
+<td><code>Result!(T, E).error(e)</code></td>
+<td><code>Result!(U, E).error(e)</code></td>
 </tr>
 <tr>
 <td rowspan="2"><code>or(r1, r2)</code></td>
@@ -325,7 +325,7 @@ The `Nullable`-returning `ok` and `err` functions are useful when absence should
 <td></td>
 </tr>
 <tr>
-<td><code>Result!(T, E).err(*)</code>, <code>Result!(T, F)</code></td>
+<td><code>Result!(T, E).error(*)</code>, <code>Result!(T, F)</code></td>
 <td><code>r2</code></td>
 <td></td>
 </tr>
@@ -336,7 +336,7 @@ The `Nullable`-returning `ok` and `err` functions are useful when absence should
 <td rowspan="2"><code>Result!(T, F) fun(E);</code></td>
 </tr>
 <tr>
-<td><code>Result!(T, E).err(e)</code></td>
+<td><code>Result!(T, E).error(e)</code></td>
 <td><code>fun(e)</code></td>
 </tr>
 <tr>
@@ -346,8 +346,8 @@ The `Nullable`-returning `ok` and `err` functions are useful when absence should
 <td rowspan="2"><code>U fun(T);</code></td>
 </tr>
 <tr>
-<td><code>Result!(T, E).err(e)</code></td>
-<td><code>Result!(U, E).err(e)</code></td>
+<td><code>Result!(T, E).error(e)</code></td>
+<td><code>Result!(U, E).error(e)</code></td>
 </tr>
 <tr>
 <td rowspan="2"><code>mapErr!fun(r)</code></td>
@@ -356,8 +356,8 @@ The `Nullable`-returning `ok` and `err` functions are useful when absence should
 <td rowspan="2"><code>F fun(E);</code></td>
 </tr>
 <tr>
-<td><code>Result!(T, E).err(e)</code></td>
-<td><code>Result!(T, F).err(fun(e))</code></td>
+<td><code>Result!(T, E).error(e)</code></td>
+<td><code>Result!(T, F).error(fun(e))</code></td>
 </tr>
 <tr>
 <td rowspan="2"><code>mapOr!fun(r, defaultValue)</code></td>
@@ -366,7 +366,7 @@ The `Nullable`-returning `ok` and `err` functions are useful when absence should
 <td rowspan="2">For a non-<code>void</code> <code>T</code></td>
 </tr>
 <tr>
-<td><code>Result!(T, E).err(*)</code></td>
+<td><code>Result!(T, E).error(*)</code></td>
 <td><code>defaultValue</code></td>
 </tr>
 <tr>
@@ -376,7 +376,7 @@ The `Nullable`-returning `ok` and `err` functions are useful when absence should
 <td rowspan="2">For a non-<code>void</code> <code>T</code></td>
 </tr>
 <tr>
-<td><code>Result!(T, E).err(e)</code></td>
+<td><code>Result!(T, E).error(e)</code></td>
 <td><code>defaultFun(e)</code></td>
 </tr>
 </tbody>
@@ -401,7 +401,7 @@ The `Nullable`-returning `ok` and `err` functions are useful when absence should
 <td>Calls <code>fun(t)</code> before returning.</td>
 </tr>
 <tr>
-<td><code>Result!(T, E).err(*)</code></td>
+<td><code>Result!(T, E).error(*)</code></td>
 <td><code>r</code></td>
 <td></td>
 </tr>
@@ -411,7 +411,7 @@ The `Nullable`-returning `ok` and `err` functions are useful when absence should
 <td><code>r</code></td>
 <td></td>
 </tr>
-<td><code>Result!(T, E).err(e)</code></td>
+<td><code>Result!(T, E).error(e)</code></td>
 <td><code>r</code></td>
 <td>Calls <code>fun(e)</code> before returning.</td>
 </tr>
@@ -444,8 +444,8 @@ debugging while preserving the result for subsequent operations.
 <td><code>Nullable!(Result!(T, E)).init</code> (the null state)</td>
 </tr>
 <tr>
-<td><code>Result!(Nullable!T, E).err(e)</code></td>
-<td><code>nullable(Result!(Nullable!T, E).err(e))</code></td>
+<td><code>Result!(Nullable!T, E).error(e)</code></td>
+<td><code>nullable(Result!(Nullable!T, E).error(e))</code></td>
 </tr>
 <tr>
 <td rowspan="2"><code>flatten(r)</code></td>
@@ -454,8 +454,8 @@ debugging while preserving the result for subsequent operations.
 <td></td>
 </tr>
 <tr>
-<td><code>Result!(Result!(T, E), E).err(e)</code></td>
-<td><code>Result!(T, E).err(e)</code></td>
+<td><code>Result!(Result!(T, E), E).error(e)</code></td>
+<td><code>Result!(T, E).error(e)</code></td>
 <td></td>
 </tr>
 </tbody>
