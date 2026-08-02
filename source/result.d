@@ -70,7 +70,7 @@ unittest
         // Result!(int, string), success
         immutable parseResult = parsePositiveInt("42");
 
-        if (isErr(parseResult))
+        if (isError(parseResult))
         {
             stderr.writeln("Error: ", unwrapError(parseResult));
             return;
@@ -79,7 +79,7 @@ unittest
         // Result!(double, string), success
         immutable divideResult = divide(unwrap(parseResult), 7);
 
-        if (isErr(divideResult))
+        if (isError(divideResult))
         {
             stderr.writeln("Error: ", unwrapError(divideResult));
             return;
@@ -972,7 +972,7 @@ bool isSuccessAnd(alias pred = "a", T, E)(scope auto ref inout(Result!(T, E)) r)
 ///     `.error(*)`|`true`
 /// )
 @CorrespondingTo("rust", "is_err")
-alias isErr = not!isSuccess;
+alias isError = not!isSuccess;
 
 ///
 @safe @nogc nothrow unittest
@@ -980,10 +980,10 @@ alias isErr = not!isSuccess;
     alias R = Result!(int, string);
 
     auto resultOk = R.success(-3);
-    assert(!isErr(resultOk));
+    assert(!isError(resultOk));
 
     auto resultErr = R.error("Some error message");
-    assert(isErr(resultErr));
+    assert(isError(resultErr));
 }
 
 @safe @nogc nothrow unittest
@@ -991,19 +991,19 @@ alias isErr = not!isSuccess;
     alias R = Result!(int, string);
 
     const cResultErr = R.error("123");
-    assert(isErr(cResultErr));
+    assert(isError(cResultErr));
 
     immutable iResultErr = R.error("123");
-    assert(isErr(iResultErr));
+    assert(isError(iResultErr));
 
     auto resultOk = R.success(123);
-    assert(!isErr(resultOk));
+    assert(!isError(resultOk));
 
     const cResultOk = R.success(123);
-    assert(!isErr(cResultOk));
+    assert(!isError(cResultOk));
 
     immutable iResultOk = R.success(123);
-    assert(!isErr(iResultOk));
+    assert(!isError(iResultOk));
 }
 
 /// Checks if a [Result] contains an error satisfying a predicate.
@@ -1021,10 +1021,10 @@ alias isErr = not!isSuccess;
 ///
 /// Returns: `true` if `r` has an error and it satisfies `pred`, `false` otherwise
 @CorrespondingTo("rust", "is_err_and")
-bool isErrAnd(alias pred = "a", T, E)(scope auto ref inout(Result!(T, E)) r)
+bool isErrorAnd(alias pred = "a", T, E)(scope auto ref inout(Result!(T, E)) r)
         if (!is(typeof(unaryFun!pred(inout(E).init)) : void))
 {
-    return isErr(r) && !!unaryFun!pred(unwrapError(r));
+    return isError(r) && !!unaryFun!pred(unwrapError(r));
 }
 
 ///
@@ -1033,13 +1033,13 @@ bool isErrAnd(alias pred = "a", T, E)(scope auto ref inout(Result!(T, E)) r)
     alias R = Result!(uint, string);
 
     auto resultErr1 = R.error("!!!");
-    assert(isErrAnd!(e => e == "!!!")(resultErr1) == true);
+    assert(isErrorAnd!(e => e == "!!!")(resultErr1) == true);
 
     auto resultErr2 = R.error("?");
-    assert(isErrAnd!`a=="!!!"`(resultErr2) == false);
+    assert(isErrorAnd!`a=="!!!"`(resultErr2) == false);
 
     auto resultOk = R.success(123);
-    assert(isErrAnd!`a=="!!!"`(resultOk) == false);
+    assert(isErrorAnd!`a=="!!!"`(resultOk) == false);
 }
 
 @safe nothrow unittest
@@ -1049,25 +1049,25 @@ bool isErrAnd(alias pred = "a", T, E)(scope auto ref inout(Result!(T, E)) r)
     alias R = Result!(int, string);
 
     auto resultOk = R.success(123);
-    assert(!isErrAnd!isNumeric(resultOk));
+    assert(!isErrorAnd!isNumeric(resultOk));
 
     const cResultOk = R.success(123);
-    assert(!isErrAnd!isNumeric(cResultOk));
+    assert(!isErrorAnd!isNumeric(cResultOk));
 
     immutable iResultOk = R.success(123);
-    assert(!isErrAnd!isNumeric(iResultOk));
+    assert(!isErrorAnd!isNumeric(iResultOk));
 
     auto resultErr = R.error("123");
-    assert(isErrAnd!isNumeric(resultErr));
+    assert(isErrorAnd!isNumeric(resultErr));
 
     const cResultErr = R.error("123");
-    assert(isErrAnd!isNumeric(cResultErr));
+    assert(isErrorAnd!isNumeric(cResultErr));
 
     immutable iResultErr = R.error("123");
-    assert(isErrAnd!isNumeric(iResultErr));
+    assert(isErrorAnd!isNumeric(iResultErr));
 
     auto resultErr2 = R.error("Good morning, 007.");
-    assert(!isErrAnd!isNumeric(resultErr2));
+    assert(!isErrorAnd!isNumeric(resultErr2));
 }
 
 /// Extracts the `T` value from a [Result] as a `Nullable!T`.
@@ -1087,7 +1087,7 @@ bool isErrAnd(alias pred = "a", T, E)(scope auto ref inout(Result!(T, E)) r)
 inout(Nullable!T) ok(T, E)(scope auto ref inout(Result!(T, E)) r) if (!is(T : void))
 {
     alias N = typeof(return);
-    return isErr(r) ? N.init : N(unwrap(r));
+    return isError(r) ? N.init : N(unwrap(r));
 }
 
 ///
@@ -1398,11 +1398,11 @@ auto or(T, E, F)(scope auto ref inout(Result!(T, E)) r1, scope auto ref inout(Re
 {
     static if (is(T : void))
     {
-        return isErr(r1) ? r2 : Result!(T, F).success();
+        return isError(r1) ? r2 : Result!(T, F).success();
     }
     else
     {
-        return isErr(r1) ? r2 : Result!(T, F).success(unwrap(r1));
+        return isError(r1) ? r2 : Result!(T, F).success(unwrap(r1));
     }
 }
 
@@ -1522,11 +1522,11 @@ auto orElse(alias fun, T, E)(scope auto ref inout(Result!(T, E)) r)
     alias F = ErrValueTypeOf!(typeof(unaryFun!fun(inout(E).init)));
     static if (is(T : void))
     {
-        return isErr(r) ? unaryFun!fun(unwrapError(r)) : Result!(T, F).success();
+        return isError(r) ? unaryFun!fun(unwrapError(r)) : Result!(T, F).success();
     }
     else
     {
-        return isErr(r) ? unaryFun!fun(unwrapError(r)) : Result!(T, F).success(unwrap(r));
+        return isError(r) ? unaryFun!fun(unwrapError(r)) : Result!(T, F).success(unwrap(r));
     }
 }
 
@@ -1678,7 +1678,7 @@ unittest
 
 /// Extracts the `E` value from a [Result].
 ///
-/// The [Result] must contain an `E` value. Use [isErr] to check.
+/// The [Result] must contain an `E` value. Use [isError] to check.
 ///
 /// $(SMALL_TABLE
 ///     Conceptual I/O summary
@@ -1695,7 +1695,7 @@ unittest
 @CorrespondingTo("rust", "unwrap_err_unchecked")
 @CorrespondingTo("c++", "error")
 auto ref inout(E) unwrapError(T, E)(scope return auto ref inout(Result!(T, E)) r)
-in (isErr(r), "Result does not have an error state.")
+in (isError(r), "Result does not have an error state.")
 {
     static if (is(T : void))
     {
@@ -1905,11 +1905,11 @@ auto ref inout(E) tryUnwrapError(T, E)(scope return auto ref inout(Result!(T, E)
 
     if (msg is null)
     {
-        enforce!UnwrapException(isErr(r), "Result does not have an error state.");
+        enforce!UnwrapException(isError(r), "Result does not have an error state.");
     }
     else
     {
-        enforce!UnwrapException(isErr(r), msg);
+        enforce!UnwrapException(isError(r), msg);
     }
     return unwrapError(r);
 }
@@ -2164,7 +2164,7 @@ auto unwrapOrElse(alias fun, T, E)(scope auto ref inout(Result!(T, E)) r)
 @CorrespondingTo("c++", "error_or")
 auto unwrapErrorOr(T, E, F)(scope auto ref inout(Result!(T, E)) r, F defaultValue = inout(E).init)
 {
-    return isErr(r) ? unwrapError(r) : defaultValue;
+    return isError(r) ? unwrapError(r) : defaultValue;
 }
 
 ///
@@ -2443,11 +2443,11 @@ auto mapError(alias fun = "a", T, E)(scope auto ref inout(Result!(T, E)) r)
     alias S = Result!(T, F);
     static if (is(T : void))
     {
-        return isErr(r) ? S.error(unaryFun!fun(unwrapError(r))) : S.success();
+        return isError(r) ? S.error(unaryFun!fun(unwrapError(r))) : S.success();
     }
     else
     {
-        return isErr(r) ? S.error(unaryFun!fun(unwrapError(r))) : S.success(unwrap(r));
+        return isError(r) ? S.error(unaryFun!fun(unwrapError(r))) : S.success(unwrap(r));
     }
 }
 
@@ -2921,7 +2921,7 @@ auto ref inout(Result!(T, E)) inspect(alias fun, T, E)(scope auto ref inout(Resu
 auto ref inout(Result!(T, E)) inspectError(alias fun, T, E)(scope auto ref inout(Result!(T, E)) r)
         if (is(typeof(unaryFun!fun(inout(E).init))))
 {
-    if (isErr(r))
+    if (isError(r))
     {
         unaryFun!fun(unwrapError(r));
     }
@@ -3015,7 +3015,7 @@ inout(Nullable!(Result!(T, E))) transpose(T, E)(scope auto ref inout(Result!(Nul
 {
     alias R = Result!(T, E);
     alias N = inout(Nullable!R);
-    if (isErr(r))
+    if (isError(r))
     {
         return N(R.error(unwrapError(r)));
     }

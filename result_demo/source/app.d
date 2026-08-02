@@ -58,7 +58,7 @@ void showBasicFlow()
     // Result!(int, string), success
     immutable parseResult = parsePositiveInt("42");
 
-    if (isErr(parseResult))
+    if (isError(parseResult))
     {
         stderr.writeln("Error: ", unwrapError(parseResult));
         return;
@@ -67,7 +67,7 @@ void showBasicFlow()
     // Result!(double, string), success
     immutable divideResult = divide(unwrap(parseResult), 7);
 
-    if (isErr(divideResult))
+    if (isError(divideResult))
     {
         stderr.writeln("Error: ", unwrapError(divideResult));
         return;

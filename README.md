@@ -139,7 +139,7 @@ If `T` is `void`, interpret the table entries appropriately.
 <td rowspan="2"><code>isSuccess(r)</code></td>
 <td><code>Result!(T, E).success(*)</code></td>
 <td><code>true</code></td>
-<td rowspan="2">Equivalent to <code>!isErr(r)</code></td>
+<td rowspan="2">Equivalent to <code>!isError(r)</code></td>
 </tr>
 <tr>
 <td><code>Result!(T, E).error(*)</code></td>
@@ -156,7 +156,7 @@ If `T` is `void`, interpret the table entries appropriately.
 <td><code>false</code></td>
 </tr>
 <tr>
-<td rowspan="2"><code>isErr(r)</code></td>
+<td rowspan="2"><code>isError(r)</code></td>
 <td><code>Result!(T, E).success(*)</code></td>
 <td><code>false</code></td>
 <td rowspan="2">Equivalent to <code>!isSuccess(r)</code></td>
@@ -166,7 +166,7 @@ If `T` is `void`, interpret the table entries appropriately.
 <td><code>true</code></td>
 </tr>
 <tr>
-<td rowspan="2"><code>isErrAnd!pred(r)</code></td>
+<td rowspan="2"><code>isErrorAnd!pred(r)</code></td>
 <td><code>Result!(T, E).success(*)</code></td>
 <td><code>false</code></td>
 <td></td>
@@ -212,7 +212,7 @@ If `T` is `void`, interpret the table entries appropriately.
 </tbody>
 </table>
 
-Use `isSuccess` or `isErr` before `unwrap` and `unwrapError` when the contained state is unknown.
+Use `isSuccess` or `isError` before `unwrap` and `unwrapError` when the contained state is unknown.
 The `Nullable`-returning `ok` and `err` functions are useful when absence should be represented as a value.
 
 ### Checked unwrapping and fallback values
