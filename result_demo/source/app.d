@@ -15,13 +15,13 @@ auto parsePositiveInt(string text)
         auto value = to!int(text);
         if (value <= 0)
         {
-            return R.err("Value must be a positive integer");
+            return R.error("Value must be a positive integer");
         }
-        return R.ok(value);
+        return R.success(value);
     }
     catch (ConvException e)
     {
-        return R.err("Invalid input: " ~ e.msg);
+        return R.error("Invalid input: " ~ e.msg);
     }
 }
 
@@ -32,9 +32,9 @@ auto divide(int numerator, int denominator)
 
     if (denominator == 0)
     {
-        return R.err("Division by zero");
+        return R.error("Division by zero");
     }
-    return R.ok(cast(double) numerator / denominator);
+    return R.success(cast(double) numerator / denominator);
 }
 
 // Convert a lazy expression into a Result value by catching any thrown exception.
@@ -44,11 +44,11 @@ auto convertExceptionToResult(T)(lazy T expr)
 
     try
     {
-        return R.ok(expr);
+        return R.success(expr);
     }
     catch (Exception e)
     {
-        return R.err(e);
+        return R.error(e);
     }
 }
 
