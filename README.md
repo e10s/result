@@ -187,7 +187,7 @@ If `T` is `void`, interpret the table entries appropriately.
 <td><code>Nullable!T.init</code> (the null state)</td>
 </tr>
 <tr>
-<td rowspan="2"><code>err(r)</code></td>
+<td rowspan="2"><code>nullableError(r)</code></td>
 <td><code>Result!(T, E).success(*)</code></td>
 <td><code>Nullable!E.init</code> (the null state)</td>
 <td></td>

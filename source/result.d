@@ -1135,7 +1135,7 @@ inout(Nullable!T) ok(T, E)(scope auto ref inout(Result!(T, E)) r) if (!is(T : vo
 ///
 /// Returns: A `Nullable!E` containing the `E` value, in the null state if a `T`
 @CorrespondingTo("rust", "err")
-inout(Nullable!E) err(T, E)(scope auto ref inout(Result!(T, E)) r)
+inout(Nullable!E) nullableError(T, E)(scope auto ref inout(Result!(T, E)) r)
 {
     alias N = typeof(return);
     return isSuccess(r) ? N.init : N(unwrapError(r));
@@ -1149,10 +1149,10 @@ inout(Nullable!E) err(T, E)(scope auto ref inout(Result!(T, E)) r)
     import std.typecons : Nullable;
 
     auto resultOk = R.success(2);
-    assert(err(resultOk).isNull);
+    assert(nullableError(resultOk).isNull);
 
     auto resultErr = R.error("Nothing here");
-    assert(err(resultErr) == Nullable!string("Nothing here"));
+    assert(nullableError(resultErr) == Nullable!string("Nothing here"));
 }
 
 ///
@@ -1163,10 +1163,10 @@ inout(Nullable!E) err(T, E)(scope auto ref inout(Result!(T, E)) r)
     import std.typecons : Nullable;
 
     auto resultOk = R.success();
-    assert(err(resultOk).isNull);
+    assert(nullableError(resultOk).isNull);
 
     auto resultErr = R.error("Nothing here");
-    assert(err(resultErr) == Nullable!string("Nothing here"));
+    assert(nullableError(resultErr) == Nullable!string("Nothing here"));
 }
 
 @safe nothrow unittest
@@ -1174,16 +1174,16 @@ inout(Nullable!E) err(T, E)(scope auto ref inout(Result!(T, E)) r)
     alias R = Result!(uint, string);
 
     const cResultOk = R.success(2);
-    assert(err(cResultOk).isNull);
+    assert(nullableError(cResultOk).isNull);
 
     immutable iResultOk = R.success(2);
-    assert(err(iResultOk).isNull);
+    assert(nullableError(iResultOk).isNull);
 
     const cResultErr = R.error("Nothing here");
-    assert(err(cResultErr) == Nullable!string("Nothing here"));
+    assert(nullableError(cResultErr) == Nullable!string("Nothing here"));
 
     immutable iResultErr = R.error("Nothing here");
-    assert(err(iResultErr) == Nullable!string("Nothing here"));
+    assert(nullableError(iResultErr) == Nullable!string("Nothing here"));
 }
 
 @safe nothrow unittest
@@ -1191,16 +1191,16 @@ inout(Nullable!E) err(T, E)(scope auto ref inout(Result!(T, E)) r)
     alias R = Result!(immutable(void), string);
 
     const cResultOk = R.success();
-    assert(err(cResultOk).isNull);
+    assert(nullableError(cResultOk).isNull);
 
     immutable iResultOk = R.success();
-    assert(err(iResultOk).isNull);
+    assert(nullableError(iResultOk).isNull);
 
     const cResultErr = R.error("Nothing here");
-    assert(err(cResultErr) == Nullable!string("Nothing here"));
+    assert(nullableError(cResultErr) == Nullable!string("Nothing here"));
 
     immutable iResultErr = R.error("Nothing here");
-    assert(err(iResultErr) == Nullable!string("Nothing here"));
+    assert(nullableError(iResultErr) == Nullable!string("Nothing here"));
 }
 
 /// Chains two [Result]s, returning the second if the first has a successful state.
