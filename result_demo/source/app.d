@@ -60,7 +60,7 @@ void showBasicFlow()
 
     if (isErr(parseResult))
     {
-        stderr.writeln("Error: ", unwrapErr(parseResult));
+        stderr.writeln("Error: ", unwrapError(parseResult));
         return;
     }
 
@@ -69,7 +69,7 @@ void showBasicFlow()
 
     if (isErr(divideResult))
     {
-        stderr.writeln("Error: ", unwrapErr(divideResult));
+        stderr.writeln("Error: ", unwrapError(divideResult));
         return;
     }
 

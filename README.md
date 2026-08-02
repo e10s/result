@@ -44,7 +44,7 @@ if (isOk(parsed))
 }
 else
 {
-    writeln("Error: ", unwrapErr(parsed));
+    writeln("Error: ", unwrapError(parsed));
 }
 ```
 
@@ -72,7 +72,7 @@ Its value is available through <code>.error</code>.</td>
 </tr>
 <tr>
 <td><code>UnwrapException</code></td>
-<td>Thrown by <code>tryUnwrap</code> or <code>tryUnwrapErr</code> when the requested state is not present.</td>
+<td>Thrown by <code>tryUnwrap</code> or <code>tryUnwrapError</code> when the requested state is not present.</td>
 </tr>
 <tr>
 <td><code>std.sumtype.SumType!(T, Err!E)</code></td>
@@ -204,7 +204,7 @@ If `T` is `void`, interpret the table entries appropriately.
 <td></td>
 </tr>
 <tr>
-<td rowspan="2"><code>unwrapErr(r)</code></td>
+<td rowspan="2"><code>unwrapError(r)</code></td>
 <td><code>Result!(T, E).error(e)</code></td>
 <td><code>e</code></td>
 <td></td>
@@ -212,7 +212,7 @@ If `T` is `void`, interpret the table entries appropriately.
 </tbody>
 </table>
 
-Use `isOk` or `isErr` before `unwrap` and `unwrapErr` when the contained state is unknown.
+Use `isOk` or `isErr` before `unwrap` and `unwrapError` when the contained state is unknown.
 The `Nullable`-returning `ok` and `err` functions are useful when absence should be represented as a value.
 
 ### Checked unwrapping and fallback values
@@ -239,7 +239,7 @@ The `Nullable`-returning `ok` and `err` functions are useful when absence should
 <td>Throws <code>UnwrapException</code>.</td>
 </tr>
 <tr>
-<td rowspan="2"><code>tryUnwrapErr(r, msg)</code></td>
+<td rowspan="2"><code>tryUnwrapError(r, msg)</code></td>
 <td><code>Result!(T, E).success(*)</code></td>
 <td></td>
 <td>Throws <code>UnwrapException</code>.</td>
@@ -270,7 +270,7 @@ The `Nullable`-returning `ok` and `err` functions are useful when absence should
 <td><code>fun(e)</code></td>
 </tr>
 <tr>
-<td rowspan="3"><code>unwrapErrOr(r, defaultValue)</code></td>
+<td rowspan="3"><code>unwrapErrorOr(r, defaultValue)</code></td>
 <td><code>Result!(T, E).success(*)</code></td>
 <td><code>defaultValue</code></td>
 <td></td>
@@ -283,7 +283,7 @@ The `Nullable`-returning `ok` and `err` functions are useful when absence should
 </tbody>
 </table>
 
-`tryUnwrap` and `tryUnwrapErr` accept an optional message.
+`tryUnwrap` and `tryUnwrapError` accept an optional message.
 
 ### Chaining and mapping
 

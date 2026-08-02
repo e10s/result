@@ -72,7 +72,7 @@ unittest
 
         if (isErr(parseResult))
         {
-            stderr.writeln("Error: ", unwrapErr(parseResult));
+            stderr.writeln("Error: ", unwrapError(parseResult));
             return;
         }
 
@@ -81,7 +81,7 @@ unittest
 
         if (isErr(divideResult))
         {
-            stderr.writeln("Error: ", unwrapErr(divideResult));
+            stderr.writeln("Error: ", unwrapError(divideResult));
             return;
         }
 
@@ -199,7 +199,7 @@ unittest
 }
 
 /// Exception thrown when attempting to unwrap a [Result] with an invalid state.
-/// Raised by [tryUnwrap] and [tryUnwrapErr].
+/// Raised by [tryUnwrap] and [tryUnwrapError].
 class UnwrapException : Exception
 {
     ///
@@ -1024,7 +1024,7 @@ alias isErr = not!isOk;
 bool isErrAnd(alias pred = "a", T, E)(scope auto ref inout(Result!(T, E)) r)
         if (!is(typeof(unaryFun!pred(inout(E).init)) : void))
 {
-    return isErr(r) && !!unaryFun!pred(unwrapErr(r));
+    return isErr(r) && !!unaryFun!pred(unwrapError(r));
 }
 
 ///
@@ -1138,7 +1138,7 @@ inout(Nullable!T) ok(T, E)(scope auto ref inout(Result!(T, E)) r) if (!is(T : vo
 inout(Nullable!E) err(T, E)(scope auto ref inout(Result!(T, E)) r)
 {
     alias N = typeof(return);
-    return isOk(r) ? N.init : N(unwrapErr(r));
+    return isOk(r) ? N.init : N(unwrapError(r));
 }
 
 ///
@@ -1221,7 +1221,7 @@ inout(Nullable!E) err(T, E)(scope auto ref inout(Result!(T, E)) r)
 inout(Result!(U, E)) and(T, U, E)(scope auto ref inout(Result!(T, E)) r1,
         scope auto ref inout(Result!(U, E)) r2)
 {
-    return isOk(r1) ? r2 : Result!(U, E).error(unwrapErr(r1));
+    return isOk(r1) ? r2 : Result!(U, E).error(unwrapError(r1));
 }
 
 ///
@@ -1316,7 +1316,7 @@ auto andThen(alias fun, T, E)(scope auto ref inout(Result!(T, E)) r)
         if (!is(T : void) && is(E == ErrValueTypeOf!(typeof(unaryFun!fun(inout(T).init)))))
 {
     alias U = OkValueTypeOf!(typeof(unaryFun!fun(inout(T).init)));
-    return isOk(r) ? unaryFun!fun(unwrap(r)) : Result!(U, E).error(unwrapErr(r));
+    return isOk(r) ? unaryFun!fun(unwrap(r)) : Result!(U, E).error(unwrapError(r));
 }
 
 ///
@@ -1522,11 +1522,11 @@ auto orElse(alias fun, T, E)(scope auto ref inout(Result!(T, E)) r)
     alias F = ErrValueTypeOf!(typeof(unaryFun!fun(inout(E).init)));
     static if (is(T : void))
     {
-        return isErr(r) ? unaryFun!fun(unwrapErr(r)) : Result!(T, F).success();
+        return isErr(r) ? unaryFun!fun(unwrapError(r)) : Result!(T, F).success();
     }
     else
     {
-        return isErr(r) ? unaryFun!fun(unwrapErr(r)) : Result!(T, F).success(unwrap(r));
+        return isErr(r) ? unaryFun!fun(unwrapError(r)) : Result!(T, F).success(unwrap(r));
     }
 }
 
@@ -1694,7 +1694,7 @@ unittest
 @CorrespondingTo("rust", "unwrap_err")
 @CorrespondingTo("rust", "unwrap_err_unchecked")
 @CorrespondingTo("c++", "error")
-auto ref inout(E) unwrapErr(T, E)(scope return auto ref inout(Result!(T, E)) r)
+auto ref inout(E) unwrapError(T, E)(scope return auto ref inout(Result!(T, E)) r)
 in (isErr(r), "Result does not have an error state.")
 {
     static if (is(T : void))
@@ -1718,10 +1718,10 @@ unittest
     alias R = Result!(uint, string);
 
     auto resultOk = R.success(2);
-    assertThrown!AssertError(unwrapErr(resultOk));
+    assertThrown!AssertError(unwrapError(resultOk));
 
     auto resultErr = R.error("emergency failure");
-    assert(unwrapErr(resultErr) == "emergency failure");
+    assert(unwrapError(resultErr) == "emergency failure");
 }
 
 ///
@@ -1733,10 +1733,10 @@ unittest
     alias R = Result!(void, string);
 
     auto resultOk = R.success();
-    assertThrown!AssertError(unwrapErr(resultOk));
+    assertThrown!AssertError(unwrapError(resultOk));
 
     auto resultErr = R.error("emergency failure");
-    assert(unwrapErr(resultErr) == "emergency failure");
+    assert(unwrapError(resultErr) == "emergency failure");
 }
 
 unittest
@@ -1745,15 +1745,15 @@ unittest
     import core.exception : AssertError;
 
     auto resultErr1 = Result!(int, string).error("123");
-    assert(assertNotThrown!AssertError(unwrapErr(resultErr1)) == "123");
+    assert(assertNotThrown!AssertError(unwrapError(resultErr1)) == "123");
 
     alias R = Result!(string, uint);
 
     auto resultErr2 = R.error(123);
-    assert(assertNotThrown!AssertError(unwrapErr(resultErr2)) == 123);
+    assert(assertNotThrown!AssertError(unwrapError(resultErr2)) == 123);
 
     auto resultOk = R.success("123");
-    assertThrown!AssertError(unwrapErr(resultOk));
+    assertThrown!AssertError(unwrapError(resultOk));
 }
 
 unittest
@@ -1762,15 +1762,15 @@ unittest
     import core.exception : AssertError;
 
     auto resultErr1 = Result!(void, string).error("123");
-    assert(assertNotThrown!AssertError(unwrapErr(resultErr1)) == "123");
+    assert(assertNotThrown!AssertError(unwrapError(resultErr1)) == "123");
 
     alias R = Result!(const(void), uint);
 
     auto resultErr2 = R.error(123);
-    assert(assertNotThrown!AssertError(unwrapErr(resultErr2)) == 123);
+    assert(assertNotThrown!AssertError(unwrapError(resultErr2)) == 123);
 
     auto resultOk = R.success();
-    assertThrown!AssertError(unwrapErr(resultOk));
+    assertThrown!AssertError(unwrapError(resultOk));
 }
 
 /// Tries to extract the `T` value from a [Result], with a custom error message.
@@ -1898,7 +1898,7 @@ auto ref inout(T) tryUnwrap(T, E)(scope return auto ref inout(Result!(T, E)) r, 
 ///
 /// Throws: [UnwrapException] with message `msg` if the `r` has a successful state
 @CorrespondingTo("rust", "expect_err")
-auto ref inout(E) tryUnwrapErr(T, E)(scope return auto ref inout(Result!(T, E)) r,
+auto ref inout(E) tryUnwrapError(T, E)(scope return auto ref inout(Result!(T, E)) r,
         lazy string msg = null)
 {
     import std.exception : enforce;
@@ -1911,7 +1911,7 @@ auto ref inout(E) tryUnwrapErr(T, E)(scope return auto ref inout(Result!(T, E)) 
     {
         enforce!UnwrapException(isErr(r), msg);
     }
-    return unwrapErr(r);
+    return unwrapError(r);
 }
 
 ///
@@ -1922,13 +1922,13 @@ auto ref inout(E) tryUnwrapErr(T, E)(scope return auto ref inout(Result!(T, E)) 
     alias R = Result!(uint, string);
 
     auto resultOk = R.success(2);
-    assertThrown!UnwrapException(tryUnwrapErr(resultOk, "Testing tryUnwrapErr"));
-    assert(collectExceptionMsg(tryUnwrapErr(resultOk,
-            "Testing tryUnwrapErr")) == "Testing tryUnwrapErr");
+    assertThrown!UnwrapException(tryUnwrapError(resultOk, "Testing tryUnwrapError"));
+    assert(collectExceptionMsg(tryUnwrapError(resultOk,
+            "Testing tryUnwrapError")) == "Testing tryUnwrapError");
 
     auto resultErr = R.error("emergency failure");
-    assert(assertNotThrown!UnwrapException(tryUnwrapErr(resultErr,
-            "Testing tryUnwrapErr")) == "emergency failure");
+    assert(assertNotThrown!UnwrapException(tryUnwrapError(resultErr,
+            "Testing tryUnwrapError")) == "emergency failure");
 }
 
 ///
@@ -1939,13 +1939,13 @@ auto ref inout(E) tryUnwrapErr(T, E)(scope return auto ref inout(Result!(T, E)) 
     alias R = Result!(void, string);
 
     auto resultOk = R.success();
-    assertThrown!UnwrapException(tryUnwrapErr(resultOk, "Testing tryUnwrapErr"));
-    assert(collectExceptionMsg(tryUnwrapErr(resultOk,
-            "Testing tryUnwrapErr")) == "Testing tryUnwrapErr");
+    assertThrown!UnwrapException(tryUnwrapError(resultOk, "Testing tryUnwrapError"));
+    assert(collectExceptionMsg(tryUnwrapError(resultOk,
+            "Testing tryUnwrapError")) == "Testing tryUnwrapError");
 
     auto resultErr = R.error("emergency failure");
-    assert(assertNotThrown!UnwrapException(tryUnwrapErr(resultErr,
-            "Testing tryUnwrapErr")) == "emergency failure");
+    assert(assertNotThrown!UnwrapException(tryUnwrapError(resultErr,
+            "Testing tryUnwrapError")) == "emergency failure");
 }
 
 @safe unittest
@@ -1953,19 +1953,19 @@ auto ref inout(E) tryUnwrapErr(T, E)(scope return auto ref inout(Result!(T, E)) 
     import std.exception : assertThrown, assertNotThrown, collectExceptionMsg;
 
     auto resultErr1 = Result!(immutable(void), string).error("123");
-    assert(assertNotThrown!UnwrapException(tryUnwrapErr(resultErr1, "bar")) == "123");
-    assert(assertNotThrown!UnwrapException(tryUnwrapErr(resultErr1)) == "123");
+    assert(assertNotThrown!UnwrapException(tryUnwrapError(resultErr1, "bar")) == "123");
+    assert(assertNotThrown!UnwrapException(tryUnwrapError(resultErr1)) == "123");
 
     alias R = Result!(const(void), uint);
 
     auto resultErr2 = R.error(123);
-    assert(assertNotThrown!UnwrapException(tryUnwrapErr(resultErr2, "bar")) == 123);
-    assert(assertNotThrown!UnwrapException(tryUnwrapErr(resultErr2)) == 123);
+    assert(assertNotThrown!UnwrapException(tryUnwrapError(resultErr2, "bar")) == 123);
+    assert(assertNotThrown!UnwrapException(tryUnwrapError(resultErr2)) == 123);
 
     auto resultOk = R.success();
-    assertThrown!UnwrapException(tryUnwrapErr(resultOk, "bar"));
-    assert(collectExceptionMsg(tryUnwrapErr(resultOk, "bar")) == "bar");
-    assertThrown!UnwrapException(tryUnwrapErr(resultOk));
+    assertThrown!UnwrapException(tryUnwrapError(resultOk, "bar"));
+    assert(collectExceptionMsg(tryUnwrapError(resultOk, "bar")) == "bar");
+    assertThrown!UnwrapException(tryUnwrapError(resultOk));
 }
 
 @safe unittest
@@ -1973,19 +1973,19 @@ auto ref inout(E) tryUnwrapErr(T, E)(scope return auto ref inout(Result!(T, E)) 
     import std.exception : assertThrown, assertNotThrown, collectExceptionMsg;
 
     auto resultErr1 = Result!(int, string).error("123");
-    assert(assertNotThrown!UnwrapException(tryUnwrapErr(resultErr1, "bar")) == "123");
-    assert(assertNotThrown!UnwrapException(tryUnwrapErr(resultErr1)) == "123");
+    assert(assertNotThrown!UnwrapException(tryUnwrapError(resultErr1, "bar")) == "123");
+    assert(assertNotThrown!UnwrapException(tryUnwrapError(resultErr1)) == "123");
 
     alias R = Result!(string, uint);
 
     auto resultErr2 = R.error(123);
-    assert(assertNotThrown!UnwrapException(tryUnwrapErr(resultErr2, "bar")) == 123);
-    assert(assertNotThrown!UnwrapException(tryUnwrapErr(resultErr2)) == 123);
+    assert(assertNotThrown!UnwrapException(tryUnwrapError(resultErr2, "bar")) == 123);
+    assert(assertNotThrown!UnwrapException(tryUnwrapError(resultErr2)) == 123);
 
     auto resultOk = R.success("123");
-    assertThrown!UnwrapException(tryUnwrapErr(resultOk, "bar"));
-    assert(collectExceptionMsg(tryUnwrapErr(resultOk, "bar")) == "bar");
-    assertThrown!UnwrapException(tryUnwrapErr(resultOk));
+    assertThrown!UnwrapException(tryUnwrapError(resultOk, "bar"));
+    assert(collectExceptionMsg(tryUnwrapError(resultOk, "bar")) == "bar");
+    assertThrown!UnwrapException(tryUnwrapError(resultOk));
 }
 
 /// Extracts the `T` value from a [Result], with a default value for an error.
@@ -2094,7 +2094,7 @@ auto unwrapOr(T, U, E)(scope auto ref inout(Result!(T, E)) r, U defaultValue = i
 auto unwrapOrElse(alias fun, T, E)(scope auto ref inout(Result!(T, E)) r)
         if (!is(CommonType!(inout(T), typeof(unaryFun!fun(inout(E).init))) : void))
 {
-    return isOk(r) ? unwrap(r) : unaryFun!fun(unwrapErr(r));
+    return isOk(r) ? unwrap(r) : unaryFun!fun(unwrapError(r));
 }
 
 ///
@@ -2162,9 +2162,9 @@ auto unwrapOrElse(alias fun, T, E)(scope auto ref inout(Result!(T, E)) r)
 ///
 /// Returns: The contained `E` value, or `defaultValue` if `r` has a `T`
 @CorrespondingTo("c++", "error_or")
-auto unwrapErrOr(T, E, F)(scope auto ref inout(Result!(T, E)) r, F defaultValue = inout(E).init)
+auto unwrapErrorOr(T, E, F)(scope auto ref inout(Result!(T, E)) r, F defaultValue = inout(E).init)
 {
-    return isErr(r) ? unwrapErr(r) : defaultValue;
+    return isErr(r) ? unwrapError(r) : defaultValue;
 }
 
 ///
@@ -2175,33 +2175,33 @@ auto unwrapErrOr(T, E, F)(scope auto ref inout(Result!(T, E)) r, F defaultValue 
     immutable defaultValue = "Being right is wrong.";
 
     auto resultOk = R.success(9);
-    assert(unwrapErrOr(resultOk, defaultValue) == defaultValue);
-    assert(unwrapErrOr(resultOk) == "");
+    assert(unwrapErrorOr(resultOk, defaultValue) == defaultValue);
+    assert(unwrapErrorOr(resultOk) == "");
 
     auto resultErr = R.error("error");
-    assert(unwrapErrOr(resultErr, defaultValue) == "error");
-    assert(unwrapErrOr(resultErr) == "error");
+    assert(unwrapErrorOr(resultErr, defaultValue) == "error");
+    assert(unwrapErrorOr(resultErr) == "error");
 }
 
 @safe @nogc nothrow unittest
 {
     auto resultOk1 = Result!(int, string).success(123);
-    assert(unwrapErrOr(resultOk1, "bad") == "bad");
-    assert(unwrapErrOr(resultOk1) == "");
+    assert(unwrapErrorOr(resultOk1, "bad") == "bad");
+    assert(unwrapErrorOr(resultOk1) == "");
 
     alias R = Result!(string, uint);
 
     const resultOk2 = R.success("123");
-    assert(unwrapErrOr(resultOk2, 1) == 1);
-    assert(unwrapErrOr(resultOk2) == 0);
+    assert(unwrapErrorOr(resultOk2, 1) == 1);
+    assert(unwrapErrorOr(resultOk2) == 0);
 
     auto resultErr1 = R.error(123);
-    assert(unwrapErrOr(resultErr1, 1) == 123);
-    assert(unwrapErrOr(resultErr1) == 123);
+    assert(unwrapErrorOr(resultErr1, 1) == 123);
+    assert(unwrapErrorOr(resultErr1) == 123);
 
     const resultErr2 = R.error(123);
-    assert(unwrapErrOr(resultErr2, 1) == 123);
-    assert(unwrapErrOr(resultErr2) == 123);
+    assert(unwrapErrorOr(resultErr2, 1) == 123);
+    assert(unwrapErrorOr(resultErr2) == 123);
 }
 
 /// Transforms the `T` value of a [Result] using a function, keeping the `E` value unchanged.
@@ -2259,7 +2259,7 @@ auto map(alias fun = "a", T, E)(scope auto ref inout(Result!(T, E)) r)
     }
     else
     {
-        return S.error(unwrapErr(r));
+        return S.error(unwrapError(r));
     }
 
 }
@@ -2443,11 +2443,11 @@ auto mapError(alias fun = "a", T, E)(scope auto ref inout(Result!(T, E)) r)
     alias S = Result!(T, F);
     static if (is(T : void))
     {
-        return isErr(r) ? S.error(unaryFun!fun(unwrapErr(r))) : S.success();
+        return isErr(r) ? S.error(unaryFun!fun(unwrapError(r))) : S.success();
     }
     else
     {
-        return isErr(r) ? S.error(unaryFun!fun(unwrapErr(r))) : S.success(unwrap(r));
+        return isErr(r) ? S.error(unaryFun!fun(unwrapError(r))) : S.success(unwrap(r));
     }
 }
 
@@ -2724,7 +2724,7 @@ auto mapOrElse(alias defaultFun, alias fun, T, E)(scope auto ref inout(Result!(T
         if (!is(T : void) && !is(CommonType!(typeof(unaryFun!defaultFun(inout(E)
             .init)), typeof(unaryFun!fun(inout(T).init))) : void))
 {
-    return isOk(r) ? unaryFun!fun(unwrap(r)) : unaryFun!defaultFun(unwrapErr(r));
+    return isOk(r) ? unaryFun!fun(unwrap(r)) : unaryFun!defaultFun(unwrapError(r));
 }
 
 ///
@@ -2923,7 +2923,7 @@ auto ref inout(Result!(T, E)) inspectError(alias fun, T, E)(scope auto ref inout
 {
     if (isErr(r))
     {
-        unaryFun!fun(unwrapErr(r));
+        unaryFun!fun(unwrapError(r));
     }
     return r;
 }
@@ -3017,7 +3017,7 @@ inout(Nullable!(Result!(T, E))) transpose(T, E)(scope auto ref inout(Result!(Nul
     alias N = inout(Nullable!R);
     if (isErr(r))
     {
-        return N(R.error(unwrapErr(r)));
+        return N(R.error(unwrapError(r)));
     }
     inout t = unwrap(r);
     return t.isNull ? N.init : N(R.success(t.get));
@@ -3102,7 +3102,7 @@ unittest
 @CorrespondingTo("rust", "flatten")
 inout(Result!(T, E)) flatten(T, E)(scope auto ref inout(Result!(Result!(T, E), E)) r)
 {
-    return isOk(r) ? unwrap(r) : Result!(T, E).error(unwrapErr(r));
+    return isOk(r) ? unwrap(r) : Result!(T, E).error(unwrapError(r));
 }
 
 ///
