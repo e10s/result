@@ -228,14 +228,8 @@ struct Result(T, E) if (!is(T : Err!X, X) && !is(E : void))
 {
     static if (is(T : void))
     {
-        /// The payload to switch states and contain values.
-        Nullable!E payload;
-
-        // The constructor accepts `E` values.
-        private this(ref inout(E) error) inout
-        {
-            payload = error;
-        }
+        ///
+        alias PayloadType = Nullable!(Err!E);
 
         /// Creates a [Result]`!(T, E)` with the successful state.
         ///
@@ -259,16 +253,11 @@ struct Result(T, E) if (!is(T : Err!X, X) && !is(E : void))
     {
         import std.sumtype : SumType;
 
-        /// The payload to switch states and contain values.
-        SumType!(T, Err!E) payload;
+        ///
+        alias PayloadType = SumType!(T, Err!E);
 
         /// The constructor for `T`.
-        this(inout(T) value) inout
-        {
-            payload = value;
-        }
-        /// Ditto
-        this(ref inout(T) value) inout
+        this()(auto ref inout(T) value) inout
         {
             payload = value;
         }
@@ -316,44 +305,20 @@ struct Result(T, E) if (!is(T : Err!X, X) && !is(E : void))
         }
     }
 
+    PayloadType payload;
+    /// The payload to switch states and contain values.
     alias payload this;
 
     /// The constructor for `Err!E`.
-    this(inout(Err!E) error) inout
+    this()(auto ref inout(Err!E) wrappedError) inout
     {
-        static if (is(T : void))
-        {
-            this(error.error);
-        }
-        else
-        {
-            payload = error;
-        }
-    }
-    /// Ditto
-    this(ref inout(Err!E) error) inout
-    {
-        static if (is(T : void))
-        {
-            this(error.error);
-        }
-        else
-        {
-            payload = error;
-        }
+        payload = wrappedError;
     }
 
     /// Assigns an `Err!E` wrapping an `E` value into a [Result].
-    void opAssign()(Err!E error) if (isAssignable!E)
+    void opAssign()(Err!E wrappedError) if (isAssignable!E)
     {
-        static if (is(T : void))
-        {
-            payload = error.error;
-        }
-        else
-        {
-            payload = error;
-        }
+        payload = wrappedError;
     }
 
     /// Creates a [Result]`!(T, E)` with an _error `E` value.
@@ -367,28 +332,14 @@ struct Result(T, E) if (!is(T : Err!X, X) && !is(E : void))
         static if (is(inout(E) == E))
         {
             alias R = Result!(T, E);
+            alias ErrE = Err!E;
         }
         else
         {
             alias R = inout(Result!(T, E));
+            alias ErrE = inout(Err!E);
         }
-
-        static if (is(T : void))
-        {
-            return R(error);
-        }
-        else
-        {
-            static if (is(inout(E) == E))
-            {
-                alias ErrE = Err!E;
-            }
-            else
-            {
-                alias ErrE = inout(Err!E);
-            }
-            return R(ErrE(error));
-        }
+        return R(ErrE(error));
     }
 
     version (D_Ddoc)
@@ -676,6 +627,7 @@ struct Result(T, E) if (!is(T : Err!X, X) && !is(E : void))
     }
 
     alias R = Result!(void, S*);
+    alias ErrE = Err!(S*);
 
     auto resultOk = R.ok();
     assert(resultOk.isNull);
@@ -687,13 +639,13 @@ struct Result(T, E) if (!is(T : Err!X, X) && !is(E : void))
     assert(iResultOk.isNull);
 
     auto resultErr = R.err(new S);
-    assert(is(typeof(resultErr.get()) == S*));
+    assert(is(typeof(resultErr.get()) == ErrE));
 
     const cResultErr = R.err(new S);
-    assert(is(typeof(cResultErr.get()) == const(S*)));
+    assert(is(typeof(cResultErr.get()) == const(ErrE)));
 
     immutable iResultErr = R.err(new S);
-    assert(is(typeof(iResultErr.get()) == immutable(S*)));
+    assert(is(typeof(iResultErr.get()) == immutable(ErrE)));
 }
 
 // Ditto
@@ -708,13 +660,13 @@ struct Result(T, E) if (!is(T : Err!X, X) && !is(E : void))
     alias R = Result!(T, E);
 
     auto resultErr = R.err(new S);
-    assert(is(typeof(resultErr.get()) == E));
+    assert(is(typeof(resultErr.get()) == Err!E));
 
     auto cResultErr = R.err(new const(S));
-    assert(is(typeof(cResultErr.get()) == E));
+    assert(is(typeof(cResultErr.get()) == Err!E));
 
     auto iResultErr = R.err(new immutable(S));
-    assert(is(typeof(iResultErr.get()) == E));
+    assert(is(typeof(iResultErr.get()) == Err!E));
 }
 
 // Assignment
@@ -1185,15 +1137,8 @@ inout(Nullable!T) ok(T, E)(scope auto ref inout(Result!(T, E)) r) if (!is(T : vo
 @CorrespondingTo("rust", "err")
 inout(Nullable!E) err(T, E)(scope auto ref inout(Result!(T, E)) r)
 {
-    static if (is(T : void))
-    {
-        return r.payload;
-    }
-    else
-    {
-        alias N = typeof(return);
-        return isOk(r) ? N.init : N(unwrapErr(r));
-    }
+    alias N = typeof(return);
+    return isOk(r) ? N.init : N(unwrapErr(r));
 }
 
 ///
@@ -1754,7 +1699,7 @@ in (isErr(r), "Result does not have an error state.")
 {
     static if (is(T : void))
     {
-        return r.payload.get();
+        return r.payload.get().error;
     }
     else
     {
