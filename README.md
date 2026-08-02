@@ -177,7 +177,7 @@ If `T` is `void`, interpret the table entries appropriately.
 <td></td>
 </tr>
 <tr>
-<td rowspan="2"><code>ok(r)</code></td>
+<td rowspan="2"><code>nullableSuccess(r)</code></td>
 <td><code>Result!(T, E).success(t)</code></td>
 <td><code>nullable(t)</code></td>
 <td rowspan="2">For a non-<code>void</code> <code>T</code></td>

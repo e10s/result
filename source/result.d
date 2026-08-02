@@ -1084,7 +1084,7 @@ bool isErrorAnd(alias pred = "a", T, E)(scope auto ref inout(Result!(T, E)) r)
 ///
 /// Returns: A `Nullable!T` containing the `T` value, or in the null state if an `E`
 @CorrespondingTo("rust", "ok")
-inout(Nullable!T) ok(T, E)(scope auto ref inout(Result!(T, E)) r) if (!is(T : void))
+inout(Nullable!T) nullableSuccess(T, E)(scope auto ref inout(Result!(T, E)) r) if (!is(T : void))
 {
     alias N = typeof(return);
     return isError(r) ? N.init : N(unwrap(r));
@@ -1098,10 +1098,10 @@ inout(Nullable!T) ok(T, E)(scope auto ref inout(Result!(T, E)) r) if (!is(T : vo
     import std.typecons : Nullable;
 
     auto resultOk = R.success(2);
-    assert(ok(resultOk) == Nullable!uint(2));
+    assert(nullableSuccess(resultOk) == Nullable!uint(2));
 
     auto resultErr = R.error("Nothing here");
-    assert(ok(resultErr).isNull);
+    assert(nullableSuccess(resultErr).isNull);
 }
 
 @safe nothrow unittest
@@ -1109,16 +1109,16 @@ inout(Nullable!T) ok(T, E)(scope auto ref inout(Result!(T, E)) r) if (!is(T : vo
     alias R = Result!(uint, string);
 
     const cResultOk = R.success(2);
-    assert(ok(cResultOk) == Nullable!uint(2));
+    assert(nullableSuccess(cResultOk) == Nullable!uint(2));
 
     immutable iResultOk = R.success(2);
-    assert(ok(iResultOk) == Nullable!uint(2));
+    assert(nullableSuccess(iResultOk) == Nullable!uint(2));
 
     const cResultErr = R.error("Nothing here");
-    assert(ok(cResultErr).isNull);
+    assert(nullableSuccess(cResultErr).isNull);
 
     immutable iResultErr = R.error("Nothing here");
-    assert(ok(iResultErr).isNull);
+    assert(nullableSuccess(iResultErr).isNull);
 }
 
 /// Extracts the error value from a [Result] as a `Nullable!E`.
