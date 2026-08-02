@@ -768,36 +768,36 @@ struct Result(T, E) if (!is(T : Err!X, X) && !is(E : void))
 /* Tests for void T end */
 
 /* Convenience templates begin */
-private alias OkValueTypeOf(R : Result!(T, E), T, E) = T;
+private alias SuccessValueTypeOf(R : Result!(T, E), T, E) = T;
 
 unittest
 {
     alias R = Result!(int, string);
-    assert(is(OkValueTypeOf!R == int));
-    assert(is(OkValueTypeOf!(const(R)) == int));
-    assert(is(OkValueTypeOf!(immutable(R)) == int));
-    assert(is(OkValueTypeOf!(inout(R)) == int));
+    assert(is(SuccessValueTypeOf!R == int));
+    assert(is(SuccessValueTypeOf!(const(R)) == int));
+    assert(is(SuccessValueTypeOf!(immutable(R)) == int));
+    assert(is(SuccessValueTypeOf!(inout(R)) == int));
 }
 
 unittest
 {
     alias R = Result!(const(void), string);
 
-    assert(is(OkValueTypeOf!R == const(void)));
-    assert(is(OkValueTypeOf!(const(R)) == const(void)));
-    assert(is(OkValueTypeOf!(immutable(R)) == const(void)));
-    assert(is(OkValueTypeOf!(inout(R)) == const(void)));
+    assert(is(SuccessValueTypeOf!R == const(void)));
+    assert(is(SuccessValueTypeOf!(const(R)) == const(void)));
+    assert(is(SuccessValueTypeOf!(immutable(R)) == const(void)));
+    assert(is(SuccessValueTypeOf!(inout(R)) == const(void)));
 }
 
-private alias ErrValueTypeOf(R : Result!(T, E), T, E) = E;
+private alias ErrorValueTypeOf(R : Result!(T, E), T, E) = E;
 
 unittest
 {
     alias R = Result!(int, string);
-    assert(is(ErrValueTypeOf!R == string));
-    assert(is(ErrValueTypeOf!(const(R)) == string));
-    assert(is(ErrValueTypeOf!(immutable(R)) == string));
-    assert(is(ErrValueTypeOf!(inout(R)) == string));
+    assert(is(ErrorValueTypeOf!R == string));
+    assert(is(ErrorValueTypeOf!(const(R)) == string));
+    assert(is(ErrorValueTypeOf!(immutable(R)) == string));
+    assert(is(ErrorValueTypeOf!(inout(R)) == string));
 }
 
 /* Convenience templates end */
@@ -1313,9 +1313,9 @@ inout(Result!(U, E)) and(T, U, E)(scope auto ref inout(Result!(T, E)) r1,
 @CorrespondingTo("rust", "and_then")
 @CorrespondingTo("c++", "and_then")
 auto andThen(alias fun, T, E)(scope auto ref inout(Result!(T, E)) r)
-        if (!is(T : void) && is(E == ErrValueTypeOf!(typeof(unaryFun!fun(inout(T).init)))))
+        if (!is(T : void) && is(E == ErrorValueTypeOf!(typeof(unaryFun!fun(inout(T).init)))))
 {
-    alias U = OkValueTypeOf!(typeof(unaryFun!fun(inout(T).init)));
+    alias U = SuccessValueTypeOf!(typeof(unaryFun!fun(inout(T).init)));
     return isSuccess(r) ? unaryFun!fun(unwrap(r)) : Result!(U, E).error(unwrapError(r));
 }
 
@@ -1517,9 +1517,9 @@ auto or(T, E, F)(scope auto ref inout(Result!(T, E)) r1, scope auto ref inout(Re
 @CorrespondingTo("rust", "or_else")
 @CorrespondingTo("c++", "or_else")
 auto orElse(alias fun, T, E)(scope auto ref inout(Result!(T, E)) r)
-        if (is(T == OkValueTypeOf!(typeof(unaryFun!fun(inout(E).init)))))
+        if (is(T == SuccessValueTypeOf!(typeof(unaryFun!fun(inout(E).init)))))
 {
-    alias F = ErrValueTypeOf!(typeof(unaryFun!fun(inout(E).init)));
+    alias F = ErrorValueTypeOf!(typeof(unaryFun!fun(inout(E).init)));
     static if (is(T : void))
     {
         return isError(r) ? unaryFun!fun(unwrapError(r)) : Result!(T, F).success();
