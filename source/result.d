@@ -2918,7 +2918,7 @@ auto ref inout(Result!(T, E)) inspect(alias fun, T, E)(scope auto ref inout(Resu
 ///
 /// Returns: The original [Result]
 @CorrespondingTo("rust", "inspect_err")
-auto ref inout(Result!(T, E)) inspectErr(alias fun, T, E)(scope auto ref inout(Result!(T, E)) r)
+auto ref inout(Result!(T, E)) inspectError(alias fun, T, E)(scope auto ref inout(Result!(T, E)) r)
         if (is(typeof(unaryFun!fun(inout(E).init))))
 {
     if (isErr(r))
@@ -2950,7 +2950,7 @@ auto ref inout(Result!(T, E)) inspectErr(alias fun, T, E)(scope auto ref inout(R
     import std.conv : writeText;
 
     auto writer = appender!string();
-    auto r = inspectErr!(e => writer.writeText("failed to read file: ", e))(
+    auto r = inspectError!(e => writer.writeText("failed to read file: ", e))(
             readToString("address.txt"));
 
     assert(isOk(r) || writer[].length > 0);
@@ -2964,12 +2964,12 @@ auto ref inout(Result!(T, E)) inspectErr(alias fun, T, E)(scope auto ref inout(R
     import std.conv : writeText;
 
     auto writer1 = appender!string();
-    auto okResult = R.success(42).inspectErr!(e => writer1.writeText("error: ", e));
+    auto okResult = R.success(42).inspectError!(e => writer1.writeText("error: ", e));
     assert(okResult == R.success(42));
     assert(writer1.length == 0);
 
     auto writer2 = appender!string();
-    auto errResult = R.error("fail").inspectErr!(e => writer2.writeText("error: ", e));
+    auto errResult = R.error("fail").inspectError!(e => writer2.writeText("error: ", e));
     assert(errResult == R.error("fail"));
     assert(writer2[] == "error: fail");
 }
@@ -2982,11 +2982,11 @@ auto ref inout(Result!(T, E)) inspectErr(alias fun, T, E)(scope auto ref inout(R
     import std.conv : writeText;
 
     auto writer1 = appender!string();
-    assert(R.success().inspectErr!(e => writer1.writeText("error: ", e)).isOk());
+    assert(R.success().inspectError!(e => writer1.writeText("error: ", e)).isOk());
     assert(writer1.length == 0);
 
     auto writer2 = appender!string();
-    auto errResult = R.error("fail").inspectErr!(e => writer2.writeText("error: ", e));
+    auto errResult = R.error("fail").inspectError!(e => writer2.writeText("error: ", e));
     assert(errResult == R.error("fail"));
     assert(writer2[] == "error: fail");
 }

@@ -406,7 +406,7 @@ The `Nullable`-returning `ok` and `err` functions are useful when absence should
 <td></td>
 </tr>
 <tr>
-<td rowspan="2"><code>inspectErr!fun(r)</code></td>
+<td rowspan="2"><code>inspectError!fun(r)</code></td>
 <td><code>Result!(T, E).success(*)</code></td>
 <td><code>r</code></td>
 <td></td>
@@ -418,7 +418,7 @@ The `Nullable`-returning `ok` and `err` functions are useful when absence should
 </tbody>
 </table>
 
-`inspect` and `inspectErr` are intended for side effects such as logging or
+`inspect` and `inspectError` are intended for side effects such as logging or
 debugging while preserving the result for subsequent operations.
 
 ### Structural helpers
