@@ -95,12 +95,12 @@ unittest
         //    Result!(int, string), failure
         // -> Result!(double, string), failure
         // -> Result!(string, string), failure
-        // -> SumType!(string, Err!string), containing Err!string
+        // -> SumType!(string, ErrorValue!string), containing ErrorValue!string
         parsePositiveInt("0").andThen!(value => divide(value, 3))
             .map!(d => format!"%.2f"(d))
             .payload // Explicit conversion to SumType
             .match!((string okValue) => writeln("Success: ", okValue),
-                    (Err!string errObj) => stderr.writeln("Failure: ", errObj.error));
+                    (ErrorValue!string errObj) => stderr.writeln("Failure: ", errObj.error));
     }
 
     // A demo that converts a thrown exception into a Result and handles it.
@@ -114,7 +114,7 @@ unittest
 
         // Implicit conversion to SumType
         result.match!((double okValue) => writefln("Converted value: %.2f", okValue),
-                (const Err!Exception errObj) => stderr.writeln("Caught exception: ",
+                (const ErrorValue!Exception errObj) => stderr.writeln("Caught exception: ",
                     errObj.error.msg));
     }
 
@@ -130,17 +130,17 @@ import std.traits : CommonType, Unqual, isAssignable;
 
 /// Wrapper struct representing an error result with a value of type `E`.
 /// Serves as the error variant in a [Result] type.
-struct Err(E) if (!is(E : void))
+struct ErrorValue(E) if (!is(E : void))
 {
     ///
     E error;
     ///
-    bool opEquals(scope const Err!E rhs) const
+    bool opEquals(scope const ErrorValue!E rhs) const
     {
         return error == rhs.error;
     }
     /// Ditto
-    bool opEquals(scope const ref Err!E rhs) const
+    bool opEquals(scope const ref ErrorValue!E rhs) const
     {
         return error == rhs.error;
     }
@@ -164,23 +164,23 @@ struct Err(E) if (!is(E : void))
 ///
 unittest
 {
-    assert(Err!int(314) == Err!int(314));
-    assert(Err!int(314).error == 314);
-    assert(Err!int(314) == 314);
-    assert(Err!string("Good day.") == "Good day.");
+    assert(ErrorValue!int(314) == ErrorValue!int(314));
+    assert(ErrorValue!int(314).error == 314);
+    assert(ErrorValue!int(314) == 314);
+    assert(ErrorValue!string("Good day.") == "Good day.");
 
     class K
     {
     }
 
-    assert(Err!K(new K) != Err!K(new K));
+    assert(ErrorValue!K(new K) != ErrorValue!K(new K));
 }
 
 unittest
 {
-    auto err1 = Err!int(314);
-    auto err2 = Err!int(314);
-    auto err3 = Err!int(315);
+    auto err1 = ErrorValue!int(314);
+    auto err2 = ErrorValue!int(314);
+    auto err3 = ErrorValue!int(315);
 
     assert(err1 == err2);
     assert(err2 != err3);
@@ -191,8 +191,8 @@ unittest
     {
     }
 
-    auto err4 = Err!K(new K);
-    auto err5 = Err!K(new K);
+    auto err4 = ErrorValue!K(new K);
+    auto err5 = ErrorValue!K(new K);
 
     assert(err4 != err5);
     assert(err4.toHash() != err5.toHash());
@@ -224,12 +224,12 @@ class UnwrapException : Exception
 /// See_Also:
 ///     [std.sumtype](https://dlang.org/phobos/std_sumtype.html)
 ///     [std.typecons.Nullable](https://dlang.org/phobos/std_typecons.html#Nullable)
-struct Result(T, E) if (!is(T : Err!X, X) && !is(E : void))
+struct Result(T, E) if (!is(T : ErrorValue!X, X) && !is(E : void))
 {
     static if (is(T : void))
     {
         ///
-        alias PayloadType = Nullable!(Err!E);
+        alias PayloadType = Nullable!(ErrorValue!E);
 
         /// Creates a [Result]`!(T, E)` with the successful state.
         ///
@@ -254,7 +254,7 @@ struct Result(T, E) if (!is(T : Err!X, X) && !is(E : void))
         import std.sumtype : SumType;
 
         ///
-        alias PayloadType = SumType!(T, Err!E);
+        alias PayloadType = SumType!(T, ErrorValue!E);
 
         /// The constructor for `T`.
         this()(auto ref inout(T) value) inout
@@ -309,14 +309,14 @@ struct Result(T, E) if (!is(T : Err!X, X) && !is(E : void))
     /// The payload to switch states and contain values.
     alias payload this;
 
-    /// The constructor for `Err!E`.
-    this()(auto ref inout(Err!E) wrappedError) inout
+    /// The constructor for `ErrorValue!E`.
+    this()(auto ref inout(ErrorValue!E) wrappedError) inout
     {
         payload = wrappedError;
     }
 
-    /// Assigns an `Err!E` wrapping an `E` value into a [Result].
-    void opAssign()(Err!E wrappedError) if (isAssignable!E)
+    /// Assigns an `ErrorValue!E` wrapping an `E` value into a [Result].
+    void opAssign()(ErrorValue!E wrappedError) if (isAssignable!E)
     {
         payload = wrappedError;
     }
@@ -332,12 +332,12 @@ struct Result(T, E) if (!is(T : Err!X, X) && !is(E : void))
         static if (is(inout(E) == E))
         {
             alias R = Result!(T, E);
-            alias ErrE = Err!E;
+            alias ErrE = ErrorValue!E;
         }
         else
         {
             alias R = inout(Result!(T, E));
-            alias ErrE = inout(Err!E);
+            alias ErrE = inout(ErrorValue!E);
         }
         return R(ErrE(error));
     }
@@ -379,13 +379,13 @@ struct Result(T, E) if (!is(T : Err!X, X) && !is(E : void))
     assert(iResultOk.get!(immutable(int)) == 123);
 
     auto resultErr = R.error("123");
-    assert(resultErr.get!(Err!string) == Err!string("123"));
+    assert(resultErr.get!(ErrorValue!string) == ErrorValue!string("123"));
 
     const cResultErr = R.error("123");
-    assert(cResultErr.get!(const(Err!string)) == Err!string("123"));
+    assert(cResultErr.get!(const(ErrorValue!string)) == ErrorValue!string("123"));
 
     immutable iResultErr = R.error("123");
-    assert(iResultErr.get!(immutable(Err!string)) == Err!string("123"));
+    assert(iResultErr.get!(immutable(ErrorValue!string)) == ErrorValue!string("123"));
 }
 
 // Ditto
@@ -409,13 +409,13 @@ struct Result(T, E) if (!is(T : Err!X, X) && !is(E : void))
     assert(iResultOk.has!(immutable(Exception)));
 
     auto resultErr = R.error(new S);
-    assert(resultErr.has!(Err!(S*)));
+    assert(resultErr.has!(ErrorValue!(S*)));
 
     const cResultErr = R.error(new S);
-    assert(cResultErr.has!(const(Err!(S*))));
+    assert(cResultErr.has!(const(ErrorValue!(S*))));
 
     immutable iResultErr = R.error(new S);
-    assert(iResultErr.has!(immutable(Err!(S*))));
+    assert(iResultErr.has!(immutable(ErrorValue!(S*))));
 }
 
 // Ditto
@@ -441,13 +441,13 @@ struct Result(T, E) if (!is(T : Err!X, X) && !is(E : void))
     assert(iResultOk.has!(immutable(T)));
 
     auto resultErr = R.error(new S);
-    assert(resultErr.has!(Err!E));
+    assert(resultErr.has!(ErrorValue!E));
 
     auto cResultErr = R.error(new const(S));
-    assert(cResultErr.has!(Err!E));
+    assert(cResultErr.has!(ErrorValue!E));
 
     auto iResultErr = R.error(new immutable(S));
-    assert(iResultErr.has!(Err!E));
+    assert(iResultErr.has!(ErrorValue!E));
 }
 
 // Assignment
@@ -461,7 +461,7 @@ struct Result(T, E) if (!is(T : Err!X, X) && !is(E : void))
     auto result2 = R.error("3");
 
     result2 = result1;
-    assert(result2.get!(Err!string) == Err!string("333"));
+    assert(result2.get!(ErrorValue!string) == ErrorValue!string("333"));
 
     const result3 = R.success(100);
     result2 = result3;
@@ -469,7 +469,7 @@ struct Result(T, E) if (!is(T : Err!X, X) && !is(E : void))
 
     immutable result4 = R.error("1000");
     result2 = result4;
-    assert(result2.get!(Err!string) == Err!string("1000"));
+    assert(result2.get!(ErrorValue!string) == ErrorValue!string("1000"));
 }
 
 // Ditto
@@ -489,7 +489,7 @@ struct Result(T, E) if (!is(T : Err!X, X) && !is(E : void))
     auto result2 = R.error(s2);
 
     result2 = result1;
-    assert(result2.get!(Err!(S*)) == Err!(S*)(s1));
+    assert(result2.get!(ErrorValue!(S*)) == ErrorValue!(S*)(s1));
 
     auto k1 = new Exception("!!!");
     auto result3 = R.success(k1);
@@ -509,8 +509,8 @@ struct Result(T, E) if (!is(T : Err!X, X) && !is(E : void))
     result = 456;
     assert(result.get!int == 456);
 
-    result = Err!string("error");
-    assert(result.get!(Err!string) == Err!string("error"));
+    result = ErrorValue!string("error");
+    assert(result.get!(ErrorValue!string) == ErrorValue!string("error"));
 }
 
 // Ctor
@@ -523,20 +523,20 @@ struct Result(T, E) if (!is(T : Err!X, X) && !is(E : void))
     auto result1 = R(123);
     assert(result1.get!int == 123);
 
-    auto result2 = R(Err!string("error"));
-    assert(result2.get!(Err!string) == Err!string("error"));
+    auto result2 = R(ErrorValue!string("error"));
+    assert(result2.get!(ErrorValue!string) == ErrorValue!string("error"));
 
     const cResult1 = const(R)(456);
     assert(cResult1.get!(const(int)) == 456);
 
-    const cResult2 = const(R)(Err!string("error"));
-    assert(cResult2.get!(const(Err!string)) == Err!string("error"));
+    const cResult2 = const(R)(ErrorValue!string("error"));
+    assert(cResult2.get!(const(ErrorValue!string)) == ErrorValue!string("error"));
 
     immutable iResult1 = immutable(R)(456);
     assert(iResult1.get!(immutable(int)) == 456);
 
-    immutable iResult2 = immutable(R)(Err!string("error"));
-    assert(iResult2.get!(immutable(Err!string)) == Err!string("error"));
+    immutable iResult2 = immutable(R)(ErrorValue!string("error"));
+    assert(iResult2.get!(immutable(ErrorValue!string)) == ErrorValue!string("error"));
 }
 
 // Ditto
@@ -547,25 +547,25 @@ struct Result(T, E) if (!is(T : Err!X, X) && !is(E : void))
     import std.sumtype : get;
 
     int v = 123;
-    auto e = Err!string("error");
+    auto e = ErrorValue!string("error");
 
     auto result1 = R(v);
     assert(result1.get!int == 123);
 
     auto result2 = R(e);
-    assert(result2.get!(Err!string) == Err!string("error"));
+    assert(result2.get!(ErrorValue!string) == ErrorValue!string("error"));
 
     const cResult1 = const(R)(v);
     assert(cResult1.get!(const(int)) == 123);
 
     const cResult2 = const(R)(e);
-    assert(cResult2.get!(const(Err!string)) == Err!string("error"));
+    assert(cResult2.get!(const(ErrorValue!string)) == ErrorValue!string("error"));
 
     immutable iResult1 = immutable(R)(v);
     assert(iResult1.get!(immutable(int)) == 123);
 
     immutable iResult2 = immutable(R)(e);
-    assert(iResult2.get!(immutable(Err!string)) == Err!string("error"));
+    assert(iResult2.get!(immutable(ErrorValue!string)) == ErrorValue!string("error"));
 }
 
 // Ditto
@@ -584,14 +584,14 @@ struct Result(T, E) if (!is(T : Err!X, X) && !is(E : void))
     auto result1 = R(new Exception("test"));
     assert(result1.get!Exception.msg == "test");
 
-    auto result2 = R(Err!(S*)(s));
-    assert(result2.get!(Err!(S*)).error == s);
+    auto result2 = R(ErrorValue!(S*)(s));
+    assert(result2.get!(ErrorValue!(S*)).error == s);
 
     const cResult1 = const(R)(new Exception("test"));
     assert(cResult1.get!(const(Exception)).msg == "test");
 
-    const cResult2 = const(R)(Err!(S*)(s));
-    assert(cResult2.get!(const(Err!(S*))).error == s);
+    const cResult2 = const(R)(ErrorValue!(S*)(s));
+    assert(cResult2.get!(const(ErrorValue!(S*))).error == s);
 }
 /* Tests for non-void T end */
 
@@ -627,7 +627,7 @@ struct Result(T, E) if (!is(T : Err!X, X) && !is(E : void))
     }
 
     alias R = Result!(void, S*);
-    alias ErrE = Err!(S*);
+    alias ErrE = ErrorValue!(S*);
 
     auto resultOk = R.success();
     assert(resultOk.isNull);
@@ -660,13 +660,13 @@ struct Result(T, E) if (!is(T : Err!X, X) && !is(E : void))
     alias R = Result!(T, E);
 
     auto resultErr = R.error(new S);
-    assert(is(typeof(resultErr.get()) == Err!E));
+    assert(is(typeof(resultErr.get()) == ErrorValue!E));
 
     auto cResultErr = R.error(new const(S));
-    assert(is(typeof(cResultErr.get()) == Err!E));
+    assert(is(typeof(cResultErr.get()) == ErrorValue!E));
 
     auto iResultErr = R.error(new immutable(S));
-    assert(is(typeof(iResultErr.get()) == Err!E));
+    assert(is(typeof(iResultErr.get()) == ErrorValue!E));
 }
 
 // Assignment
@@ -719,7 +719,7 @@ struct Result(T, E) if (!is(T : Err!X, X) && !is(E : void))
 
     auto result = R.success();
 
-    result = Err!string("error");
+    result = ErrorValue!string("error");
     assert(result.get == "error");
 }
 
@@ -728,10 +728,10 @@ struct Result(T, E) if (!is(T : Err!X, X) && !is(E : void))
 {
     alias R = Result!(void, string);
 
-    auto result1 = R(Err!string("error"));
+    auto result1 = R(ErrorValue!string("error"));
     assert(result1.get == "error");
 
-    const cResult1 = const(R)(Err!string("error"));
+    const cResult1 = const(R)(ErrorValue!string("error"));
     assert(cResult1.get == "error");
 }
 
@@ -739,7 +739,7 @@ struct Result(T, E) if (!is(T : Err!X, X) && !is(E : void))
 @safe @nogc nothrow unittest
 {
     alias R = Result!(void, string);
-    auto e = Err!string("error");
+    auto e = ErrorValue!string("error");
 
     auto result1 = R(e);
     assert(result1.get == "error");
@@ -759,10 +759,10 @@ struct Result(T, E) if (!is(T : Err!X, X) && !is(E : void))
 
     auto s = new S;
 
-    auto result1 = R(Err!(S*)(s));
+    auto result1 = R(ErrorValue!(S*)(s));
     assert(result1.get == s);
 
-    const cResult1 = const(R)(Err!(S*)(s));
+    const cResult1 = const(R)(ErrorValue!(S*)(s));
     assert(cResult1.get == s);
 }
 /* Tests for void T end */
@@ -1084,7 +1084,8 @@ bool isErrorAnd(alias pred = "a", T, E)(scope auto ref inout(Result!(T, E)) r)
 ///
 /// Returns: A `Nullable!T` containing the `T` value, or in the null state if an `E`
 @CorrespondingTo("rust", "ok")
-inout(Nullable!T) nullableSuccess(T, E)(scope auto ref inout(Result!(T, E)) r) if (!is(T : void))
+inout(Nullable!T) nullableSuccess(T, E)(scope auto ref inout(Result!(T, E)) r)
+        if (!is(T : void))
 {
     alias N = typeof(return);
     return isError(r) ? N.init : N(unwrap(r));
@@ -1705,7 +1706,7 @@ in (isError(r), "Result does not have an error state.")
     {
         import std.sumtype : get;
 
-        return r.payload.get!(inout(Err!E)).error;
+        return r.payload.get!(inout(ErrorValue!E)).error;
     }
 }
 
@@ -1898,8 +1899,8 @@ auto ref inout(T) tryUnwrap(T, E)(scope return auto ref inout(Result!(T, E)) r, 
 ///
 /// Throws: [UnwrapException] with message `msg` if the `r` has a successful state
 @CorrespondingTo("rust", "expect_err")
-auto ref inout(E) tryUnwrapError(T, E)(scope return auto ref inout(Result!(T, E)) r,
-        lazy string msg = null)
+auto ref inout(E) tryUnwrapError(T, E)(scope return auto ref inout(Result!(T,
+        E)) r, lazy string msg = null)
 {
     import std.exception : enforce;
 

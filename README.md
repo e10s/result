@@ -66,7 +66,7 @@ For a success state with no value, use `Result!(void, E)`.
 <code>T</code> may be <code>void</code> when success has no payload.</td>
 </tr>
 <tr>
-<td><code>Err!E</code></td>
+<td><code>ErrorValue!E</code></td>
 <td>Wraps an error value. Used for assigning the error to a <code>Result</code>.
 Its value is available through <code>.error</code>.</td>
 </tr>
@@ -75,19 +75,19 @@ Its value is available through <code>.error</code>.</td>
 <td>Thrown by <code>tryUnwrap</code> or <code>tryUnwrapError</code> when the requested state is not present.</td>
 </tr>
 <tr>
-<td><code>std.sumtype.SumType!(T, Err!E)</code></td>
+<td><code>std.sumtype.SumType!(T, ErrorValue!E)</code></td>
 <td>The underlying <code>SumType</code> for a non-<code>void</code> <code>T</code>.
 It can be obtained by referring to <code>.payload</code> field of a <code>Result</code>.</td>
 </tr>
 <tr>
-<td><code>std.typecons.Nullable!E</code></td>
+<td><code>std.typecons.Nullable!(ErrorValue!E)</code></td>
 <td>The underlying <code>Nullable</code> for a <code>void</code> <code>T</code>.
 It can be obtained by referring to <code>.payload</code> field of a <code>Result</code>.</td>
 </tr>
 </tbody>
 </table>
 
-Note that `Result!(T, E)` rejects `void` as `E` and prevents using `Err!X` as `T`.
+Note that `Result!(T, E)` rejects `void` as `E` and prevents using `ErrorValue!X` as `T`.
 
 `Result` also provides the following static member functions to construct `Result` objects easily.
 

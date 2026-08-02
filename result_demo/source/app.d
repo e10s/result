@@ -83,12 +83,12 @@ void showCompositionExample()
     //    Result!(int, string), failure
     // -> Result!(double, string), failure
     // -> Result!(string, string), failure
-    // -> SumType!(string, Err!string), containing Err!string
+    // -> SumType!(string, ErrorValue!string), containing ErrorValue!string
     parsePositiveInt("0").andThen!(value => divide(value, 3))
         .map!(d => format!"%.2f"(d))
         .payload // Explicit conversion to SumType
         .match!((string okValue) => writeln("Success: ", okValue),
-                (Err!string errObj) => stderr.writeln("Failure: ", errObj.error));
+                (ErrorValue!string errObj) => stderr.writeln("Failure: ", errObj.error));
 }
 
 // A demo that converts a thrown exception into a Result and handles it.
@@ -102,7 +102,8 @@ void showExceptionInterop()
 
     // Implicit conversion to SumType
     result.match!((double okValue) => writefln("Converted value: %.2f", okValue),
-            (const Err!Exception errObj) => stderr.writeln("Caught exception: ", errObj.error.msg));
+            (const ErrorValue!Exception errObj) => stderr.writeln("Caught exception: ",
+                errObj.error.msg));
 }
 
 void main()
