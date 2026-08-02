@@ -350,7 +350,7 @@ The `Nullable`-returning `ok` and `err` functions are useful when absence should
 <td><code>Result!(U, E).error(e)</code></td>
 </tr>
 <tr>
-<td rowspan="2"><code>mapErr!fun(r)</code></td>
+<td rowspan="2"><code>mapError!fun(r)</code></td>
 <td><code>Result!(T, E).success(t)</code></td>
 <td><code>Result!(T, F).success(t)</code></td>
 <td rowspan="2"><code>F fun(E);</code></td>
