@@ -135,22 +135,12 @@ struct ErrorValue(E) if (!is(E : void))
     ///
     E error;
     ///
-    bool opEquals(scope const ErrorValue!E rhs) const
+    bool opEquals()(scope const auto ref ErrorValue!E rhs) const
     {
         return error == rhs.error;
     }
     /// Ditto
-    bool opEquals(scope const ref ErrorValue!E rhs) const
-    {
-        return error == rhs.error;
-    }
-    /// Ditto
-    bool opEquals(scope const E rhs) const
-    {
-        return error == rhs;
-    }
-    /// Ditto
-    bool opEquals(scope const ref E rhs) const
+    bool opEquals()(scope const auto ref E rhs) const
     {
         return error == rhs;
     }
