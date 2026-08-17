@@ -1,4 +1,4 @@
-import result;
+import yares;
 import std.conv : ConvException, to;
 import std.format : format;
 import std.stdio : stderr, writefln, writeln;

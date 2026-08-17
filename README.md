@@ -18,7 +18,7 @@ The module does not prescribe how errors should be logged or handled.
 The following example validates input and then handles the result explicitly.
 
 ```d
-import result;
+import yares;
 import std.conv : ConvException, to;
 import std.stdio : writeln;
 

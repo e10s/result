@@ -6,7 +6,7 @@
  * and contains either `T` for success or `E` for failure.
  * Each one is used to signify both the status and the value.
  */
-module result;
+module yares;
 
 ///
 unittest
