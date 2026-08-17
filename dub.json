@@ -1,9 +1,7 @@
 {
-    "description": "Result for D",
+    "description": "Yet another Result type for D",
     "license": "MIT",
-    "authors": [
-        "Kazuya Takahashi"
-    ],
+    "authors": ["Kazuya Takahashi"],
     "copyright": "Copyright © 2026, Kazuya Takahashi",
     "name": "yares",
     "targetType": "library"
