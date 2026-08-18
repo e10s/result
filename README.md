@@ -139,11 +139,21 @@ If `T` is `void`, interpret the table entries appropriately.
 <td rowspan="2"><code>r.isSuccess</code></td>
 <td><code>Result!(T, E).success(*)</code></td>
 <td><code>true</code></td>
-<td rowspan="2">Equivalent to <code>!isError(r)</code></td>
+<td rowspan="2">Equivalent to <code>!r.isError</code></td>
 </tr>
 <tr>
 <td><code>Result!(T, E).error(*)</code></td>
 <td><code>false</code></td>
+</tr>
+<tr>
+<td rowspan="2"><code>r.isError</code></td>
+<td><code>Result!(T, E).success(*)</code></td>
+<td><code>false</code></td>
+<td rowspan="2">Equivalent to <code>!r.isSuccess</code></td>
+</tr>
+<tr>
+<td><code>Result!(T, E).error(*)</code></td>
+<td><code>true</code></td>
 </tr>
 </tbody>
 </table>
@@ -167,16 +177,6 @@ If `T` is `void`, interpret the table entries appropriately.
 <tr>
 <td><code>Result!(T, E).error(*)</code></td>
 <td><code>false</code></td>
-</tr>
-<tr>
-<td rowspan="2"><code>isError(r)</code></td>
-<td><code>Result!(T, E).success(*)</code></td>
-<td><code>false</code></td>
-<td rowspan="2">Equivalent to <code>!isSuccess(r)</code></td>
-</tr>
-<tr>
-<td><code>Result!(T, E).error(*)</code></td>
-<td><code>true</code></td>
 </tr>
 <tr>
 <td rowspan="2"><code>isErrorAnd!pred(r)</code></td>

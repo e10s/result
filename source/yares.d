@@ -70,7 +70,7 @@ unittest
         // Result!(int, string), success
         immutable parseResult = parsePositiveInt("42");
 
-        if (isError(parseResult))
+        if (parseResult.isError)
         {
             stderr.writeln("Error: ", unwrapError(parseResult));
             return;
@@ -79,7 +79,7 @@ unittest
         // Result!(double, string), success
         immutable divideResult = divide(unwrap(parseResult), 7);
 
-        if (isError(divideResult))
+        if (divideResult.isError)
         {
             stderr.writeln("Error: ", unwrapError(divideResult));
             return;
@@ -403,6 +403,51 @@ struct Result(T, E) if (!is(T : ErrorValue!X, X) && !is(E : void))
             assert(!resultErr.isSuccess);
         }
     }
+
+    /// Checks if a [Result] contains an error.
+    /// Equivalent to `!result.`[isSuccess].
+    ///
+    /// $(SMALL_TABLE
+    ///     Conceptual I/O summary
+    ///     `this`: `Result!(T, E)`|Output: `bool`
+    ///     `.success(*)`|`false`
+    ///     `.error(*)`|`true`
+    /// )
+    ///
+    /// Returns: `true` if `this` contains an error, `false` otherwise
+    @CorrespondingTo("rust", "is_err")
+    bool isError() inout @property
+    {
+        return !isSuccess;
+    }
+
+    version (D_Ddoc)
+    {
+        ///
+        unittest
+        {
+            alias R = Result!(int, string);
+
+            auto resultOk = R.success(-3);
+            assert(!resultOk.isError);
+
+            auto resultErr = R.error("Some error message");
+            assert(resultErr.isError);
+        }
+
+        ///
+        unittest
+        {
+            alias R = Result!(void, string);
+
+            auto resultOk = R.success();
+            assert(!resultOk.isError);
+
+            auto resultErr = R.error("Some error message");
+            assert(resultErr.isError);
+        }
+    }
+
 }
 
 /* Tests for non-void T begin */
@@ -870,6 +915,39 @@ struct Result(T, E) if (!is(T : ErrorValue!X, X) && !is(E : void))
     immutable iResultErr = R.error("123");
     assert(!iResultErr.isSuccess);
 }
+
+@("isError")
+@safe @nogc nothrow unittest
+{
+    alias R = Result!(int, string);
+
+    auto resultOk = R.success(-3);
+    assert(!resultOk.isError);
+
+    auto resultErr = R.error("Some error message");
+    assert(resultErr.isError);
+}
+
+@("isError")
+@safe @nogc nothrow unittest
+{
+    alias R = Result!(int, string);
+
+    const cResultErr = R.error("123");
+    assert(cResultErr.isError);
+
+    immutable iResultErr = R.error("123");
+    assert(iResultErr.isError);
+
+    auto resultOk = R.success(123);
+    assert(!resultOk.isError);
+
+    const cResultOk = R.success(123);
+    assert(!cResultOk.isError);
+
+    immutable iResultOk = R.success(123);
+    assert(!iResultOk.isError);
+}
 /* Tests for member functions end */
 
 /* Convenience templates begin */
@@ -915,7 +993,6 @@ struct CorrespondingTo
     string functionName;
 }
 /* For UDA end */
-
 
 /// Checks if a [Result] contains a `T` value satisfying a predicate.
 ///
@@ -981,53 +1058,6 @@ bool isSuccessAnd(alias pred = "a", T, E)(scope auto ref inout(Result!(T, E)) r)
     assert(!isSuccessAnd!isOdd(iResultErr));
 }
 
-/// Checks if a [Result] contains an error.
-/// Equivalent to `!`[isSuccess]`(r)`.
-///
-/// $(SMALL_TABLE
-///     Conceptual I/O summary
-///     Input: `Result!(T, E)`|Output: `bool`
-///     `.success(*)`|`false`
-///     `.error(*)`|`true`
-/// )
-@CorrespondingTo("rust", "is_err")
-bool isError(T, E)(scope auto ref inout(Result!(T, E)) r)
-{
-    return !r.isSuccess;
-}
-
-///
-@safe @nogc nothrow unittest
-{
-    alias R = Result!(int, string);
-
-    auto resultOk = R.success(-3);
-    assert(!isError(resultOk));
-
-    auto resultErr = R.error("Some error message");
-    assert(isError(resultErr));
-}
-
-@safe @nogc nothrow unittest
-{
-    alias R = Result!(int, string);
-
-    const cResultErr = R.error("123");
-    assert(isError(cResultErr));
-
-    immutable iResultErr = R.error("123");
-    assert(isError(iResultErr));
-
-    auto resultOk = R.success(123);
-    assert(!isError(resultOk));
-
-    const cResultOk = R.success(123);
-    assert(!isError(cResultOk));
-
-    immutable iResultOk = R.success(123);
-    assert(!isError(iResultOk));
-}
-
 /// Checks if a [Result] contains an error satisfying a predicate.
 ///
 /// $(SMALL_TABLE
@@ -1046,7 +1076,7 @@ bool isError(T, E)(scope auto ref inout(Result!(T, E)) r)
 bool isErrorAnd(alias pred = "a", T, E)(scope auto ref inout(Result!(T, E)) r)
         if (!is(typeof(unaryFun!pred(inout(E).init)) : void))
 {
-    return isError(r) && !!unaryFun!pred(unwrapError(r));
+    return r.isError && !!unaryFun!pred(unwrapError(r));
 }
 
 ///
@@ -1110,7 +1140,7 @@ inout(Nullable!T) nullableSuccess(T, E)(scope auto ref inout(Result!(T, E)) r)
         if (!is(T : void))
 {
     alias N = typeof(return);
-    return isError(r) ? N.init : N(unwrap(r));
+    return r.isError ? N.init : N(unwrap(r));
 }
 
 ///
@@ -1421,11 +1451,11 @@ auto or(T, E, F)(scope auto ref inout(Result!(T, E)) r1, scope auto ref inout(Re
 {
     static if (is(T : void))
     {
-        return isError(r1) ? r2 : Result!(T, F).success();
+        return r1.isError ? r2 : Result!(T, F).success();
     }
     else
     {
-        return isError(r1) ? r2 : Result!(T, F).success(unwrap(r1));
+        return r1.isError ? r2 : Result!(T, F).success(unwrap(r1));
     }
 }
 
@@ -1545,11 +1575,11 @@ auto orElse(alias fun, T, E)(scope auto ref inout(Result!(T, E)) r)
     alias F = ErrorValueTypeOf!(typeof(unaryFun!fun(inout(E).init)));
     static if (is(T : void))
     {
-        return isError(r) ? unaryFun!fun(unwrapError(r)) : Result!(T, F).success();
+        return r.isError ? unaryFun!fun(unwrapError(r)) : Result!(T, F).success();
     }
     else
     {
-        return isError(r) ? unaryFun!fun(unwrapError(r)) : Result!(T, F).success(unwrap(r));
+        return r.isError ? unaryFun!fun(unwrapError(r)) : Result!(T, F).success(unwrap(r));
     }
 }
 
@@ -1718,7 +1748,7 @@ unittest
 @CorrespondingTo("rust", "unwrap_err_unchecked")
 @CorrespondingTo("c++", "error")
 auto ref inout(E) unwrapError(T, E)(scope return auto ref inout(Result!(T, E)) r)
-in (isError(r), "Result does not have an error state.")
+in (r.isError, "Result does not have an error state.")
 {
     static if (is(T : void))
     {
@@ -1928,11 +1958,11 @@ auto ref inout(E) tryUnwrapError(T, E)(scope return auto ref inout(Result!(T,
 
     if (msg is null)
     {
-        enforce!UnwrapException(isError(r), "Result does not have an error state.");
+        enforce!UnwrapException(r.isError, "Result does not have an error state.");
     }
     else
     {
-        enforce!UnwrapException(isError(r), msg);
+        enforce!UnwrapException(r.isError, msg);
     }
     return unwrapError(r);
 }
@@ -2187,7 +2217,7 @@ auto unwrapOrElse(alias fun, T, E)(scope auto ref inout(Result!(T, E)) r)
 @CorrespondingTo("c++", "error_or")
 auto unwrapErrorOr(T, E, F)(scope auto ref inout(Result!(T, E)) r, F defaultValue = inout(E).init)
 {
-    return isError(r) ? unwrapError(r) : defaultValue;
+    return r.isError ? unwrapError(r) : defaultValue;
 }
 
 ///
@@ -2466,11 +2496,11 @@ auto mapError(alias fun = "a", T, E)(scope auto ref inout(Result!(T, E)) r)
     alias S = Result!(T, F);
     static if (is(T : void))
     {
-        return isError(r) ? S.error(unaryFun!fun(unwrapError(r))) : S.success();
+        return r.isError ? S.error(unaryFun!fun(unwrapError(r))) : S.success();
     }
     else
     {
-        return isError(r) ? S.error(unaryFun!fun(unwrapError(r))) : S.success(unwrap(r));
+        return r.isError ? S.error(unaryFun!fun(unwrapError(r))) : S.success(unwrap(r));
     }
 }
 
@@ -2944,7 +2974,7 @@ auto ref inout(Result!(T, E)) inspect(alias fun, T, E)(scope auto ref inout(Resu
 auto ref inout(Result!(T, E)) inspectError(alias fun, T, E)(scope auto ref inout(Result!(T, E)) r)
         if (is(typeof(unaryFun!fun(inout(E).init))))
 {
-    if (isError(r))
+    if (r.isError)
     {
         unaryFun!fun(unwrapError(r));
     }
@@ -3038,7 +3068,7 @@ inout(Nullable!(Result!(T, E))) transpose(T, E)(scope auto ref inout(Result!(Nul
 {
     alias R = Result!(T, E);
     alias N = inout(Nullable!R);
-    if (isError(r))
+    if (r.isError)
     {
         return N(R.error(unwrapError(r)));
     }
