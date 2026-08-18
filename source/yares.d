@@ -350,6 +350,59 @@ struct Result(T, E) if (!is(T : ErrorValue!X, X) && !is(E : void))
             assert(is(typeof(constR) == const(Result!(void, string))));
         }
     }
+
+    /// Checks if a [Result] contains a successful state.
+    ///
+    /// $(SMALL_TABLE
+    ///     Conceptual I/O summary
+    ///     `this`: `Result!(T, E)`|Output: `bool`
+    ///     `.success(*)`|`true`
+    ///     `.error(*)`|`false`
+    /// )
+    ///
+    /// Returns: `true` if `this` contains a successful state, `false` otherwise
+    @CorrespondingTo("rust", "is_ok")
+    @CorrespondingTo("c++", "has_value")
+    bool isSuccess() inout @property
+    {
+        static if (is(T : void))
+        {
+            return payload.isNull;
+        }
+        else
+        {
+            import std.sumtype : has;
+
+            return payload.has!(inout(T));
+        }
+    }
+
+    version (D_Ddoc)
+    {
+        ///
+        unittest
+        {
+            alias R = Result!(int, string);
+
+            auto resultOk = R.success(-3);
+            assert(resultOk.isSuccess);
+
+            auto resultErr = R.error("Some error message");
+            assert(!resultErr.isSuccess);
+        }
+
+        ///
+        unittest
+        {
+            alias R = Result!(void, string);
+
+            auto resultOk = R.success();
+            assert(resultOk.isSuccess);
+
+            auto resultErr = R.error("Some error message");
+            assert(!resultErr.isSuccess);
+        }
+    }
 }
 
 /* Tests for non-void T begin */
@@ -757,6 +810,68 @@ struct Result(T, E) if (!is(T : ErrorValue!X, X) && !is(E : void))
 }
 /* Tests for void T end */
 
+/* Tests for member functions begin */
+@("isSuccess")
+@safe @nogc nothrow unittest
+{
+    alias R = Result!(int, string);
+
+    auto resultOk = R.success(-3);
+    assert(resultOk.isSuccess);
+
+    auto resultErr = R.error("Some error message");
+    assert(!resultErr.isSuccess);
+}
+
+@("isSuccess")
+@safe @nogc nothrow unittest
+{
+    alias R = Result!(void, string);
+
+    auto resultOk = R.success();
+    assert(resultOk.isSuccess);
+
+    auto resultErr = R.error("Some error message");
+    assert(!resultErr.isSuccess);
+}
+
+@("isSuccess")
+@safe @nogc nothrow unittest
+{
+    alias R = Result!(int, string);
+
+    const cResultOk = R.success(123);
+    assert(cResultOk.isSuccess);
+
+    immutable iResultOk = R.success(123);
+    assert(iResultOk.isSuccess);
+
+    const cResultErr = R.error("123");
+    assert(!cResultErr.isSuccess);
+
+    immutable iResultErr = R.error("123");
+    assert(!iResultErr.isSuccess);
+}
+
+@("isSuccess")
+@safe @nogc nothrow unittest
+{
+    alias R = Result!(immutable(void), string);
+
+    const cResultOk = R.success();
+    assert(cResultOk.isSuccess);
+
+    immutable iResultOk = R.success();
+    assert(iResultOk.isSuccess);
+
+    const cResultErr = R.error("123");
+    assert(!cResultErr.isSuccess);
+
+    immutable iResultErr = R.error("123");
+    assert(!iResultErr.isSuccess);
+}
+/* Tests for member functions end */
+
 /* Convenience templates begin */
 private alias SuccessValueTypeOf(R : Result!(T, E), T, E) = T;
 
@@ -801,92 +916,6 @@ struct CorrespondingTo
 }
 /* For UDA end */
 
-/// Checks if a [Result] contains a successful state.
-///
-/// $(SMALL_TABLE
-///     Conceptual I/O summary
-///     Input: `Result!(T, E)`|Output: `bool`
-///     `.success(*)`|`true`
-///     `.error(*)`|`false`
-/// )
-///
-/// Params:
-///     r = The [Result] to check
-///
-/// Returns: `true` if `r` contains a successful state, `false` otherwise
-@CorrespondingTo("rust", "is_ok")
-@CorrespondingTo("c++", "has_value")
-bool isSuccess(T, E)(scope auto ref inout(Result!(T, E)) r)
-{
-    static if (is(T : void))
-    {
-        return r.payload.isNull;
-    }
-    else
-    {
-        import std.sumtype : has;
-
-        return r.payload.has!(inout(T));
-    }
-}
-
-///
-@safe @nogc nothrow unittest
-{
-    alias R = Result!(int, string);
-
-    auto resultOk = R.success(-3);
-    assert(isSuccess(resultOk));
-
-    auto resultErr = R.error("Some error message");
-    assert(!isSuccess(resultErr));
-}
-
-///
-@safe @nogc nothrow unittest
-{
-    alias R = Result!(void, string);
-
-    auto resultOk = R.success();
-    assert(isSuccess(resultOk));
-
-    auto resultErr = R.error("Some error message");
-    assert(!isSuccess(resultErr));
-}
-
-@safe @nogc nothrow unittest
-{
-    alias R = Result!(int, string);
-
-    const cResultOk = R.success(123);
-    assert(isSuccess(cResultOk));
-
-    immutable iResultOk = R.success(123);
-    assert(isSuccess(iResultOk));
-
-    const cResultErr = R.error("123");
-    assert(!isSuccess(cResultErr));
-
-    immutable iResultErr = R.error("123");
-    assert(!isSuccess(iResultErr));
-}
-
-@safe @nogc nothrow unittest
-{
-    alias R = Result!(immutable(void), string);
-
-    const cResultOk = R.success();
-    assert(isSuccess(cResultOk));
-
-    immutable iResultOk = R.success();
-    assert(isSuccess(iResultOk));
-
-    const cResultErr = R.error("123");
-    assert(!isSuccess(cResultErr));
-
-    immutable iResultErr = R.error("123");
-    assert(!isSuccess(iResultErr));
-}
 
 /// Checks if a [Result] contains a `T` value satisfying a predicate.
 ///
@@ -906,7 +935,7 @@ bool isSuccess(T, E)(scope auto ref inout(Result!(T, E)) r)
 bool isSuccessAnd(alias pred = "a", T, E)(scope auto ref inout(Result!(T, E)) r)
         if (!is(T : void) && !is(typeof(unaryFun!pred(inout(T).init)) : void))
 {
-    return isSuccess(r) && !!unaryFun!pred(unwrap(r));
+    return r.isSuccess && !!unaryFun!pred(unwrap(r));
 }
 
 ///
@@ -962,7 +991,10 @@ bool isSuccessAnd(alias pred = "a", T, E)(scope auto ref inout(Result!(T, E)) r)
 ///     `.error(*)`|`true`
 /// )
 @CorrespondingTo("rust", "is_err")
-alias isError = not!isSuccess;
+bool isError(T, E)(scope auto ref inout(Result!(T, E)) r)
+{
+    return !r.isSuccess;
+}
 
 ///
 @safe @nogc nothrow unittest
@@ -1129,7 +1161,7 @@ inout(Nullable!T) nullableSuccess(T, E)(scope auto ref inout(Result!(T, E)) r)
 inout(Nullable!E) nullableError(T, E)(scope auto ref inout(Result!(T, E)) r)
 {
     alias N = typeof(return);
-    return isSuccess(r) ? N.init : N(unwrapError(r));
+    return r.isSuccess ? N.init : N(unwrapError(r));
 }
 
 ///
@@ -1212,7 +1244,7 @@ inout(Nullable!E) nullableError(T, E)(scope auto ref inout(Result!(T, E)) r)
 inout(Result!(U, E)) and(T, U, E)(scope auto ref inout(Result!(T, E)) r1,
         scope auto ref inout(Result!(U, E)) r2)
 {
-    return isSuccess(r1) ? r2 : Result!(U, E).error(unwrapError(r1));
+    return r1.isSuccess ? r2 : Result!(U, E).error(unwrapError(r1));
 }
 
 ///
@@ -1307,7 +1339,7 @@ auto andThen(alias fun, T, E)(scope auto ref inout(Result!(T, E)) r)
         if (!is(T : void) && is(E == ErrorValueTypeOf!(typeof(unaryFun!fun(inout(T).init)))))
 {
     alias U = SuccessValueTypeOf!(typeof(unaryFun!fun(inout(T).init)));
-    return isSuccess(r) ? unaryFun!fun(unwrap(r)) : Result!(U, E).error(unwrapError(r));
+    return r.isSuccess ? unaryFun!fun(unwrap(r)) : Result!(U, E).error(unwrapError(r));
 }
 
 ///
@@ -1606,7 +1638,7 @@ auto orElse(alias fun, T, E)(scope auto ref inout(Result!(T, E)) r)
 @CorrespondingTo("rust", "unwrap")
 @CorrespondingTo("rust", "unwrap_unchecked")
 auto ref inout(T) unwrap(T, E)(scope return auto ref inout(Result!(T, E)) r)
-in (isSuccess(r), "Result does not have a successful state.")
+in (r.isSuccess, "Result does not have a successful state.")
 {
     static if (is(T : void))
     {
@@ -1791,11 +1823,11 @@ auto ref inout(T) tryUnwrap(T, E)(scope return auto ref inout(Result!(T, E)) r, 
 
     if (msg is null)
     {
-        enforce!UnwrapException(isSuccess(r), "Result does not have a successful state.");
+        enforce!UnwrapException(r.isSuccess, "Result does not have a successful state.");
     }
     else
     {
-        enforce!UnwrapException(isSuccess(r), msg);
+        enforce!UnwrapException(r.isSuccess, msg);
     }
     return unwrap(r);
 }
@@ -2003,7 +2035,7 @@ auto ref inout(E) tryUnwrapError(T, E)(scope return auto ref inout(Result!(T,
 auto unwrapOr(T, U, E)(scope auto ref inout(Result!(T, E)) r, U defaultValue = inout(T).init)
         if (!is(T : void))
 {
-    return isSuccess(r) ? unwrap(r) : defaultValue;
+    return r.isSuccess ? unwrap(r) : defaultValue;
 }
 
 ///
@@ -2085,7 +2117,7 @@ auto unwrapOr(T, U, E)(scope auto ref inout(Result!(T, E)) r, U defaultValue = i
 auto unwrapOrElse(alias fun, T, E)(scope auto ref inout(Result!(T, E)) r)
         if (!is(CommonType!(inout(T), typeof(unaryFun!fun(inout(E).init))) : void))
 {
-    return isSuccess(r) ? unwrap(r) : unaryFun!fun(unwrapError(r));
+    return r.isSuccess ? unwrap(r) : unaryFun!fun(unwrapError(r));
 }
 
 ///
@@ -2227,7 +2259,7 @@ auto map(alias fun = "a", T, E)(scope auto ref inout(Result!(T, E)) r)
         alias U = Unqual!(typeof(unaryFun!fun(inout(T).init)));
     }
     alias S = Result!(U, E);
-    if (isSuccess(r))
+    if (r.isSuccess)
     {
         static if (is(T : void) && is(U : void))
         {
@@ -2284,7 +2316,7 @@ auto map(alias fun = "a", T, E)(scope auto ref inout(Result!(T, E)) r)
         import std.sumtype : match;
 
         immutable r = map!`a*2`(parse(num));
-        if (isSuccess(r))
+        if (r.isSuccess)
         {
             arr ~= unwrap(r);
         }
@@ -2630,7 +2662,7 @@ auto mapError(alias fun = "a", T, E)(scope auto ref inout(Result!(T, E)) r)
 auto mapOr(alias fun, T, U, E)(scope auto ref inout(Result!(T, E)) r,
         U defaultValue = typeof(unaryFun!fun(inout(T).init)).init) if (!is(T : void))
 {
-    return isSuccess(r) ? unaryFun!fun(unwrap(r)) : defaultValue;
+    return r.isSuccess ? unaryFun!fun(unwrap(r)) : defaultValue;
 }
 
 ///
@@ -2715,7 +2747,7 @@ auto mapOrElse(alias defaultFun, alias fun, T, E)(scope auto ref inout(Result!(T
         if (!is(T : void) && !is(CommonType!(typeof(unaryFun!defaultFun(inout(E)
             .init)), typeof(unaryFun!fun(inout(T).init))) : void))
 {
-    return isSuccess(r) ? unaryFun!fun(unwrap(r)) : unaryFun!defaultFun(unwrapError(r));
+    return r.isSuccess ? unaryFun!fun(unwrap(r)) : unaryFun!defaultFun(unwrapError(r));
 }
 
 ///
@@ -2785,7 +2817,7 @@ auto ref inout(Result!(T, E)) inspect(alias fun, T, E)(scope auto ref inout(Resu
         if ((!is(T : void) && is(typeof(unaryFun!fun(inout(T).init)))) || (is(T
             : void) && is(typeof(fun()))))
 {
-    if (isSuccess(r))
+    if (r.isSuccess)
     {
         static if (is(T : void))
         {
@@ -2853,7 +2885,7 @@ auto ref inout(Result!(T, E)) inspect(alias fun, T, E)(scope auto ref inout(Resu
     import std.conv : writeText;
 
     auto writer = appender!string();
-    assert(isParsable("4").inspect!(() => writer.writeText("success")).isSuccess());
+    assert(isParsable("4").inspect!(() => writer.writeText("success")).isSuccess);
     assert(writer[] == "success");
 }
 
@@ -2883,7 +2915,7 @@ auto ref inout(Result!(T, E)) inspect(alias fun, T, E)(scope auto ref inout(Resu
     import std.conv : writeText;
 
     auto writer1 = appender!string();
-    assert(R.success().inspect!(() => writer1.writeText("ok")).isSuccess());
+    assert(R.success().inspect!(() => writer1.writeText("ok")).isSuccess);
     assert(writer1[] == "ok");
 
     auto writer2 = appender!string();
@@ -2944,7 +2976,7 @@ auto ref inout(Result!(T, E)) inspectError(alias fun, T, E)(scope auto ref inout
     auto r = inspectError!(e => writer.writeText("failed to read file: ", e))(
             readToString("address.txt"));
 
-    assert(isSuccess(r) || writer[].length > 0);
+    assert(r.isSuccess || writer[].length > 0);
 }
 
 @safe unittest
@@ -2973,7 +3005,7 @@ auto ref inout(Result!(T, E)) inspectError(alias fun, T, E)(scope auto ref inout
     import std.conv : writeText;
 
     auto writer1 = appender!string();
-    assert(R.success().inspectError!(e => writer1.writeText("error: ", e)).isSuccess());
+    assert(R.success().inspectError!(e => writer1.writeText("error: ", e)).isSuccess);
     assert(writer1.length == 0);
 
     auto writer2 = appender!string();
@@ -3093,7 +3125,7 @@ unittest
 @CorrespondingTo("rust", "flatten")
 inout(Result!(T, E)) flatten(T, E)(scope auto ref inout(Result!(Result!(T, E), E)) r)
 {
-    return isSuccess(r) ? unwrap(r) : Result!(T, E).error(unwrapError(r));
+    return r.isSuccess ? unwrap(r) : Result!(T, E).error(unwrapError(r));
 }
 
 ///

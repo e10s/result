@@ -38,7 +38,7 @@ Result!(int, string) parsePositiveInt(string text)
 }
 
 auto parsed = parsePositiveInt("42");
-if (isSuccess(parsed))
+if (parsed.isSuccess)
 {
     writeln("Value: ", unwrap(parsed));
 }
@@ -128,15 +128,15 @@ If `T` is `void`, interpret the table entries appropriately.
 <table>
 <thead>
 <tr>
-<th>Function</th>
-<th>Input</th>
+<th>Property</th>
+<th><code>this</code></th>
 <th>Output</th>
 <th>Notes</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td rowspan="2"><code>isSuccess(r)</code></td>
+<td rowspan="2"><code>r.isSuccess</code></td>
 <td><code>Result!(T, E).success(*)</code></td>
 <td><code>true</code></td>
 <td rowspan="2">Equivalent to <code>!isError(r)</code></td>
@@ -145,6 +145,19 @@ If `T` is `void`, interpret the table entries appropriately.
 <td><code>Result!(T, E).error(*)</code></td>
 <td><code>false</code></td>
 </tr>
+</tbody>
+</table>
+
+<table>
+<thead>
+<tr>
+<th>Function</th>
+<th>Input</th>
+<th>Output</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
 <tr>
 <td rowspan="2"><code>isSuccessAnd!pred(r)</code></td>
 <td><code>Result!(T, E).success(t)</code></td>
