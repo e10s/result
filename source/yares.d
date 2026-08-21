@@ -352,6 +352,7 @@ struct Result(T, E) if (!is(T : ErrorValue!X, X) && !is(E : void))
     }
 
     /// Checks if a [Result] contains a successful state.
+    /// Equivalent to `!result.`[isError].
     ///
     /// $(SMALL_TABLE
     ///     Conceptual I/O summary
