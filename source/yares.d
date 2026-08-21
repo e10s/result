@@ -1447,7 +1447,8 @@ auto andThen(alias fun, T, E)(scope auto ref inout(Result!(T, E)) r)
 ///
 /// Returns: `r2` if `r1` has an error value, otherwise a new [Result]`!(T, F)` with `r1`'s `T` value
 @CorrespondingTo("rust", "or")
-auto or(T, E, F)(scope auto ref inout(Result!(T, E)) r1, scope auto ref inout(Result!(T, F)) r2)
+inout(Result!(T, F)) or(T, E, F)(scope auto ref inout(Result!(T, E)) r1,
+        scope auto ref inout(Result!(T, F)) r2)
 {
     static if (is(T : void))
     {
